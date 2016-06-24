@@ -19,23 +19,23 @@ class Model:
 #        dp.CloseDataBase()
         #*************************************************Modeling**************************************************/
         #Q345
-        self.material=[]
-        self.section=[]
+        self.materials=[]
+        self.sections=[]
         self.nodes=[]
         self.beams=[]
         
-        self.materials.append(Material(2.000E11, 0.3, 7849.0474, 1.17e-5))
+        self.materials.append(Material.Material(2.000E11, 0.3, 7849.0474, 1.17e-5))
         #H200x150x8x10
         #sections.push_back(new Section(materials[0], 4.265e-3, 9.651e-8, 6.573e-5, 3.301e-6))
-        self.sections.append(Section(materials[0], 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6))
-        self.nodes.append(Node(0, 0, 0))
-        self.nodes.append(Node(0, 0, 5))
+        self.sections.append(Section.Section(self.materials[0], 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6))
+        self.nodes.append(Node.Node(0, 0, 0))
+        self.nodes.append(Node.Node(0, 0, 5))
         #nodes.push_back(new Node(0, 0, 10))
         #nodes.push_back(new Node(5, 0, 5))
         #nodes.push_back(new Node(5, 5, 5))
         #nodes.push_back(new Node(5, 5, 0))
-        for i in range(len(nodes)-1):
-            beams.append(Beam(nodes[i], nodes[i + 1], sections[0]))
+        for i in range(len(self.nodes)-1):
+            self.beams.append(Beam.Beam(self.nodes[i], self.nodes[i + 1], self.sections[0]))
         #loads
         #double f[6] = { 0,0,-100000,0,0,0 }
         #double qi[6] = { 0,-100000,0,0,0,0 }
@@ -49,12 +49,12 @@ class Model:
         res1 = [True,True, True, True, True, True ]
         res2 = [False,False, True, False, False, False ]
         res3 = [False,True, True, True, True, True ]
-        nodes[0].SetRestraints(res1)
-        nodes[1].SetRestraints(res3)
+        self.nodes[0].SetRestraints(res1)
+        self.nodes[1].SetRestraints(res3)
         #nodes[5].SetRestraints(res1)
         #releases
         #beams[3].releaseJ[4] = True
-        beams[3].releaseJ[5] = True
+#        self.beams[3].releaseJ[5] = True
         #*************************************************Modeling**************************************************/
 
     def Assemble(self):
@@ -64,10 +64,10 @@ class Model:
         """
         nid = 0
         # Dynamic space allocate
-        Kmat = sp.csc_matrix((len(nodes)*6, len(nodes)*6))
-        Mmat = sp.csc_matrix((len(nodes)*6, len(nodes)*6))
-        Fvec = sp.csc_matrix((len(nodes)*6, 1))
-        Dvec = sp.csc_matrix((len(nodes)*6, 1))
+        Kmat = sp.csc_matrix((len(self.nodes)*6, len(self.nodes)*6))
+        Mmat = sp.csc_matrix((len(self.nodes)*6, len(self.nodes)*6))
+        Fvec = sp.csc_matrix((len(self.nodes)*6, 1))
+        Dvec = sp.csc_matrix((len(self.nodes)*6, 1))
 
         #Nodal load and displacement, and reset the index
         for node in self.nodes:
@@ -81,8 +81,7 @@ class Model:
         nid = 0
         #Beam load and displacement, and reset the index
         for beam in self.beams:
-            beam.id = nid
-            Beam* beam = *it
+            beam.Id = nid
             i = beam.nodeI.id
             j = beam.nodeJ.id
             T=sp.csc_matrix(beam.TransformMatrix())
@@ -90,7 +89,7 @@ class Model:
 
             #Transform matrix
             Vl=np.matrix(beam.localCsys.TransformMatrix())
-            V=zeros(6, 6)
+            V=np.zeros(6, 6)
             V[:3,:3] =V[3:,3:]= Vl
             Vt = V.t()
 
@@ -149,7 +148,7 @@ class Model:
         f = self.Fvec
         Id=np.zeros(len(f))
         for i in len(f):
-            Id(i) = i
+            Id[i] = i
         nRemoved = 0
         for node in self.nodes:
             i = node.Id
@@ -199,7 +198,7 @@ class Model:
         K_bar = sp_mat()
         F_bar = vec()
         index = vec()
-        EliminateMatrix(K_bar, F_bar, index)
+        self.EliminateMatrix(K_bar, F_bar, index)
         try:
             #sparse matrix solution
             delta_bar = spsolve(K_bar, F_bar)
@@ -234,9 +233,9 @@ class Model:
                 fij = Kij_bar * uij + beam.NodalForce()
                 for i in range(6):
                     if beam.releaseI[i] == True:
-                        fij(i) = 0
+                        fij[i] = 0
                     if beam.releaseJ[i] == True:
-                        fij(i + 6) = 0
+                        fij[i + 6] = 0
                 f[beam.id * 12:beam.id * 12 + 11] = fij
             for n in range(len(nodes)):
                 print("Disp of node "+str(n)+':')
@@ -356,8 +355,11 @@ class Model:
 #    }
 
     def SetMass(self):
-        for beam in beams:
+        for beam in self.beams:
             beam.nodeI.mass += beam.section.A*beam.section.material.gamma*beam.Length() / 2
             beam.nodeJ.mass += beam.section.A*beam.section.material.gamma*beam.Length() / 2
         return False
-}
+        
+m=Model(1)
+m.Assemble()
+m.SolveLinear()

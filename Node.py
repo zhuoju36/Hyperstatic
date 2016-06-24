@@ -16,6 +16,7 @@ class Node:
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
         self.localCsys=CoordinateSystem.CoordinateSystem(o,pt1,pt2)
+        self.load=[False,False,False,False,False,False]
         
     def TransformMatrix(self):
         V=self.localCsys.TransformMatrix()
