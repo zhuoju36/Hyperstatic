@@ -7,10 +7,16 @@ Created on Fri Jun 24 16:26:46 2016
 import sqlite3
 
 class DataManager:
-    def Connect(self,db):
+    def __init__(self,db):
+        self.db=db
+        
+    def Connect(self):
         try:
-            self.conn = sqlite3.connect(db)
+            self.conn = sqlite3.connect(self.db)
         except:
             print('error')
     def Close(self):
         self.conn.close()
+        
+
+    

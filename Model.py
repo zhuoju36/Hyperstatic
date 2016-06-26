@@ -64,16 +64,16 @@ class Model:
         """
         nid = 0
         # Dynamic space allocate
-        Kmat = sp.csc_matrix((len(self.nodes)*6, len(self.nodes)*6))
-        Mmat = sp.csc_matrix((len(self.nodes)*6, len(self.nodes)*6))
-        Fvec = sp.csc_matrix((len(self.nodes)*6, 1))
-        Dvec = sp.csc_matrix((len(self.nodes)*6, 1))
+        Kmat = sp.bsr_matrix((len(self.nodes)*6, len(self.nodes)*6))
+        Mmat = sp.bsr_matrix((len(self.nodes)*6, len(self.nodes)*6))
+        Fvec = sp.bsr_matrix((len(self.nodes)*6, 1))
+        Dvec = sp.bsr_matrix((len(self.nodes)*6, 1))
 
         #Nodal load and displacement, and reset the index
         for node in self.nodes:
             node.id = nid
             load = np.array(node.load)
-            Fvec[nid * 6: nid * 6 + 5] = node.TransformMatrix().transpose()*load
+            Fvec[nid * 6: nid * 6 + 6] = node.TransformMatrix().transpose()*load
             for i in range(6):
                 if node.disp[i] != 0:
                     Dvec[nid * 6 + i] = node.disp[i]
@@ -84,7 +84,7 @@ class Model:
             beam.Id = nid
             i = beam.nodeI.id
             j = beam.nodeJ.id
-            T=sp.csc_matrix(beam.TransformMatrix())
+            T=sp.bsr_matrix(beam.TransformMatrix())
             Tt = T.t()
 
             #Transform matrix
@@ -94,9 +94,9 @@ class Model:
             Vt = V.t()
 
             #Static condensation to consider releases
-            Kij=sp.csc_matrix((12, 12))
-            Mij=sp.csc_matrix((12, 12))
-            rij=sp.csc_matrix((12))
+            Kij=sp.bsr_matrix((12, 12))
+            Mij=sp.bsr_matrix((12, 12))
+            rij=sp.bsr_matrix((12))
             beam.StaticCondensation(Kij, Mij, rij)
 
             #Assemble nodal force vector
@@ -138,60 +138,58 @@ class Model:
     def F(self):
         return self.Fvec
 
-    def EliminateMatrix(self, K_bar, F_bar, index):
+    def EliminateMatrix(self, mass=False):
         """
-        K_bar: sparse matrix
-        F_bar: sparse matrix
-        index: vector
-        """
-        k = self.Kmat
-        f = self.Fvec
-        Id=np.zeros(len(f))
-        for i in len(f):
-            Id[i] = i
-        nRemoved = 0
-        for node in self.nodes:
-            i = node.Id
-            for j in range(6):
-                if node.restraints[j] == True or node.disp[j] != 0:
-                    k.shed_col(i * 6 + j - nRemoved)
-                    k.shed_row(i * 6 + j - nRemoved)
-                    f.shed_row(i * 6 + j - nRemoved)
-                    Id.shed_row(i * 6 + j - nRemoved)
-                    nRemoved+=1
-        K_bar = k
-        F_bar = f
-        index = Id
-
-    def EliminateMatrix(self, K_bar, M_bar, F_bar, index):
-        """
+        return 
         K_bar: sparse matrix
         F_bar: sparse matrix
         M_bar: sparse matrix
         index: vector
         """
-        k = self.Kmat
-        m = self.Mmat
-        f = self.Fvec
-        Id=np.zeros(len(f))
-        for i in range(len(f)):
-            Id[i] = i
-        nRemoved = 0
-        for node in nodes:
-            i = node.Id
-            for j in range(6):
-                if node.restraints[j] == True or node.disp[j] != 0:
-                    k.shed_col(i * 6 + j - nRemoved)
-                    k.shed_row(i * 6 + j - nRemoved)
-                    f.shed_row(i * 6 + j - nRemoved)
-                    m.shed_col(i * 6 + j - nRemoved)
-                    m.shed_row(i * 6 + j - nRemoved)
-                    Id.shed_row(i * 6 + j - nRemoved)
-                    nRemoved+=1
-        K_bar = k
-        M_bar = m
-        F_bar = f
-        index = Id
+        if mass==False:
+            k = self.Kmat
+            f = self.Fvec
+            Id=np.zeros(len(f))
+            for i in len(f):
+                Id[i] = i
+            nRemoved = 0
+            for node in self.nodes:
+                i = node.Id
+                for j in range(6):
+                    if node.restraints[j] == True or node.disp[j] != 0:
+                        k.shed_col(i * 6 + j - nRemoved)
+                        k.shed_row(i * 6 + j - nRemoved)
+                        f.shed_row(i * 6 + j - nRemoved)
+                        Id.shed_row(i * 6 + j - nRemoved)
+                        nRemoved+=1
+            K_bar = k
+            F_bar = f
+            index = Id
+            return K_bar,None,F_bar,index
+        else:
+            k = self.Kmat
+            m = self.Mmat
+            f = self.Fvec
+            Id=np.zeros(len(f))
+            for i in range(len(f)):
+                Id[i] = i
+            nRemoved = 0
+            for node in self.nodes:
+                i = node.Id
+                for j in range(6):
+                    if node.restraints[j] == True or node.disp[j] != 0:
+                        k.shed_col(i * 6 + j - nRemoved)
+                        k.shed_row(i * 6 + j - nRemoved)
+                        f.shed_row(i * 6 + j - nRemoved)
+                        m.shed_col(i * 6 + j - nRemoved)
+                        m.shed_row(i * 6 + j - nRemoved)
+                        Id.shed_row(i * 6 + j - nRemoved)
+                        nRemoved+=1
+            K_bar = k
+            M_bar = m
+            F_bar = f
+            index = Id
+            return K_bar,M_bar,F_bar,index
 
     def SolveLinear(self):
         self.Assemble()
@@ -219,8 +217,8 @@ class Model:
 
             #calculate element displacement and forces
             for beam in beams:
-                Kij_bar=sp.csc_matrix(12, 12)
-                rij_bar=sp.csc_matrix(12,1)
+                Kij_bar=sp.bsr_matrix(12, 12)
+                rij_bar=sp.bsr_matrix(12,1)
                 beam.StaticCondensation(Kij_bar, rij_bar)
                 uij=np.zeros(12)
                 fij=np.zeros(12)
