@@ -10,6 +10,9 @@ class DataManager:
     def __init__(self,db):
         self.db=db
         
+    def __del__(self):
+        self.Close()
+        
     def Connect(self):
         try:
             self.conn = sqlite3.connect(self.db)

@@ -16,7 +16,9 @@ class Node:
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
         self.localCsys=CoordinateSystem.CoordinateSystem(o,pt1,pt2)
-        self.load=[False,False,False,False,False,False]
+        self.restraints=[False]*6
+        self.load=[False]*6
+        self.disp=[False]*6
         
     def TransformMatrix(self):
         V=self.localCsys.TransformMatrix()
@@ -43,4 +45,4 @@ class Node:
         """
         res: a boolean vector indicates a nodal displacement.
         """
-        self.res=res
+        self.restraints=res

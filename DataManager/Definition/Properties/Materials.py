@@ -11,29 +11,28 @@ sys.path.append('..')
 from DataManager import DataManager
 import pandas as pd
 
-class Nodes(DataManager):
+class Materials(DataManager):
     def __init__(self,db):
         DataManager.__init__(self,db)
     
     def CreateTable(self):
-        sql='CREATE TABLE Node_Coordinates (\
-        Name TEXT UNIQUE PRIMARY KEY, \
-        CoordSys TEXT, \
-        CoordType TEXT, \
-        X REAL, \
-        Y REAL, \
-        Z REAL)'
-
         cu=self.conn.cursor()
+        sql=[]
+        sql.append(
+        'CREATE TABLE Material_Properties_General (\
+        Name TEXT UNIQUE PRIMARY KEY, \
+        Type TEXT, \
+        SymType TEXT, \
+        TempDepend TEXT, \
+        Color REAL)'
+        )
         cu.execute(sql)
         
     def AddCartesian(self,nodes):
         cu=self.conn.cursor()
-        sql='INSERT INTO Node_Coordinates VALUES (?,?,?,?,?,?)'
-        args=[]
         for node in nodes:
-            args.append((str(node.name),'Global','Cartesian',str(node.x),str(node.y),str(node.z)))
-        cu.executemany(sql,args)
+            val=(str(node.name),str(node.name),'Global','Cartesian',str(node.x),str(node.y),str(node.z))
+            cu.execute('INSERT INTO Node_Coordinates VALUES (?,?,?,?,?,?,?)',val)
         self.conn.commit()
                 
     def Count():

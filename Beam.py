@@ -12,6 +12,10 @@ class Beam:
     def __init__(self,i, j, sec):
         self.nodeI=i
         self.nodeJ=j
+        self.loadI=[False]*6
+        self.loadJ=[False]*6
+        self.releaseI=[False]*6
+        self.releaseJ=[False]*6
         self.section=sec
         tol = 1E-6
         #Initialize local CSys
@@ -34,47 +38,47 @@ class Beam:
         I3 = self.section.I33
         rho = self.section.material.gamma
 
-        Kij = np.zeros((12, 12))
-        Mij = np.zeros((12, 12))
+        self.Kij = np.zeros((12, 12))
+        self.Mij = np.zeros((12, 12))
 
         #form the stiffness matrix:
-        Kij[0, 0]=E*A / l
-        Kij[0, 6]=Kij[6, 0]=-E*A / l
+        self.Kij[0, 0]=E*A / l
+        self.Kij[0, 6]=self.Kij[6, 0]=-E*A / l
 
-        Kij[1, 1]=12 * E*I3 / l / l / l
-        Kij[1, 5]=Kij[5, 1]=6 * E*I3 / l / l
-        Kij[1, 7]=Kij[7, 1]=-12 * E*I3 / l / l / l
-        Kij[1, 11]=Kij[11, 1]=6 * E*I3 / l / l
+        self.Kij[1, 1]=12 * E*I3 / l / l / l
+        self.Kij[1, 5]=self.Kij[5, 1]=6 * E*I3 / l / l
+        self.Kij[1, 7]=self.Kij[7, 1]=-12 * E*I3 / l / l / l
+        self.Kij[1, 11]=self.Kij[11, 1]=6 * E*I3 / l / l
 
-        Kij[2, 2]=12 * E*I2 / l / l / l
-        Kij[2, 4]=Kij[4, 2]=-6 * E*I2 / l / l
-        Kij[2, 8]=Kij[8, 2]=-12 * E*I2 / l / l / l
-        Kij[2, 10]=Kij[10, 2]=-6 * E*I2 / l / l
+        self.Kij[2, 2]=12 * E*I2 / l / l / l
+        self.Kij[2, 4]=self.Kij[4, 2]=-6 * E*I2 / l / l
+        self.Kij[2, 8]=self.Kij[8, 2]=-12 * E*I2 / l / l / l
+        self.Kij[2, 10]=self.Kij[10, 2]=-6 * E*I2 / l / l
 
-        Kij[3, 3]=G*J / l
-        Kij[3, 9]=Kij[9, 3]=-G*J / l
+        self.Kij[3, 3]=G*J / l
+        self.Kij[3, 9]=self.Kij[9, 3]=-G*J / l
 
-        Kij[4, 4]=4 * E*I2 / l
-        Kij[4, 8]=Kij[8, 4]=6 * E*I2 / l / l
-        Kij[4, 10]=Kij[10, 4]=2 * E*I2 / l
+        self.Kij[4, 4]=4 * E*I2 / l
+        self.Kij[4, 8]=self.Kij[8, 4]=6 * E*I2 / l / l
+        self.Kij[4, 10]=self.Kij[10, 4]=2 * E*I2 / l
 
-        Kij[5, 5]=4 * E*I3 / l
-        Kij[5, 7]=Kij[7, 5]=-6 * E*I3 / l / l
-        Kij[5, 11]=Kij[11, 5]=2 * E*I3 / l
+        self.Kij[5, 5]=4 * E*I3 / l
+        self.Kij[5, 7]=self.Kij[7, 5]=-6 * E*I3 / l / l
+        self.Kij[5, 11]=self.Kij[11, 5]=2 * E*I3 / l
 
-        Kij[6, 6]=E*A / l
+        self.Kij[6, 6]=E*A / l
 
-        Kij[7, 7]=12 * E*I3 / l / l / l
-        Kij[7, 11]=Kij[11, 7]=-6 * E*I3 / l / l
+        self.Kij[7, 7]=12 * E*I3 / l / l / l
+        self.Kij[7, 11]=self.Kij[11, 7]=-6 * E*I3 / l / l
 
-        Kij[8, 8]=12 * E*I2 / l / l / l
-        Kij[8, 10]=Kij[10, 8]=6 * E*I2 / l / l
+        self.Kij[8, 8]=12 * E*I2 / l / l / l
+        self.Kij[8, 10]=self.Kij[10, 8]=6 * E*I2 / l / l
 
-        Kij[9, 9]=G*J / l
+        self.Kij[9, 9]=G*J / l
 
-        Kij[10, 10]=4 * E*I2 / l
+        self.Kij[10, 10]=4 * E*I2 / l
 
-        Kij[11, 11]=4 * E*I3 / l
+        self.Kij[11, 11]=4 * E*I3 / l
 
         #form mass matrix    
         ##Coordinated mass matrix
@@ -120,8 +124,8 @@ class Beam:
 
         #Concentrated mass matrix
         for i in range(12):
-            Mij[i, i]=1
-        Mij*=rho*A*l/2
+            self.Mij[i, i]=1
+        self.Mij*=rho*A*l/2
 
     def InitializeCsys(self):
         nodeI=self.nodeI
@@ -238,14 +242,14 @@ class Beam:
     def LocalMassMatrix(self):
         return self.Mij
 
-    def StaticCondensation(self, kij_bar, rij_bar, mij_bar=0):
+    def StaticCondensation(self, kij_bar, rij_bar, mij_bar=None):
         """
-        kij_bar: 12x12 sparse matrix
-        rij_bar: 12x1  sparse vector
-        mij_bar: 12x12 sparse matrix, if mij_bar==0, mass matrix will not be considered
+        kij_bar: 12x12 matrix
+        rij_bar: 12x1 vector
+        mij_bar: 12x12 matrix, if mij_bar==None, mass matrix will not be considered
         return???refer????
         """
-        if mij_bar==0:
+        if mij_bar is None:
             kij=self.Kij
             rij=self.NodalForce()
             kij_bar = kij
@@ -262,6 +266,7 @@ class Beam:
                         for j in range(12):
                             kij_bar[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
                         rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
+            return kij_bar, rij_bar
         else:
             kij=self.Kij
             mij=self.Mij
@@ -283,12 +288,11 @@ class Beam:
                             kij_bar[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
                             mij_bar[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
                         rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
-        return True
+            return kij_bar, rij_bar, mij_bar
 
     def CalculateElmForce(self,uij,fij):
         """
         uij,fij: 12x1 sparse vector
-        return???refer????
         """
         fij = np.zeros(12)
         Kij = sp.csc_matrix(12, 12)
@@ -310,14 +314,15 @@ class Beam:
         self.loadI=qi
         self.loadJ=qj
 
-import Node
-import Material
-import Section
 
-m = Material.Material(2.000E11, 0.3, 7849.0474, 1.17e-5)
-s = Section.Section(m, 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6)
-n1=Node.Node(1,2,3)
-n2=Node.Node(2,3,4)
-b=Beam(n1,n2,s)
+if __name__=='__main__':
+    import Node
+    import Material
+    import Section
+    m = Material.Material(2.000E11, 0.3, 7849.0474, 1.17e-5)
+    s = Section.Section(m, 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6)
+    n1=Node.Node(1,2,3)
+    n2=Node.Node(2,3,4)
+    b=Beam(n1,n2,s)
     
     
