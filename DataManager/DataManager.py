@@ -16,8 +16,9 @@ class DataManager:
     def Connect(self):
         try:
             self.conn = sqlite3.connect(self.db)
-        except:
-            print('error')
+        except Exception as e:
+            print('error:'+str(e))
+        
     def Close(self):
         self.conn.close()
         

@@ -4,54 +4,22 @@ Created on Thu Jun 23 21:32:57 2016
 
 @author: HZJ
 """
+import sqlite3
 import numpy as np
 import scipy.sparse as sp
 from scipy import linalg
-import Material
-import Section
-import Node
-import Beam
+import Material,Section,Node,Beam
+import DataManager.Definition as dd
+import DataManager.Modeling.Nodes as dmn
+import DataManager.Definition.Properties.Materials as ddpm
+import DataManager.Definition.Properties.BeamSections as ddpb
 
 class Model:
-    def __init__(self,file):
-#        DBParser dp
-#        dp.OpenDataBase(file.c_str())
-#        dp.GetModel(materials, sections, nodes, beams)
-#        dp.CloseDataBase()
-        #*************************************************Modeling**************************************************/
-        #Q345
-        self.materials=[]
-        self.sections=[]
-        self.nodes=[]
-        self.beams=[]
+    def __init__(self,db):
+        self.database=db
         
-        self.materials.append(Material.Material(2.000E11, 0.3, 7849.0474, 1.17e-5))
-        #H200x150x8x10
-        self.sections.append(Section.Section(self.materials[0], 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6))
-        self.nodes.append(Node.Node(0, 0, 0))
-        self.nodes.append(Node.Node(5, 0, 0))
-        for i in range(len(self.nodes)-1):
-            self.beams.append(Beam.Beam(self.nodes[i], self.nodes[i+1], self.sections[0]))
-        #loads
-        #double f[6] = { 0,0,-100000,0,0,0 }
-        qi=(0,0,-10,0,0,0)
-        qj=(0,0,-10,0,0,0)
-        #double d[6] = { 1,0,0,0,0,0 }
-        self.beams[0].SetLoadDistributed(qi, qj)
-        #beams[3].SetLoadDistributed(qi, qj)
-        #nodes[3].SetLoad(f)
-        #nodes[0].SetDisp(d)
-        #supports
-        res1 = [True]*6
-        res2 = [False]*6
-        res3 = [False,True, True, True, True, True ]
-        self.nodes[0].SetRestraints(res1)
-        self.nodes[1].SetRestraints(res2)
-        #nodes[5].SetRestraints(res1)
-        #releases
-        #beams[3].releaseJ[4] = True
-#        self.beams[3].releaseJ[5] = True
-        #*************************************************Modeling**************************************************/
+    def Save(self):
+        return
 
     def Assemble(self):
         """
@@ -100,7 +68,7 @@ class Model:
             self.Fvec[j*6:j*6+6] += np.dot(Vt,rij[6:])
 
             #Assemble Total Stiffness Matrix
-            Ke = Tt*Kij*T
+            Ke = np.dot(np.dot(Tt,Kij),T)
             Keii = Ke[:6,:6]
             Keij = Ke[:6,6:]
             Keji = Ke[6:,:6]
@@ -111,7 +79,7 @@ class Model:
             self.Kmat[j*6:j*6+6, j*6:j*6+6] += Kejj
 
             #Assembel Mass Matrix        
-            Me = Tt*Mij*T
+            Me = np.dot(np.dot(Tt,Mij),T)
             Meii = Me[:6,:6]
             Meij = Me[:6,6:]
             Meji = Me[6:,:6]
@@ -171,12 +139,12 @@ class Model:
                 i = node.Id
                 for j in range(6):
                     if node.restraints[j] == True or node.disp[j]!=0:
-                        k=np.delete(k,i * 6 + j - nRemoved,axis=0)
-                        k=np.delete(k,i * 6 + j - nRemoved,axis=1)
-                        f=np.delete(f,i * 6 + j - nRemoved)
-                        m=np.delete(m,i * 6 + j - nRemoved,axis=0)
-                        m=np.delete(m,i * 6 + j - nRemoved,axis=1)
-                        Id=np.delete(Id,i * 6 + j - nRemoved)
+                        k=np.delete(k,i*6+j-nRemoved,axis=0)
+                        k=np.delete(k,i*6+j-nRemoved,axis=1)
+                        f=np.delete(f,i*6+j-nRemoved)
+                        m=np.delete(m,i*6+j-nRemoved,axis=0)
+                        m=np.delete(m,i*6+j-nRemoved,axis=1)
+                        Id=np.delete(Id,i*6+j-nRemoved)
                         nRemoved+=1
             K_bar = k
             M_bar = m
@@ -189,15 +157,12 @@ class Model:
         K_bar,F_bar,index = self.EliminateMatrix()
         try:
             #sparse matrix solution            
-            print(K_bar.shape)
-            print(F_bar.shape)
-            delta_bar = linalg.inv(K_bar).dot(F_bar)
+            delta_bar = linalg.solve(K_bar,F_bar)
             
             delta = delta_bar
             f=np.zeros(len(self.beams)*12)
            
             #fill original displacement vector
-            print(index)
             prev = 0
             for idx in index:
                 gap=idx-prev
@@ -206,7 +171,6 @@ class Model:
                 prev = idx + 1               
                 if idx==index[-1] and idx!=len(self.nodes)-1:
                     delta = np.insert(delta,prev, [0]*(len(self.nodes)*6-prev))
-            print(delta)
             delta += self.Dvec
 
             #calculate element displacement and forces
@@ -243,7 +207,6 @@ class Model:
                         bid=i
                     i+=1
                 f[bid*12:bid*12+12] = fij
-                print('I am here!!!')
             for n in range(len(self.nodes)):
                 print("Disp of node "+str(n)+':')
                 for i in range(n * 6,n * 6 + 6):
@@ -368,7 +331,62 @@ class Model:
             beam.nodeJ.mass += beam.section.A*beam.section.material.gamma*beam.Length() / 2
         return False
         
+    def Test(self):
+        #*************************************************Modeling**************************************************/
+        #Q345
+        self.materials=[]
+        self.sections=[]
+        self.nodes=[]
+        self.beams=[]
+        
+        self.materials.append(Material.Material(2.000E11, 0.3, 7849.0474, 1.17e-5))
+        #H200x150x8x10
+        self.sections.append(Section.Section(self.materials[0], 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6))
+        self.nodes.append(Node.Node(0, 0, 0))
+        self.nodes.append(Node.Node(5, 0, 0))
+        for i in range(len(self.nodes)-1):
+            self.beams.append(Beam.Beam(self.nodes[i], self.nodes[i+1], self.sections[0]))
+        #loads
+        #double f[6] = { 0,0,-100000,0,0,0 }
+        qi=(0,0,-10,0,0,0)
+        qj=(0,0,-10,0,0,0)
+        #double d[6] = { 1,0,0,0,0,0 }
+        self.beams[0].SetLoadDistributed(qi, qj)
+        #beams[3].SetLoadDistributed(qi, qj)
+        #nodes[3].SetLoad(f)
+        #nodes[0].SetDisp(d)
+        #supports
+        res1 = [True]*6
+        res2 = [False]*6
+        res3 = [False,True, True, True, True, True ]
+        self.nodes[0].SetRestraints(res1)
+        self.nodes[1].SetRestraints(res2)
+        #nodes[5].SetRestraints(res1)
+        #releases
+        #beams[3].releaseJ[4] = True
+#        self.beams[3].releaseJ[5] = True
+        #*************************************************Modeling**************************************************/
+        ID=0
+        ns=[]
+        for node in self.nodes:
+            ns.append([ID,node.x,node.y,node.z])
+            ID+=1
+        conn=sqlite3.connect(self.database)
+        try:
+            dmn.CreateTable(conn)
+            dmn.AddCartesian(conn,ns)
+            
+            ddpm.CreateTable(conn)
+            ddpm.AddQuick(conn,'GB','Q345')
+            
+            ddpb.CreateTable(conn)
+            ddpb.AddQuick(conn,'Q345','H400x200x12x14')
+        finally:
+            conn.close()
+        
+        
 if __name__=='__main__':        
-    m=Model(1)
+    m=Model('F:\\Test.sqlite')
+    m.Test()
     m.Assemble()
     m.SolveLinear()
