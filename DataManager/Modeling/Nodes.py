@@ -8,7 +8,7 @@ Created on Fri Jun 24 16:32:51 2016
 import pandas as pd
 
     
-def CreateTable(conn):
+def CreateTable(conn,commit=True):
     sql='CREATE TABLE IF NOT EXISTS Node_Coordinates(\
     Name TEXT UNIQUE PRIMARY KEY, \
     CoordSys TEXT, \
@@ -18,9 +18,11 @@ def CreateTable(conn):
     Z REAL)'
     cu=conn.cursor()
     cu.execute(sql)
-    cu.close()
+    cu.close
+    if commit:
+        conn.commit()
     
-def AddCartesian(conn,nodes):
+def AddCartesian(conn,nodes,commit=True):
     """
     conn: sqlite database connection
     nodes: a list of tuples in (name,x,y,z)
@@ -31,8 +33,9 @@ def AddCartesian(conn,nodes):
     for node in nodes:
         args.append((str(node[0]),'Global','Cartesian',str(node[1]),str(node[2]),str(node[3])))
     cu.executemany(sql,args)
-    conn.commit()
-    cu.close()
+    cu.close
+    if commit:
+        conn.commit()
             
 def Count():
     return False

@@ -5,7 +5,7 @@ Created on Fri Jun 24 16:32:51 2016
 @author: huan
 """
     
-def CreateTable(conn):
+def CreateTable(conn,commit=True):
     cu=conn.cursor()
     sqls=[]
     sqls.append(
@@ -42,9 +42,11 @@ def CreateTable(conn):
     )
     for sql in sqls:
         cu.execute(sql)
-    conn.commit()
+    cu.close
+    if commit:
+        conn.commit()
 
-def AddQuick(conn,std,grade):
+def AddQuick(conn,std,grade,commit=True):
     """
     std： GB as Chinese standard
     """
@@ -57,6 +59,8 @@ def AddQuick(conn,std,grade):
             cu.execute('INSERT INTO Material_Properties_General VALUES (?,?,?,?,?)',mpg)
             cu.execute('INSERT INTO Material_Properties_Basic_Mechanical VALUES (?,?,?,?,?,?,?)',mpb)
             cu.execute('INSERT INTO Material_Properties_Steel VALUES (?,?,?,?,?,?,?,?,?,?,?)',mps)
-    conn.commit()
+    cu.close
+    if commit:
+        conn.commit()
             
             

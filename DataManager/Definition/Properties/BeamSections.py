@@ -4,8 +4,9 @@ Created on Tue Jun 28 22:13:07 2016
 
 @author: HZJ
 """
+import SectionParameters
 
-def CreateTable(conn):
+def CreateTable(conn,commit=True):
     cu=conn.cursor()
     sqls=[]
     sqls.append(
@@ -42,18 +43,19 @@ def CreateTable(conn):
     GUID TEXT, \
     Notes TEXT)'
     )
-
     for sql in sqls:
         cu.execute(sql)
-    conn.commit()
+    if commit:
+        conn.commit()
 
-def AddQuick(conn,material,profile):
+def AddQuick(conn,material,profile,commit=True):
     """
-    profile: H400x200x10x12
+    profile: format like H400x200x10x12
     """
     cu=conn.cursor()
     if profile[0]=='H':
         size=profile[1:].split('x')
+        section=SectionParameters.IProfile(size[0],size[1],size[3],size[2])
         rec=(
         profile,
         material,
@@ -62,10 +64,10 @@ def AddQuick(conn,material,profile):
         str(size[1]),
         str(size[3]),
         str(size[2]),
-        0,#Area REAL, \
-        0,#TorsConst REAL, \
-        0,#I33 REAL, \
-        0,#I22 REAL, \
+        str(section.A),#Area REAL, \
+        str(section.J),#TorsConst REAL, \
+        str(section.I33),#I33 REAL, \
+        str(section.I22),#I22 REAL, \
         0,#AS2 REAL, \
         0,#AS3 REAL, \
         0,#S33 REAL, \
@@ -88,4 +90,7 @@ def AddQuick(conn,material,profile):
         '0',#Notes TEXT
         )
         cu.execute('INSERT INTO Beam_Prop_General VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',rec)
-    conn.commit()
+    cu.close()
+    if commit:
+        conn.commit()
+    

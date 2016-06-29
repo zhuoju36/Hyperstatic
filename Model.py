@@ -102,7 +102,7 @@ class Model:
     def F(self):
         return self.Fvec
 
-    def EliminateMatrix(self, mass=None):
+    def EliminateMatrix(self, mass=True):
         """
         return 
         K_bar: sparse matrix
@@ -110,7 +110,7 @@ class Model:
         M_bar: sparse matrix
         index: vector
         """
-        if mass==None:
+        if mass==False:
             k = self.Kmat
             f = self.Fvec
             Id=np.arange(len(f))
@@ -180,6 +180,7 @@ class Model:
                 Kij_bar,rij_bar=beam.StaticCondensation(Kij_bar, rij_bar)
                 uij=np.zeros(12)
                 fij=np.zeros(12)
+                
                 i=0
                 for node in self.nodes:
                     if node is beam.nodeI:
@@ -201,6 +202,7 @@ class Model:
                         fij[i] = 0
                     if beam.releaseJ[i] == True:
                         fij[i + 6] = 0
+                #beam.ID
                 i=0
                 for b in self.beams:
                     if beam is b:
@@ -221,109 +223,82 @@ class Model:
             return False
         return True
 
-#    def SolveModal(self)
-#    {
-#        self.Assemble()
-#        sp_mat K_bar = sp_mat()
-#        sp_mat M_bar = sp_mat()
-#        vec F_bar = vec()
-#        vec index = vec()
-#        EliminateMatrix(K_bar, M_bar, F_bar, index)
-#
-#        try
-#        {
-#            #general eigen solution, should be optimized later!!
-#            mat A(K_bar)
-#            mat B(M_bar)
-#            mat P = chol(B)
-#            sp_mat S(P.i().t()*K_bar*P.i())
-#            vec omega2
-#            mat mode
-#
-#            ##############TEST##############
-#            mat k = B
-#            #cout.setf(ios::scientific)
-#            for (int i = 0 i < k.n_rows i++)
-#            {
-#                for (int j = 0 j < k.n_cols j++)
-#                {
-#                    cout.width(6)
-#                    cout.precision(4)
-#                    cout.setf(ios::right)
-#                    cout << k(i, j) << "  "
-#                }
-#                cout << endl
-#            }
-#            cout << endl
-#            ##############TEST##############
-#
-#
-#            cx_vec oega2 = eig_pair(A, B)
-#            #eigs_sym(omega2, mode, S, 1,"sm")
-#            #omega.for_each([](mat::elem_type& val) { std::sqrt(val) })
-#            for (vec::iterator it = omega2.end() it != omega2.begin() it--)
-#                cout << 2 * 3.14 / sqrt(*it) << endl
-#
-#            #extract vibration mode
-#            vec delta_bar = normalise(mode.col(0))
-#            vec delta(delta_bar)
-#            vec f(self.beams.size() * 12, 1, fill::zeros)
-#
-#            #fill original displacement vector
-#            int prev = 0
-#            for (vec::iterator it = index.begin() it != index.end())
-#            {
-#                int gap = int(*it) - prev
-#                if (gap > 0)
-#                    delta.insert_rows(prev, gap)
-#                prev = int(*it) + 1
-#                it++
-#                if (it == index.end() and *it != nodes.size() - 1)
-#                    delta.insert_rows(prev, nodes.size() * 6 - prev)
-#            }
-#            delta += *Dvec
-#
-#            #calculate element displacement and forces
-#            for (vector<Beam*>::iterator it = beams.begin() it != beams.end() it++)
-#            {
-#                sp_mat Kij_bar(12, 12)
-#                sp_vec rij_bar(12)
-#                (*it).StaticCondensation(Kij_bar, rij_bar)
-#                vec::fixed<12> uij(fill::zeros)
-#                vec::fixed<12> fij(fill::zeros)
-#                int iend = (*it).nodeI.id
-#                int jend = (*it).nodeJ.id
-#                uij[0, 0, SizeMat(6, 1)) = delta.subvec(iend * 6, iend * 6 + 5)
-#                uij[6, 0, SizeMat(6, 1)) = delta.subvec(jend * 6, jend * 6 + 5)
-#                uij = (*it).TransformMatrix()*uij
-#
-#                fij = Kij_bar * uij + (*it).NodalForce()
-#                for (int i = 0 i < 6 i++)
-#                {
-#                    if ((*it).releaseI[i] == True)
-#                        fij(i) = 0
-#                    if ((*it).releaseJ[i] == True)
-#                        fij(i + 6) = 0
-#                }
-#                f.subvec((*it).id * 12, (*it).id * 12 + 11) = fij
-#            }
-#            for (int n = 0 n < nodes.size() n++)
-#            {
-#                cout << "Disp of node " << n << ':' << endl
-#                for (int i = n * 6 i < n * 6 + 6 i++)
-#                    cout << "delta[" << i - n * 6 << "]=" << delta[i] << endl
-#                cout << endl
-#            }
-#
-#            for n in range(len(beams))
-#                cout << "Force of beam " << n << ':' << endl
-#                for (int i = n * 12 i < n * 12 + 12 i++)
-#                    cout << "f[" << i - n * 12 << "]=" << f[i] << endl
-#                cout << endl
-#        except Exception as e
-#            return False
-#        return True
-#    }
+    def SolveModal(self):
+        self.Assemble()
+        K_bar,M_bar,F_bar,index = self.EliminateMatrix(True)
+
+        try:
+            #general eigen solution, should be optimized later!!
+            mat A(K_bar)
+            mat B(M_bar)
+            mat P = chol(B)
+            S=np.dot(np.dot(P.I.T,K_bar),P.I)
+            vec omega2
+            mat mode
+
+            cx_vec oega2s = eig_pair(A, B)
+            #eigs_sym(omega2, mode, S, 1,"sm")
+            #omega.for_each([](mat::elem_type& val) { std::sqrt(val) })
+            for omega2 in omega2s:
+                print(2*3.14/sqrt(*it))
+
+            #extract vibration mode
+            delta_bar = normalise(mode.col(0))
+            delta=delta_bar
+            f=np.zeros(len(self.beams)*12)
+
+            #fill original displacement vector
+            prev = 0
+            for idx in index:
+                gap=idx-prev
+                if gap>0:
+                    delta=np.insert(delta,prev,[0]*gap)
+                prev = idx + 1               
+                if idx==index[-1] and idx!=len(self.nodes)-1:
+                    delta = np.insert(delta,prev, [0]*(len(self.nodes)*6-prev))
+            delta += self.Dvec
+
+            #calculate element displacement and forces
+            for beam in self.beams:
+                sp_mat Kij_bar(12, 12)
+                sp_vec rij_bar(12)
+                Kij_bar,rij_bar=beam.StaticCondensation(Kij_bar,rij_bar)
+                uij=np.zeros(12)
+                fij=np.zeros(12)
+                
+                i=0
+                for node in self.nodes:
+                    if node is beam.nodeI:
+                        iend=i
+                    i+=1
+                i=0
+                for node in self.nodes:
+                    if node is beam.nodeJ:
+                        jend=i
+                    i+=1
+                    
+                uij[:6]=delta[iend*6:iend*6+6]
+                uij[6:]=delta[jend*6:jend*6+6]
+                uij = np.dot(beam.TransformMatrix(),uij)
+
+                fij = np.dot(Kij_bar,uij) + beam.NodalForce()
+                for (int i = 0 i < 6 i++)
+                    if beam.releaseI[i] == True:
+                        fij[i] = 0
+                    if beam.releaseJ[i] == True:
+                        fij[i + 6] = 0
+                f.subvec((*it).id * 12, (*it).id * 12 + 11) = fij
+            for n in range(len(self.nodes)):
+                print("Disp of node " +str(n)+ ':')
+                for i in range(n*6, n*6+6):
+                    print("delta["+str(i-n*6)+"]="+str(delta[i])
+            for n in range(len(beams))
+                print( "Force of beam "+str(n)+':'
+                for i in range(n*12, n*12 + 12):
+                    print("f[" +str(i-n*12)+"]=" +str(f[i])
+        except Exception as e
+            return False
+        return True
 
     def SetMass(self):
         for beam in self.beams:
@@ -386,7 +361,7 @@ class Model:
         
         
 if __name__=='__main__':        
-    m=Model('F:\\Test.sqlite')
+    m=Model('c:\\huan\\Test.sqlite')
     m.Test()
     m.Assemble()
     m.SolveLinear()
