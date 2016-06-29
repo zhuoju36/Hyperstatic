@@ -4,7 +4,7 @@ Created on Tue Jun 28 22:13:07 2016
 
 @author: HZJ
 """
-import SectionParameters
+import DataManager.Definition.Properties.SectionParameters as sp
 
 def CreateTable(conn,commit=True):
     cu=conn.cursor()
@@ -55,15 +55,19 @@ def AddQuick(conn,material,profile,commit=True):
     cu=conn.cursor()
     if profile[0]=='H':
         size=profile[1:].split('x')
-        section=SectionParameters.IProfile(size[0],size[1],size[3],size[2])
+        h=eval(size[0])
+        b=eval(size[1])
+        tw=eval(size[2])
+        tf=eval(size[3])
+        section=sp.IProfile(h,b,tw,tf)
         rec=(
         profile,
         material,
         'I',
-        str(size[0]),
-        str(size[1]),
-        str(size[3]),
-        str(size[2]),
+        size[0],
+        size[1],
+        size[3],
+        size[2],
         str(section.A),#Area REAL, \
         str(section.J),#TorsConst REAL, \
         str(section.I33),#I33 REAL, \

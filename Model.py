@@ -7,6 +7,7 @@ Created on Thu Jun 23 21:32:57 2016
 import sqlite3
 import numpy as np
 import scipy.sparse as sp
+import scipy.sparse.linalg as sl
 from scipy import linalg
 import Material,Section,Node,Beam
 import DataManager.Definition as dd
@@ -102,7 +103,7 @@ class Model:
     def F(self):
         return self.Fvec
 
-    def EliminateMatrix(self, mass=True):
+    def EliminateMatrix(self, mass=False):
         """
         return 
         K_bar: sparse matrix
@@ -135,8 +136,8 @@ class Model:
             f = self.Fvec
             Id=np.arange(len(f))
             nRemoved = 0
+            i=0
             for node in self.nodes:
-                i = node.Id
                 for j in range(6):
                     if node.restraints[j] == True or node.disp[j]!=0:
                         k=np.delete(k,i*6+j-nRemoved,axis=0)
@@ -146,6 +147,7 @@ class Model:
                         m=np.delete(m,i*6+j-nRemoved,axis=1)
                         Id=np.delete(Id,i*6+j-nRemoved)
                         nRemoved+=1
+                i+=1
             K_bar = k
             M_bar = m
             F_bar = f
@@ -223,30 +225,26 @@ class Model:
             return False
         return True
 
-    def SolveModal(self):
+    def SolveModal(self,k):
         self.Assemble()
         K_bar,M_bar,F_bar,index = self.EliminateMatrix(True)
 
         try:
             #general eigen solution, should be optimized later!!
-            mat A(K_bar)
-            mat B(M_bar)
-            mat P = chol(B)
-            S=np.dot(np.dot(P.I.T,K_bar),P.I)
-            vec omega2
-            mat mode
-
-            cx_vec oega2s = eig_pair(A, B)
-            #eigs_sym(omega2, mode, S, 1,"sm")
-            #omega.for_each([](mat::elem_type& val) { std::sqrt(val) })
+            A=sp.csr_matrix(K_bar)
+            B=sp.csr_matrix(M_bar)
+            
+            omega2s,mode = sl.eigsh(A,k,B)
+        
             for omega2 in omega2s:
-                print(2*3.14/sqrt(*it))
+                print(2*3.14/np.sqrt(omega2))
 
             #extract vibration mode
-            delta_bar = normalise(mode.col(0))
+            delta_bar = np.linalg.norm(mode)/np.linalg.norm(mode)
             delta=delta_bar
             f=np.zeros(len(self.beams)*12)
-
+            
+            print('HERE!!!!')
             #fill original displacement vector
             prev = 0
             for idx in index:
@@ -260,8 +258,8 @@ class Model:
 
             #calculate element displacement and forces
             for beam in self.beams:
-                sp_mat Kij_bar(12, 12)
-                sp_vec rij_bar(12)
+                Kij_bar=np.zeros((12, 12))
+                rij_bar=np.zeros(12)
                 Kij_bar,rij_bar=beam.StaticCondensation(Kij_bar,rij_bar)
                 uij=np.zeros(12)
                 fij=np.zeros(12)
@@ -276,27 +274,36 @@ class Model:
                     if node is beam.nodeJ:
                         jend=i
                     i+=1
-                    
+                
                 uij[:6]=delta[iend*6:iend*6+6]
                 uij[6:]=delta[jend*6:jend*6+6]
                 uij = np.dot(beam.TransformMatrix(),uij)
 
                 fij = np.dot(Kij_bar,uij) + beam.NodalForce()
-                for (int i = 0 i < 6 i++)
+                for i in range(6):
                     if beam.releaseI[i] == True:
                         fij[i] = 0
                     if beam.releaseJ[i] == True:
                         fij[i + 6] = 0
-                f.subvec((*it).id * 12, (*it).id * 12 + 11) = fij
+                
+                #beam.ID
+                i=0
+                for b in self.beams:
+                    if beam is b:
+                        bid=i
+                    i+=1  
+            
+                f[bid * 12,bid*12+12]=fij
             for n in range(len(self.nodes)):
                 print("Disp of node " +str(n)+ ':')
                 for i in range(n*6, n*6+6):
-                    print("delta["+str(i-n*6)+"]="+str(delta[i])
-            for n in range(len(beams))
-                print( "Force of beam "+str(n)+':'
+                    print("delta["+str(i-n*6)+"]="+str(delta[i]))
+            for n in range(len(self.beams)):
+                print( "Force of beam "+str(n)+':')
                 for i in range(n*12, n*12 + 12):
-                    print("f[" +str(i-n*12)+"]=" +str(f[i])
-        except Exception as e
+                    print("f[" +str(i-n*12)+"]=" +str(f[i]))
+        except Exception as e:
+            print(str(e))
             return False
         return True
 
@@ -348,20 +355,23 @@ class Model:
             ID+=1
         conn=sqlite3.connect(self.database)
         try:
-            dmn.CreateTable(conn)
-            dmn.AddCartesian(conn,ns)
+            dmn.CreateTable(conn,commit=False)
+            dmn.AddCartesian(conn,ns,commit=False)
             
-            ddpm.CreateTable(conn)
-            ddpm.AddQuick(conn,'GB','Q345')
+            ddpm.CreateTable(conn,commit=False)
+            ddpm.AddQuick(conn,'GB','Q345',commit=False)
             
-            ddpb.CreateTable(conn)
+            ddpb.CreateTable(conn,commit=False)
             ddpb.AddQuick(conn,'Q345','H400x200x12x14')
+            
+            conn.commit()
         finally:
             conn.close()
         
         
 if __name__=='__main__':        
-    m=Model('c:\\huan\\Test.sqlite')
+    m=Model('F:\\Test.sqlite')
     m.Test()
     m.Assemble()
     m.SolveLinear()
+    m.SolveModal(1)

@@ -130,6 +130,7 @@ class IProfile(Section):
         I22=2*tf*b**3/12+(h-2*tf)*tw**3/12
         W33=I33/h*2
         W22=I22/b*2
+        self.J=1/3*(b*tf**4*2+(h-2*tf)*tw**4)
         Section.__init__(self,A,I33,I22,W33,W22)
         self.gamma33=1.05
         self.gamma22=1.2
