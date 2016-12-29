@@ -4,56 +4,172 @@ Created on Thu Jun 23 21:32:57 2016
 
 @author: HZJ
 """
-import sqlite3
+
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as sl
 from scipy import linalg
-import Material,Section,Node,Beam
-import DataManager.Definition as dd
-import DataManager.Modeling.Nodes as dmn
-import DataManager.Definition.Properties.Materials as ddpm
-import DataManager.Definition.Properties.BeamSections as ddpb
+import Material,Section,Node,Element
 
-class Model:
-    def __init__(self,db):
-        self.database=db
+class fem_model:
+    def __init__(self,path):
+        self.__path=path
+        self.__materials=[]
+        self.__sections=[]
+        self.__nodes=[]
+        self.__beams=[]
+        self.__quads=[]
+        self.__is_solved=False
         
-    def Save(self):
-        return
+    def save(self):
+        f=open(self.__path+'/model','w+')
+        try:            
+            f.write('!!!nodes!!!\n')
+            for node in self.__nodes:
+                f.write('%s,%s,%s,%s\n'%(node.name,node.x,node.y,node.z))
+            f.write('!!!beams!!!\n')
+            for beam in self.__beams:
+                f.write('%s,%s,%s\n'%(beam.name,beam.nodeI.name,beam.nodeJ.name))
+        except:
+            pass
+        finally:
+            f.close()
+        if not self.is_solved:
+            return
+            
+    def save_result(self):    
+        f=open(self.__path+'/result','w+')
+        try:
+            f.write('!!!node disp!!!!\n')
+            for node in self.__nodes:
+                d=np.dot(node.transform_matrix.T,node.res_disp)                
+                f.write('%s,%s,%s,%s,%s,%s,%s\n'%(node.name,d[0],d[1],d[2],d[3],d[4],d[5]))
+            f.write('!!!beam disp!!!\n')
+            for beam in self.__beams:
+                d=np.dot(beam.transform_matrix.T,beam.res_disp)
+                v=np.array([beam.nodeJ.x-beam.nodeI.x,beam.nodeJ.y-beam.nodeI.y,beam.nodeJ.z-beam.nodeI.z])
+                loc=np.zeros(6)
+                
+                [phi,theta,psi]=d[3:6]    
+                Ax=[[1,            0,           0],
+                    [0,  np.cos(phi), np.sin(phi)],
+                    [0, -np.sin(phi), np.cos(phi)]]
+                Ay=[[np.cos(theta), 0, -np.sin(theta)],
+                    [0,             1,              0],
+                    [np.sin(theta), 0,  np.cos(theta)]]
+                Az=[[ np.cos(psi), np.sin(psi), 0],
+                    [-np.sin(psi), np.cos(psi), 0],
+                    [           0,           0, 1]]             
+                A=np.dot(np.dot(Az,Ay),Ax)
+                loc[:3]=np.dot(v,A)
+                
+                [phi,theta,psi]=d[9:12]
+                Ax=[[1,            0,           0],
+                    [0,  np.cos(phi), np.sin(phi)],
+                    [0, -np.sin(phi), np.cos(phi)]]
+                Ay=[[np.cos(theta), 0, -np.sin(theta)],
+                    [0,             1,              0],
+                    [np.sin(theta), 0,  np.cos(theta)]]
+                Az=[[ np.cos(psi), np.sin(psi), 0],
+                    [-np.sin(psi), np.cos(psi), 0],
+                    [           0,           0, 1]]
+                A=np.dot(np.dot(Az,Ay),Ax)
+                loc[3:]=np.dot(v,A)
+                f.write('%s,%s,%s,%s,%s,%s,%s\n'%(beam.name,loc[0],loc[1],loc[2],loc[3],loc[4],loc[5]))
+                #f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n'%(beam.name,d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],d[8],d[9],d[10],d[11]))
+                #d=np.dot(beam.transform_matrix.T,beam.res_force)
+                #f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n'%(beam.name,d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],d[8],d[9],d[10],d[11]))
+        except:
+            pass
+        finally:
+            f.close()           
+    
+    @property
+    def node_count(self):
+        return len(self.__nodes)
 
-    def Assemble(self):
+    @property
+    def beam_count(self):
+        return len(self.__beams)
+    
+    @property
+    def quad_count(self):
+        return len(self.__quads)
+        
+    @property
+    def nodes(self):
+        return self.__nodes
+        
+    @property
+    def beams(self):
+        return self.__beams
+        
+    @property
+    def quads(self):
+        return self.__quads
+        
+    def add_material(self,mat:Material.material):
+        self.__materials.append(mat)
+        
+    def add_section(self,sec:Section.section):
+        self.__sections.append(sec)
+        
+    def add_node(self,node:Node.node):
+        self.__nodes.append(node)
+        
+    def add_beam(self,beam:Element.beam):
+        self.__beams.append(beam)
+        
+    def add_quad(self,quad):
+        self.__quads.append(quad)
+        
+    def set_beam_distributed(self,idx,qi,qj):
+        self.__beams[idx].loadI=qi
+        self.__beams[idx].loadJ=qj
+        
+    def set_node_force(self,idx,P):
+        self.__nodes[idx].load=P
+        
+    def set_node_restraint(self,idx,res):
+        self.__nodes[idx].restraint=res
+        
+        
+    def assemble(self):
         """
         Assemble matrix
-        Writing the matrix to the disk
         """
-        nid = 0
         # Dynamic space allocate
-        self.Kmat = np.zeros((len(self.nodes)*6, len(self.nodes)*6))
-        self.Mmat = np.zeros((len(self.nodes)*6, len(self.nodes)*6))
-        self.Fvec = np.zeros(len(self.nodes)*6)
-        self.Dvec = np.zeros(len(self.nodes)*6)
+        n_nodes=self.node_count
+        self.__Kmat = np.zeros((n_nodes*6, n_nodes*6))
+        self.__Mmat = np.zeros((n_nodes*6, n_nodes*6))
+        self.__Fvec = np.zeros(n_nodes*6)
+        self.__Dvec = np.zeros(n_nodes*6)
 
         #Nodal load and displacement, and reset the index
-        for node in self.nodes:
-            node.id = nid
-            load = np.array(node.load)
-            self.Fvec[nid * 6: nid * 6 + 6] = np.dot(node.TransformMatrix().transpose(),load)
-            for i in range(6):
-                if node.disp[i] != 0:
-                    self.Dvec[nid * 6 + i] = node.disp[i]
-            nid+=1
         nid = 0
+        for node in self.nodes:
+            node.hid = nid                
+            load = np.array(node.load)
+            self.__Fvec[nid * 6: nid * 6 + 6] = np.dot(node.transform_matrix.transpose(),load)
+
+            disp = np.array(node.load)
+            self.__Dvec[nid * 6: nid * 6 + 6] = np.dot(node.transform_matrix.transpose(),disp)
+#                for i in range(6):
+#                    if node.disp[i] != 0:
+#                        self.__Dvec[nid * 6 + i] = node.disp[i]
+            nid+=1
+        
         #Beam load and displacement, and reset the index
+        nid = 0    
         for beam in self.beams:
             beam.Id = nid
-            i = beam.nodeI.id
-            j = beam.nodeJ.id
-            T=np.matrix(beam.TransformMatrix())
+            i = beam.nodeI.hid
+            j = beam.nodeJ.hid
+            T=beam.transform_matrix
             Tt = T.transpose()
 
             #Transform matrix
-            Vl=np.matrix(beam.localCsys.TransformMatrix())
+            Vl=np.matrix(beam.local_csys.transform_matrix)
             V=np.zeros((6, 6))
             V[:3,:3] =V[3:,3:]= Vl
             Vt = V.transpose()
@@ -62,11 +178,12 @@ class Model:
             Kij=sp.bsr_matrix((12, 12))
             Mij=sp.bsr_matrix((12, 12))
             rij=sp.bsr_matrix((12))
-            Kij, rij, Mij = beam.StaticCondensation(Kij, rij, Mij)
+
+            Kij, rij, Mij = beam.static_condensation(Kij, rij, Mij)
 
             #Assemble nodal force vector
-            self.Fvec[i*6:i*6+6] += np.dot(Vt,rij[:6])
-            self.Fvec[j*6:j*6+6] += np.dot(Vt,rij[6:])
+            self.__Fvec[i*6:i*6+6] += np.dot(Vt,rij[:6])
+            self.__Fvec[j*6:j*6+6] += np.dot(Vt,rij[6:])
 
             #Assemble Total Stiffness Matrix
             Ke = np.dot(np.dot(Tt,Kij),T)
@@ -74,36 +191,52 @@ class Model:
             Keij = Ke[:6,6:]
             Keji = Ke[6:,:6]
             Kejj = Ke[6:,6:]
-            self.Kmat[i*6:i*6+6, i*6:i*6+6] += Keii
-            self.Kmat[i*6:i*6+6, j*6:j*6+6] += Keij
-            self.Kmat[j*6:j*6+6, i*6:i*6+6] += Keji
-            self.Kmat[j*6:j*6+6, j*6:j*6+6] += Kejj
-
+            self.__Kmat[i*6:i*6+6, i*6:i*6+6] += Keii
+            self.__Kmat[i*6:i*6+6, j*6:j*6+6] += Keij
+            self.__Kmat[j*6:j*6+6, i*6:i*6+6] += Keji
+            self.__Kmat[j*6:j*6+6, j*6:j*6+6] += Kejj
+            
             #Assembel Mass Matrix        
             Me = np.dot(np.dot(Tt,Mij),T)
             Meii = Me[:6,:6]
             Meij = Me[:6,6:]
             Meji = Me[6:,:6]
             Mejj = Me[6:,6:]
-            self.Mmat[i*6:i*6+6, i*6:i*6+6] += Meii
-            self.Mmat[i*6:i*6+6, j*6:j*6+6] += Meij
-            self.Mmat[j*6:j*6+6, i*6:i*6+6] += Meji
-            self.Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj
-
+            self.__Mmat[i*6:i*6+6, i*6:i*6+6] += Meii
+            self.__Mmat[i*6:i*6+6, j*6:j*6+6] += Meij
+            self.__Mmat[j*6:j*6+6, i*6:i*6+6] += Meji
+            self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj
+            
             nid+=1
+        
 
-    def isAssembled(self):
-        if self.Kmat == None:
+    @property
+    def is_assembled(self):
+        if self.__Kmat == None:
             return False
         return True
+        
+    @property
+    def is_solved(self):
+        return self.__is_solved
+        
+    @is_solved.setter
+    def is_solved(self,solved):
+        self.__is_solved=solved
 
+    @property
     def K(self):
-        return self.Kmat
+        return self.__Kmat
 
+    @property
     def F(self):
-        return self.Fvec
+        return self.__Fvec
+        
+    @property
+    def D(self):
+        return self.__Dvec
 
-    def EliminateMatrix(self, mass=False):
+    def eliminate_matrix(self, mass=False):
         """
         return 
         K_bar: sparse matrix
@@ -112,200 +245,87 @@ class Model:
         index: vector
         """
         if mass==False:
-            k = self.Kmat
-            f = self.Fvec
+            k = self.K
+            f = self.F
             Id=np.arange(len(f))
-            nRemoved=0
-            i=0
-            for node in self.nodes:
-                for j in range(6):
-                    if node.restraints[j] == True or node.disp[j] != 0:
-                        k=np.delete(k,i*6+j-nRemoved,axis=0)
-                        k=np.delete(k,i*6+j-nRemoved,axis=1)
-                        f=np.delete(f,i*6+j-nRemoved)
-                        Id=np.delete(Id,i*6+j-nRemoved)
-                        nRemoved+=1
-                i+=1
+            for i in range(self.node_count-1,-1,-1):
+                for j in range(5,-1,-1):
+                    if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
+                        k=np.delete(k,i*6+j,axis=0)
+                        k=np.delete(k,i*6+j,axis=1)
+                        f=np.delete(f,i*6+j)
+                        Id=np.delete(Id,i*6+j)
+
             K_bar = k
             F_bar = f
             index = Id
+            for i in F_bar:
+                print(i)
             return K_bar,F_bar,index
         else:
-            k = self.Kmat
-            m = self.Mmat
-            f = self.Fvec
+            k = self.__Kmat
+            m = self.__Mmat
+            f = self.__Fvec
             Id=np.arange(len(f))
-            nRemoved = 0
-            i=0
-            for node in self.nodes:
-                for j in range(6):
-                    if node.restraints[j] == True or node.disp[j]!=0:
-                        k=np.delete(k,i*6+j-nRemoved,axis=0)
-                        k=np.delete(k,i*6+j-nRemoved,axis=1)
-                        f=np.delete(f,i*6+j-nRemoved)
-                        m=np.delete(m,i*6+j-nRemoved,axis=0)
-                        m=np.delete(m,i*6+j-nRemoved,axis=1)
-                        Id=np.delete(Id,i*6+j-nRemoved)
-                        nRemoved+=1
-                i+=1
+            for i in range(self.node_count-1,-1,-1):
+                for j in range(5,-1,-1):
+                    if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
+                        k=np.delete(k,i*6+j,axis=0)
+                        k=np.delete(k,i*6+j,axis=1)
+                        m=np.delete(m,i*6+j,axis=0)
+                        m=np.delete(m,i*6+j,axis=1)
+                        f=np.delete(f,i*6+j)
+                        Id=np.delete(Id,i*6+j)
             K_bar = k
             M_bar = m
             F_bar = f
             index = Id
             return K_bar,M_bar,F_bar,index
-
-    def SolveLinear(self):
-        self.Assemble()
-        K_bar,F_bar,index = self.EliminateMatrix()
-        try:
-            #sparse matrix solution            
-            delta_bar = linalg.solve(K_bar,F_bar)
             
-            delta = delta_bar
-            f=np.zeros(len(self.beams)*12)
-           
-            #fill original displacement vector
-            prev = 0
-            for idx in index:
-                gap=idx-prev
-                if gap>0:
-                    delta=np.insert(delta,prev,[0]*gap)
-                prev = idx + 1               
-                if idx==index[-1] and idx!=len(self.nodes)-1:
-                    delta = np.insert(delta,prev, [0]*(len(self.nodes)*6-prev))
-            delta += self.Dvec
-
-            #calculate element displacement and forces
-            for beam in self.beams:
-                Kij_bar=np.zeros((12, 12))
-                rij_bar=np.zeros((12,1))
-                Kij_bar,rij_bar=beam.StaticCondensation(Kij_bar, rij_bar)
-                uij=np.zeros(12)
-                fij=np.zeros(12)
-                
-                i=0
-                for node in self.nodes:
-                    if node is beam.nodeI:
-                        iend=i
-                    i+=1
-                i=0
-                for node in self.nodes:
-                    if node is beam.nodeJ:
-                        jend=i
-                    i+=1
-                
-                uij[:6]=delta[iend*6:iend*6+6]
-                uij[6:]=delta[jend*6:jend*6+6]
-                uij = np.dot(beam.TransformMatrix(),uij)
-                
-                fij = np.dot(Kij_bar,uij) + beam.NodalForce()
-                for i in range(6):
-                    if beam.releaseI[i] == True:
-                        fij[i] = 0
-                    if beam.releaseJ[i] == True:
-                        fij[i + 6] = 0
-                #beam.ID
-                i=0
-                for b in self.beams:
-                    if beam is b:
-                        bid=i
-                    i+=1
-                f[bid*12:bid*12+12] = fij
-            for n in range(len(self.nodes)):
-                print("Disp of node "+str(n)+':')
-                for i in range(n * 6,n * 6 + 6):
-                   print("delta[%d"%(i - n * 6) +"]=%f"%delta[i])
-
-            for n in range(len(self.beams)):
-                print("Force of beam " +str(n)+ ':')
-                for i in range(n*12,n*12+12):
-                    print("f[%d"%(i - n * 12)+"]=%f"%f[i])
-        except Exception as e:
-            print(e)
-            return False
-        return True
-
-    def SolveModal(self,k):
-        self.Assemble()
-        K_bar,M_bar,F_bar,index = self.EliminateMatrix(True)
-
-        try:
-            #general eigen solution, should be optimized later!!
-            A=sp.csr_matrix(K_bar)
-            B=sp.csr_matrix(M_bar)
-            
-            omega2s,mode = sl.eigsh(A,k,B)
+    def write_result(self,delta):
         
-            for omega2 in omega2s:
-                print(2*3.14/np.sqrt(omega2))
-
-            #extract vibration mode
-            delta_bar = np.linalg.norm(mode)/np.linalg.norm(mode)
-            delta=delta_bar
-            f=np.zeros(len(self.beams)*12)
+        for node in self.__nodes:
+            node.res_disp=np.dot(node.transform_matrix,delta[node.hid*6:node.hid*6+6])
+         
+        #calculate element displacement and forces     
+        for beam in self.__beams:
+            Kij_bar=np.zeros((12, 12))
+            rij_bar=np.zeros((12,1))
+            Kij_bar,rij_bar=beam.static_condensation(Kij_bar, rij_bar)
+            uij=np.zeros(12)
+            fij=np.zeros(12)
             
-            print('HERE!!!!')
-            #fill original displacement vector
-            prev = 0
-            for idx in index:
-                gap=idx-prev
-                if gap>0:
-                    delta=np.insert(delta,prev,[0]*gap)
-                prev = idx + 1               
-                if idx==index[-1] and idx!=len(self.nodes)-1:
-                    delta = np.insert(delta,prev, [0]*(len(self.nodes)*6-prev))
-            delta += self.Dvec
-
-            #calculate element displacement and forces
-            for beam in self.beams:
-                Kij_bar=np.zeros((12, 12))
-                rij_bar=np.zeros(12)
-                Kij_bar,rij_bar=beam.StaticCondensation(Kij_bar,rij_bar)
-                uij=np.zeros(12)
-                fij=np.zeros(12)
-                
-                i=0
-                for node in self.nodes:
-                    if node is beam.nodeI:
-                        iend=i
-                    i+=1
-                i=0
-                for node in self.nodes:
-                    if node is beam.nodeJ:
-                        jend=i
-                    i+=1
-                
-                uij[:6]=delta[iend*6:iend*6+6]
-                uij[6:]=delta[jend*6:jend*6+6]
-                uij = np.dot(beam.TransformMatrix(),uij)
-
-                fij = np.dot(Kij_bar,uij) + beam.NodalForce()
-                for i in range(6):
-                    if beam.releaseI[i] == True:
-                        fij[i] = 0
-                    if beam.releaseJ[i] == True:
-                        fij[i + 6] = 0
-                
-                #beam.ID
-                i=0
-                for b in self.beams:
-                    if beam is b:
-                        bid=i
-                    i+=1  
+            i=0
+            for node in self.nodes:
+                if node is beam.nodeI:
+                    iend=i
+                i+=1
+            i=0
+            for node in self.nodes:
+                if node is beam.nodeJ:
+                    jend=i
+                i+=1
             
-                f[bid * 12,bid*12+12]=fij
-            for n in range(len(self.nodes)):
-                print("Disp of node " +str(n)+ ':')
-                for i in range(n*6, n*6+6):
-                    print("delta["+str(i-n*6)+"]="+str(delta[i]))
-            for n in range(len(self.beams)):
-                print( "Force of beam "+str(n)+':')
-                for i in range(n*12, n*12 + 12):
-                    print("f[" +str(i-n*12)+"]=" +str(f[i]))
-        except Exception as e:
-            print(str(e))
-            return False
-        return True
+            uij[:6]=delta[iend*6:iend*6+6]
+            uij[6:]=delta[jend*6:jend*6+6]
+            uij = np.dot(beam.transform_matrix,uij)#set to local coordinate
+            beam.res_disp=uij
+            
+            fij = np.dot(Kij_bar,uij) + beam.nodal_force
+            for i in range(6):
+                if beam.releaseI[i] == True:
+                    fij[i] = 0
+                if beam.releaseJ[i] == True:
+                    fij[i + 6] = 0
+            beam.res_force=fij
+#            #beam.ID
+#            f=np.zeros(len(self.beams)*12)
+#            i=0
+#            for b in self.__beams:
+#                if beam is b:
+#                    bid=i
+#                i+=1
+#            f[bid*12:bid*12+12] = fij
 
     def SetMass(self):
         for beam in self.beams:
@@ -313,65 +333,54 @@ class Model:
             beam.nodeJ.mass += beam.section.A*beam.section.material.gamma*beam.Length() / 2
         return False
         
-    def Test(self):
-        #*************************************************Modeling**************************************************/
-        #Q345
-        self.materials=[]
-        self.sections=[]
-        self.nodes=[]
-        self.beams=[]
-        
-        self.materials.append(Material.Material(2.000E11, 0.3, 7849.0474, 1.17e-5))
-        #H200x150x8x10
-        self.sections.append(Section.Section(self.materials[0], 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6))
-        self.nodes.append(Node.Node(0, 0, 0))
-        self.nodes.append(Node.Node(5, 0, 0))
-        for i in range(len(self.nodes)-1):
-            self.beams.append(Beam.Beam(self.nodes[i], self.nodes[i+1], self.sections[0]))
-        #loads
-        #double f[6] = { 0,0,-100000,0,0,0 }
-        qi=(0,0,-10,0,0,0)
-        qj=(0,0,-10,0,0,0)
-        #double d[6] = { 1,0,0,0,0,0 }
-        self.beams[0].SetLoadDistributed(qi, qj)
-        #beams[3].SetLoadDistributed(qi, qj)
-        #nodes[3].SetLoad(f)
-        #nodes[0].SetDisp(d)
-        #supports
-        res1 = [True]*6
-        res2 = [False]*6
-        res3 = [False,True, True, True, True, True ]
-        self.nodes[0].SetRestraints(res1)
-        self.nodes[1].SetRestraints(res2)
-        #nodes[5].SetRestraints(res1)
-        #releases
-        #beams[3].releaseJ[4] = True
-#        self.beams[3].releaseJ[5] = True
-        #*************************************************Modeling**************************************************/
-        ID=0
-        ns=[]
-        for node in self.nodes:
-            ns.append([ID,node.x,node.y,node.z])
-            ID+=1
-        conn=sqlite3.connect(self.database)
-        try:
-            dmn.CreateTable(conn,commit=False)
-            dmn.AddCartesian(conn,ns,commit=False)
-            
-            ddpm.CreateTable(conn,commit=False)
-            ddpm.AddQuick(conn,'GB','Q345',commit=False)
-            
-            ddpb.CreateTable(conn,commit=False)
-            ddpb.AddQuick(conn,'Q345','H400x200x12x14')
-            
-            conn.commit()
-        finally:
-            conn.close()
-        
         
 if __name__=='__main__':        
-    m=Model('F:\\Test.sqlite')
-    m.Test()
-    m.Assemble()
-    m.SolveLinear()
-    m.SolveModal(1)
+    m=fem_model('d:/fem_model')
+    steel=Material.linear_elastic(2.000E11, 0.3, 7849.0474, 1.17e-5)#Q345
+    #i_section=Section.I_section(steel, 200,150,8,10)#H200x150x8x10
+    i_section=Section.section(steel,4.265e-3,9.651e-8,6.572e-5,3.301e-6,4.313e-4,5.199e-5)
+    m.add_material(steel)
+    m.add_section(i_section)
+    
+#simple-supported beam
+    m.add_node(Node.node(0, 0, 0))
+    m.add_node(Node.node(14.28,0,0))
+    m.add_node(Node.node(20,0,0))
+    m.add_beam(Element.beam(m.nodes[0], m.nodes[1], i_section))
+    m.add_beam(Element.beam(m.nodes[1], m.nodes[2], i_section))
+    qi=(0,-10000,0,0,0,0)
+    qj=(0,-10000,0,0,0,0)
+    m.set_beam_distributed(0,qi,qj)
+    m.set_beam_distributed(1,qi,qj)
+    res1=[True,True,True,False,False,False]
+    res2=[True,True,True,True,False,False]
+    m.set_node_restraint(0,res1)
+    m.set_node_restraint(2,res2)
+
+##cantilever beam
+#    m.add_node(Node.node(0, 0, 0))
+#    m.add_node(Node.node(5,0,0))
+#    m.add_beam(Element.beam(m.nodes[0], m.nodes[1], i_section))
+#    qi=(0,0,-100,0,0,0)
+#    qj=(0,0,-100,0,0,0)
+#    m.set_beam_distributed(0,qi,qj)
+#    res=[True]*6
+#    m.set_node_restraint(0,res)
+    m.save()
+    m.assemble() 
+
+    import Solver    
+    #omegas,d=Solver.solve_modal(m,3)
+#    m.write_result(d[0])
+    d=Solver.solve_linear(m)
+    m.write_result(d)
+    if m.is_solved:
+        m.save_result()
+        
+#            f=open('d:/fem_model/K_o','w+')
+#            K=Ke
+#            for i in range(K.shape[0]):
+#                for j in range(K.shape[1]):
+#                    f.write('%10.0f '%K[i,j])
+#                f.write('\n')
+#            f.close()
