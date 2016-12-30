@@ -7,9 +7,9 @@ Created on Thu Jun 23 21:32:57 2016
 
 import numpy as np
 import scipy.sparse as sp
-import scipy.sparse.linalg as sl
-from scipy import linalg
 import Material,Section,Node,Element
+import threading
+import Logger
 
 class fem_model:
     def __init__(self,path):
@@ -21,7 +21,9 @@ class fem_model:
         self.__quads=[]
         self.__is_solved=False
         
-    def save(self):
+    def save(self):  
+        Logger.info('save document to %s/model'%self.__path,)
+        
         f=open(self.__path+'/model','w+')
         try:            
             f.write('!!!nodes!!!\n')
@@ -37,7 +39,8 @@ class fem_model:
         if not self.is_solved:
             return
             
-    def save_result(self):    
+    def save_result(self):
+        Logger.info('save document to %s/result'%self.__path)    
         f=open(self.__path+'/result','w+')
         try:
             f.write('!!!node disp!!!!\n')
@@ -134,11 +137,10 @@ class fem_model:
         self.__nodes[idx].restraint=res
         
         
-    def assemble(self):
-        """
-        Assemble matrix
-        """
-        # Dynamic space allocate
+    def assemble(self):      
+        
+        Logger.info("Assembleing %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
+        
         n_nodes=self.node_count
         self.__Kmat = np.zeros((n_nodes*6, n_nodes*6))
         self.__Mmat = np.zeros((n_nodes*6, n_nodes*6))
@@ -209,6 +211,12 @@ class fem_model:
             
             nid+=1
         
+    def clear_result(self):
+        for node in self.__nodes:
+            node.clear_result()
+        for beam in self.__beams:
+            beam.clear_result()
+        self.is_solved=False
 
     @property
     def is_assembled(self):
@@ -244,38 +252,46 @@ class fem_model:
         M_bar: sparse matrix
         index: vector
         """
+        Logger.info('Eliminateing matrix...')
         if mass==False:
             k = self.K
+            f = self.F
+            to_rmv=[]
+            Id=np.arange(len(f))
+            for i in range(self.node_count-1,-1,-1):
+                for j in range(5,-1,-1):
+                    if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
+                        to_rmv.append(i*6+j)
+            k=np.delete(k,to_rmv,axis=0)
+            k=np.delete(k,to_rmv,axis=1)
+            f=np.delete(f,to_rmv)
+            Id=np.delete(Id,to_rmv)
+            
+            K_bar = k
+            F_bar = f
+            index = Id
+            return K_bar,F_bar,index
+        else:
+            k = self.K
+            m = self.M
             f = self.F
             Id=np.arange(len(f))
             for i in range(self.node_count-1,-1,-1):
                 for j in range(5,-1,-1):
                     if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
-                        k=np.delete(k,i*6+j,axis=0)
-                        k=np.delete(k,i*6+j,axis=1)
-                        f=np.delete(f,i*6+j)
-                        Id=np.delete(Id,i*6+j)
-
-            K_bar = k
-            F_bar = f
-            index = Id
-            for i in F_bar:
-                print(i)
-            return K_bar,F_bar,index
-        else:
-            k = self.__Kmat
-            m = self.__Mmat
-            f = self.__Fvec
-            Id=np.arange(len(f))
-            for i in range(self.node_count-1,-1,-1):
-                for j in range(5,-1,-1):
-                    if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
-                        k=np.delete(k,i*6+j,axis=0)
-                        k=np.delete(k,i*6+j,axis=1)
-                        m=np.delete(m,i*6+j,axis=0)
-                        m=np.delete(m,i*6+j,axis=1)
-                        f=np.delete(f,i*6+j)
-                        Id=np.delete(Id,i*6+j)
+                        to_rmv.append(i*6+j)
+            k=np.delete(k,to_rmv,axis=0)
+            k=np.delete(k,to_rmv,axis=1)
+            m=np.delete(m,to_rmv,axis=0)
+            m=np.delete(m,to_rmv,axis=1)
+            f=np.delete(f,to_rmv)
+            Id=np.delete(Id,to_rmv)
+#                        k=np.delete(k,i*6+j,axis=0)
+#                        k=np.delete(k,i*6+j,axis=1)
+#                        m=np.delete(m,i*6+j,axis=0)
+#                        m=np.delete(m,i*6+j,axis=1)
+#                        f=np.delete(f,i*6+j)
+#                        Id=np.delete(Id,i*6+j)
             K_bar = k
             M_bar = m
             F_bar = f
@@ -334,7 +350,8 @@ class fem_model:
         return False
         
         
-if __name__=='__main__':        
+if __name__=='__main__':   
+    from Solver import Static     
     m=fem_model('d:/fem_model')
     steel=Material.linear_elastic(2.000E11, 0.3, 7849.0474, 1.17e-5)#Q345
     #i_section=Section.I_section(steel, 200,150,8,10)#H200x150x8x10
@@ -369,10 +386,10 @@ if __name__=='__main__':
     m.save()
     m.assemble() 
 
-    import Solver    
-    #omegas,d=Solver.solve_modal(m,3)
+#    T,d=Solver.solve_modal(m,6)
+#    print(T)
 #    m.write_result(d[0])
-    d=Solver.solve_linear(m)
+    d=Static.solve_linear(m)
     m.write_result(d)
     if m.is_solved:
         m.save_result()
