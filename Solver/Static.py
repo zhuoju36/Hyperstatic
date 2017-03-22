@@ -16,13 +16,13 @@ import scipy.sparse.linalg as sl
 import Logger
 
 def solve_linear(model:Model.fem_model):
-    K_bar,F_bar,index=model.eliminate_matrix()
+    K_bar,F_bar,index=model.K_,model.F_,model.index
     Dvec=model.D
-    Logger.info('Solving linear model...')
+    Logger.info('Solving linear model with %d DOFs...'%model.DOF)
     n_nodes=model.node_count
     try:
         #sparse matrix solution
-        delta_bar = sl.solve(sp.bsr_matrix(K_bar),F_bar,sym_pos=True)
+        delta_bar = sl.spsolve(sp.csr_matrix(K_bar),F_bar,sym_pos=True)
         delta = delta_bar
         #fill original displacement vector
         prev = 0
@@ -37,6 +37,29 @@ def solve_linear(model:Model.fem_model):
     except Exception as e:
         print(e)
         return None
+    model.is_solved=True
+    return delta
+    
+def solve_linear2(model:Model.fem_model):
+    K_bar,F_bar,index=model.K_,model.F_,model.index
+    Dvec=model.D
+    Logger.info('Solving linear model with %d DOFs...'%model.DOF)
+    n_nodes=model.node_count
+    #sparse matrix solution
+    delta_bar = sl.spsolve(sp.csc_matrix(K_bar),F_bar)
+    #delta_bar=linalg.solve(K_bar,F_bar,sym_pos=True)
+    delta = delta_bar
+    #fill original displacement vector
+    prev = 0
+    for idx in index:
+        gap=idx-prev
+        if gap>0:
+            delta=np.insert(delta,prev,[0]*gap)
+        prev = idx + 1               
+        if idx==index[-1] and idx!=n_nodes-1:
+            delta = np.insert(delta,prev, [0]*(n_nodes*6-prev))
+    delta += Dvec
+
     model.is_solved=True
     return delta
 
@@ -82,68 +105,58 @@ def solve_modal(model:Model.fem_model,k:int):
         return None
     model.is_solved=True
     return periods, deltas
-
-    
-    
-    
-    n_nodes=model.node_count
-    try:
-        #sparse matrix solution            
-        delta_bar = linalg.solve(K_bar,F_bar)
-        delta = delta_bar
-        #fill original displacement vector
-        prev = 0
-        for idx in index:
-            gap=idx-prev
-            if gap>0:
-                delta=np.insert(delta,prev,[0]*gap)
-            prev = idx + 1               
-            if idx==index[-1] and idx!=n_nodes-1:
-                delta = np.insert(delta,prev, [0]*(n_nodes*6-prev))
-        delta += Dvec
-    except Exception as e:
-        print(e)
-        return None
-    model.is_solved=True
-    return delta
     
 def solve_linear_tf(model):
     """
     Linearly solve the structure.
     """
-    Logger.info('Solving linear model with TensorFlow...')
-    K_bar,F_bar,index=model.eliminate_matrix()
+    Logger.info('Solving linear model with %d DOFs using TensorFlow...'%model.DOF)
     
+    K_bar,F_bar,index=model.K_,model.F_,model.index
+    K_bar=K_bar.astype(np.float32)
+    F_bar=F_bar.astype(np.float32)
+    Dvec=model.D
     #Begin a new graph
     if 'sess' in locals() and sess is not None:
         print('Close interactive session')
         sess.close()
     
-    with tf.device('/gpu:0'):
-        Dvec=tf.Variable(model.D,name="stiffness")
+#    with tf.device('/cpu:0'):  
+    K_init = tf.placeholder(tf.float32, shape=(model.DOF, model.DOF))
+    K_ = tf.Variable(K_init)
+#        K_ = tf.constant(K_bar,name="stiffness")    
+    F_ =  tf.Variable(np.array([F_bar.astype(np.float32)]),name="force")
         
-        K_ = tf.Variable(K_bar,name="stiffness")
-    
-        F_ =  tf.Variable(np.array([F_bar]),name="force")
-        
-    with tf.device('/cpu:0'):
-        x=tf.matrix_solve(K_,tf.transpose(F_),name='displacement')
-        sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-    sess.run(tf.global_variables_initializer())
+#    with tf.device('/cpu:0'):
+    D_=tf.matrix_solve(K_,tf.transpose(F_),name='displacement')
+    sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    print(type(K_bar),K_bar.dtype,K_bar.shape)
+    sess.run(tf.global_variables_initializer(),feed_dict={K_init:K_bar})
     # run the op.
-    delta=sess.run(x)
+    delta=sess.run(D_)
+    
+    n_nodes=model.node_count
+    #fill original displacement vector
+    prev = 0
+    for idx in index:
+        gap=idx-prev
+        if gap>0:
+            delta=np.insert(delta,prev,[0]*gap)
+        prev = idx + 1               
+        if idx==index[-1] and idx!=n_nodes-1:
+            delta = np.insert(delta,prev, [0]*(n_nodes*6-prev))
+    delta += Dvec
+    model.is_solved=True
     return delta
     
-def solve_2nd(K,F):
+    
+def solve_2nd(model):
     pass
 
-def solve_3rd(K,F):
+def solve_3rd(model):
     pass
 
-def solve_modal_tf(K,F,M):
-    pass
-
-def solve_direct_integrate(K,F,M):
+def solve_push_over(model):
     pass
 
 

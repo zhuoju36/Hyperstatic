@@ -13,7 +13,7 @@ from scipy import linalg
 from scipy import sparse as sp
 import scipy.sparse.linalg as sl
         
-def eigen_mode(model:Model.fem_model,n,sparse=False):
+def eigen_mode(model:Model.fem_model,n):
     """
     Solve the eigen mode of the MDOF system\n
     n: number of modes to extract.
@@ -21,10 +21,7 @@ def eigen_mode(model:Model.fem_model,n,sparse=False):
     sparse: True if system use a sparse K\n
     return: w, freq, t, mode
     """
-    if sparse==True:
-        w2,mode=sl.eigsh(A=self.K,M=self.M,k=n,which='LM')
-    else:
-        w2,mode=linalg.eigh(self.K,self.M)
+    w2,mode=sl.eigsh(A=model.K,M=model.M,k=n,which='LM')
     freq=[]
     w=[]
     T=[]
@@ -32,7 +29,16 @@ def eigen_mode(model:Model.fem_model,n,sparse=False):
     for i in range(n):
         w.append(np.sqrt(w2[i]))
         T.append(2*np.pi/w[-1])
-#            alpha=np.array(mode).T
+        freq.append(1/T[-1])
+    return w,freq,T,mode
+    
+def Riz_mode(model:Model.fem_model,n,F):
+    """
+    Solve the Riz mode of the MDOF system\n
+    n: number of modes to extract\n
+    F: spacial load pattern
+    """
+    #            alpha=np.array(mode).T
 #            #Grum-Schmidt procedure            
 #            beta=[]
 #            for i in range(len(mode)):
@@ -41,29 +47,20 @@ def eigen_mode(model:Model.fem_model,n,sparse=False):
 #                    beta_i-=np.dot(alpha[i],beta[j])/np.dot(alpha[j],alpha[j])*beta[j]
 #                beta.append(beta_i)
 #            mode_=np.array(beta).T
-        freq.append(1/T[-1])
-    return w,freq,T,mode
-    
-def RizMode(model:Model.fem_model,n,F):
-    """
-    Solve the Riz mode of the MDOF system\n
-    n: number of modes to extract\n
-    F: spacial load pattern
-    """
     pass
 
-def SpectrumAnalysis(model:Model.fem_model,n,spec):
+def spectrum_analysis(model:Model.fem_model,n,spec):
     """
     sepctrum analysis\n
     n: number of modes to use\n
     spec: a list of tuples (period,acceleration response)
     """
-    freq,mode=self.EigenMode(n)
-    M_=np.dot(mode.T,self.M)
+    freq,mode=eigen_mode(model,n)
+    M_=np.dot(mode.T,model.M)
     M_=np.dot(M_,mode)
-    K_=np.dot(mode.T,self.K)
+    K_=np.dot(mode.T,model.K)
     K_=np.dot(K_,mode)
-    C_=np.dot(mode.T,self.C)
+    C_=np.dot(mode.T,model.C)
     C_=np.dot(C_,mode)
     d_=[]
     for (m_,k_,c_) in zip(M_.diag(),K_.diag(),C_.diag()):
@@ -72,12 +69,9 @@ def SpectrumAnalysis(model:Model.fem_model,n,spec):
         d_.append(np.interp(T,spec[0],spec[1]*m_))
     d=np.dot(d_,mode)
     #CQC
-        
-    
-    
     return d
     
-def ModalDecomposition(model:Model.fem_model,T,F,u0,v0,a0,xi):
+def modal_decomposition(model:Model.fem_model,n,T,F,u0,v0,a0,xi):
     """
     Solve time-history problems with modal decomposition method.\n
     u0,v0,a0: initial state.\n
@@ -85,7 +79,7 @@ def ModalDecomposition(model:Model.fem_model,T,F,u0,v0,a0,xi):
     F: list of time-dependent force vectors.\n
     xi: modal damping ratio
     """
-    w,f,T,mode=self.EigenMode(n)
+    w,f,T,mode=eigen_mode(model,n)
     damp=[]
     w=1/f
     for wn in w:
@@ -141,19 +135,20 @@ def ModalDecomposition(model:Model.fem_model,T,F,u0,v0,a0,xi):
     #iterate solve
     y_=[]
     for i in range(len(T)):
-
         y_.append(A*R_)
 
-def ResponseSpectrum(model:Model.fem_model,spec,mdd,comb='CQC'):
+def response_spectrum(model:Model.fem_model,spec,mdd,n=60,comb='CQC'):
     """
     spec: a {'T':period,'a':acceleration} dictionary of spectrum\n
     mdd: a list of modal damping ratio\n
     comb: combination method, 'CQC' or 'SRSS'
     """
-    K=self.K
-    M=self.M
-    DOF=self.K.shape[0]
-    w,f,T,mode=self.EigenMode(DOF)
+    K=model.K_
+    M=model.M_
+    DOF=model.DOF
+    w,f,T,mode=eigen_mode(model,DOF)
+    mode[n:,:]=np.zeros((DOF-n,DOF))#use n modes only.
+    mode[:,n:]=np.zeros((DOF,DOF-n))
     M_=np.dot(np.dot(mode.T,M),mode)#generalized mass
     K_=np.dot(np.dot(mode.T,K),mode)#generalized stiffness
     L_=np.dot(np.diag(M),mode)
@@ -197,7 +192,7 @@ def ResponseSpectrum(model:Model.fem_model,spec,mdd,comb='CQC'):
         print(srss)
     
     
-def NewmarkBeta(model:Model.fem_model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
+def Newmark_beta(model:Model.fem_model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
     """
     beta,gamma: parameters.\n
     u0,v0,a0: initial state.\n
@@ -228,7 +223,7 @@ def NewmarkBeta(model:Model.fem_model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
     df=pd.DataFrame({'t':tt,'u':u,'v':v,'a':a})
     return df
     
-def WilsonTheta(model:Model.fem_model,T,F,u0=0,v0=0,a0=0,beta=0.25,gamma=0.5,theta=1.4):
+def Wilson_theta(model:Model.fem_model,T,F,u0=0,v0=0,a0=0,beta=0.25,gamma=0.5,theta=1.4):
     """
     beta,gamma,theta: parameters.\n
     u0,v0,a0: initial state.\n

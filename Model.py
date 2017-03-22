@@ -7,23 +7,52 @@ Created on Thu Jun 23 21:32:57 2016
 
 import numpy as np
 import scipy.sparse as sp
-import Material,Section,Node,Element
-import threading
+import Material,Section,Loadcase,LoadCombination,Node,Element
 import Logger
 
 class fem_model:
     def __init__(self,path):
+        self.__version='0.0.1'
         self.__path=path
         self.__materials=[]
         self.__sections=[]
+        self.__quad_sections=[]
+        self.__loadcases=[]
+        self.__combinations=[]
+        
         self.__nodes=[]
         self.__beams=[]
         self.__quads=[]
+        
+        self.__load_point_concentrate=[]
+        self.__load_beam_concentrate=[]
+        self.__load_beam_distributed=[]
+        self.__load_beam_strain=[]
+        self.__load_beam_temperatrue=[]
+        self.__load_quad_distributed=[]    
+        self.__load_quad_to_beam=[]
+        
         self.__is_solved=False
         
-    def save(self):  
-        Logger.info('save document to %s/model'%self.__path,)
+        self.__index=[]
+        self.__dof=None
+        #without restraint
+        self.__K=self.__M=self.__C=None
+        self.__F=self.__D=None
+        #with restraint
+        self.__K_bar=self.__M_bar=self.__C_bar=None
+        self.__F_bar=self.__D_bar=None
         
+    @property
+    def version(self):
+        return self.__version
+        
+    @property
+    def loadcases(self):
+        return self.__loadcases
+        
+    def save(self):  
+        Logger.info('save document to %s/model'%self.__path)
         f=open(self.__path+'/model','w+')
         try:            
             f.write('!!!nodes!!!\n')
@@ -39,9 +68,9 @@ class fem_model:
         if not self.is_solved:
             return
             
-    def save_result(self):
+    def save_result(self,lc):
         Logger.info('save document to %s/result'%self.__path)    
-        f=open(self.__path+'/result','w+')
+        f=open(self.__path+'/result_%s'%lc,'w+')
         try:
             f.write('!!!node disp!!!!\n')
             for node in self.__nodes:
@@ -110,12 +139,80 @@ class fem_model:
     @property
     def quads(self):
         return self.__quads
+
+    @property
+    def is_assembled(self):
+        if self.__dof == None:
+            return False
+        return True
+        
+    @property 
+    def index(self):
+        return self.__index
+        
+    @property
+    def is_solved(self):
+        return self.__is_solved
+        
+    @is_solved.setter
+    def is_solved(self,solved):
+        self.__is_solved=solved
+
+    @property
+    def DOF(self):
+        return self.__dof
+    @property
+    def K(self):
+        if not self.is_assembled:
+            return None
+        return self.__Kmat
+    @property
+    def M(self):
+        if not self.is_assembled:
+            return None
+        return self.__Mmat        
+    @property
+    def F(self):
+        if not self.is_assembled:
+            return None
+        return self.__Fvec        
+    @property
+    def D(self):
+        if not self.is_assembled:
+            return None
+        return self.__Dvec
+    @property
+    def K_(self):
+        if not self.is_assembled:
+            return None
+        return self.__K_bar
+    @property
+    def M_(self):
+        if not self.is_assembled:
+            return None
+        return self.__M_bar
+    @property
+    def F_(self):
+        if not self.is_assembled:
+            return None
+        return self.__F_bar
+    @property
+    def D_(self):
+        if not self.is_assembled:
+            return None
+        return self.__D_bar
         
     def add_material(self,mat:Material.material):
         self.__materials.append(mat)
         
     def add_section(self,sec:Section.section):
         self.__sections.append(sec)
+        
+    def add_loadcase(self,lc: Loadcase.loadcase):
+        self.__loadcases.append(lc)
+        
+    def add_combination(self,lc: Loadcase.loadcase):
+        self.__combinations.append(lc)
         
     def add_node(self,node:Node.node):
         self.__nodes.append(node)
@@ -126,15 +223,36 @@ class fem_model:
     def add_quad(self,quad):
         self.__quads.append(quad)
         
-    def set_beam_distributed(self,idx,qi,qj):
-        self.__beams[idx].loadI=qi
-        self.__beams[idx].loadJ=qj
-        
-    def set_node_force(self,idx,P):
-        self.__nodes[idx].load=P
-        
+#    def set_beam_distributed(self,idx,qi,qj):
+#        self.__beams[idx].loadI=qi
+#        self.__beams[idx].loadJ=qj
+#        
+#    def set_node_force(self,idx,P):
+#        self.__nodes[idx].load=P
+#        
     def set_node_restraint(self,idx,res):
         self.__nodes[idx].restraint=res
+        
+    def add_point_concentrate(self,load):
+        self.__load_point_concentrate.append(load)
+        
+    def add_beam_concentrate(self,load):
+        self.__load_beam_concentrate.append(load)
+        
+    def add_beam_distributed(self,load):
+        self.__load_beam_distributed.append(load)
+        
+    def add_load_beam_strain(self,load):
+        self.__load_beam_strain.append(load)
+        
+    def add_beam_temperature(self,load):
+        self.__load_beam_temperature.append(load)
+        
+    def add_quad_distributed(self,load):
+        self.__load_quad_distributed.append(load)
+        
+    def add_quad_to_beam(self,load):
+        self.__load_quad_to_beam.append(load)
         
         
     def assemble(self):      
@@ -154,11 +272,8 @@ class fem_model:
             load = np.array(node.load)
             self.__Fvec[nid * 6: nid * 6 + 6] = np.dot(node.transform_matrix.transpose(),load)
 
-            disp = np.array(node.load)
+            disp = np.array(node.disp)
             self.__Dvec[nid * 6: nid * 6 + 6] = np.dot(node.transform_matrix.transpose(),disp)
-#                for i in range(6):
-#                    if node.disp[i] != 0:
-#                        self.__Dvec[nid * 6 + i] = node.disp[i]
             nid+=1
         
         #Beam load and displacement, and reset the index
@@ -177,11 +292,11 @@ class fem_model:
             Vt = V.transpose()
 
             #Static condensation to consider releases
-            Kij=sp.bsr_matrix((12, 12))
-            Mij=sp.bsr_matrix((12, 12))
-            rij=sp.bsr_matrix((12))
+#            Kij=sp.bsr_matrix((12, 12))
+#            Mij=sp.bsr_matrix((12, 12))
+#            rij=sp.bsr_matrix((12))
 
-            Kij, rij, Mij = beam.static_condensation(Kij, rij, Mij)
+            Kij, Mij, rij = beam.static_condensation()
 
             #Assemble nodal force vector
             self.__Fvec[i*6:i*6+6] += np.dot(Vt,rij[:6])
@@ -210,41 +325,9 @@ class fem_model:
             self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj
             
             nid+=1
-        
-    def clear_result(self):
-        for node in self.__nodes:
-            node.clear_result()
-        for beam in self.__beams:
-            beam.clear_result()
-        self.is_solved=False
+        self.eliminate_matrix()
 
-    @property
-    def is_assembled(self):
-        if self.__Kmat == None:
-            return False
-        return True
-        
-    @property
-    def is_solved(self):
-        return self.__is_solved
-        
-    @is_solved.setter
-    def is_solved(self,solved):
-        self.__is_solved=solved
-
-    @property
-    def K(self):
-        return self.__Kmat
-
-    @property
-    def F(self):
-        return self.__Fvec
-        
-    @property
-    def D(self):
-        return self.__Dvec
-
-    def eliminate_matrix(self, mass=False):
+    def eliminate_matrix(self):
         """
         return 
         K_bar: sparse matrix
@@ -252,62 +335,173 @@ class fem_model:
         M_bar: sparse matrix
         index: vector
         """
-        Logger.info('Eliminateing matrix...')
-        if mass==False:
-            k = self.K
-            f = self.F
-            to_rmv=[]
-            Id=np.arange(len(f))
-            for i in range(self.node_count-1,-1,-1):
-                for j in range(5,-1,-1):
-                    if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
-                        to_rmv.append(i*6+j)
-            k=np.delete(k,to_rmv,axis=0)
-            k=np.delete(k,to_rmv,axis=1)
-            f=np.delete(f,to_rmv)
-            Id=np.delete(Id,to_rmv)
+        Logger.info('Eliminating matrix...')
+        k = self.K
+        m=self.M
+        f = self.F
+        to_rmv=[]
+        Id=np.arange(len(f))
+        for i in range(self.node_count-1,-1,-1):
+            for j in range(5,-1,-1):
+                if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
+                    to_rmv.append(i*6+j)
+        k=np.delete(k,to_rmv,axis=0)
+        k=np.delete(k,to_rmv,axis=1)
+        m=np.delete(m,to_rmv,axis=0)
+        m=np.delete(m,to_rmv,axis=1)
+        f=np.delete(f,to_rmv)
+        Id=np.delete(Id,to_rmv)        
+        self.__K_bar = k
+        self.__M_bar = m
+        self.__F_bar = f
+        self.__index = Id
+        self.__dof=len(Id)
             
-            K_bar = k
-            F_bar = f
-            index = Id
-            return K_bar,F_bar,index
-        else:
-            k = self.K
-            m = self.M
-            f = self.F
-            Id=np.arange(len(f))
-            for i in range(self.node_count-1,-1,-1):
-                for j in range(5,-1,-1):
-                    if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
-                        to_rmv.append(i*6+j)
-            k=np.delete(k,to_rmv,axis=0)
-            k=np.delete(k,to_rmv,axis=1)
-            m=np.delete(m,to_rmv,axis=0)
-            m=np.delete(m,to_rmv,axis=1)
-            f=np.delete(f,to_rmv)
-            Id=np.delete(Id,to_rmv)
-#                        k=np.delete(k,i*6+j,axis=0)
-#                        k=np.delete(k,i*6+j,axis=1)
-#                        m=np.delete(m,i*6+j,axis=0)
-#                        m=np.delete(m,i*6+j,axis=1)
-#                        f=np.delete(f,i*6+j)
-#                        Id=np.delete(Id,i*6+j)
-            K_bar = k
-            M_bar = m
-            F_bar = f
-            index = Id
-            return K_bar,M_bar,F_bar,index
-            
-    def write_result(self,delta):
+    def assemble2(self,lc):
+        """
+        lc: name of the loadcase to be assemble.
+        """
+        Logger.info("Assembleing %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
+        for load in self.__load_beam_concentrate:
+            if load.lc!=lc:
+                continue
+            pass
+        for load in self.__load_beam_distributed:
+            if load.lc!=lc:
+                continue
+            for i in load.targets:
+                self.beams[i].load_distributed(load.values_i,load.values_j)
+        for load in self.__load_beam_strain:
+            if load.lc!=lc:
+                continue
+            pass
+        for load in self.__load_beam_temperatrue:
+            if load.lc!=lc:
+                continue
+            pass
+        for load in self.__load_point_concentrate:
+            if load.lc!=lc:
+                continue
+            pass
+        for load in self.__load_quad_distributed:
+            if load.lc!=lc:
+                continue
+            pass
+        for load in self.__load_quad_to_beam:
+            if load.lc!=lc:
+                continue
+            pass
         
+        to_rmv=[]
+        Id=np.arange(self.node_count*6)
+        for i in range(self.node_count-1,-1,-1):
+            for j in range(5,-1,-1):
+                if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
+                    to_rmv.append(i*6+j)
+
+        self.__index=np.delete(Id,to_rmv)
+        id_dic={}
+        for i in self.__index:
+           id_dic[i]=len(id_dic.keys()) 
+        
+        dof=self.__dof=len(self.__index)#degree of freedom
+        self.__K_bar = np.zeros((dof, dof))
+        self.__M_bar = np.zeros((dof, dof))
+        self.__F_bar = np.zeros(dof)
+        self.__Dvec = np.zeros(self.node_count*6)
+
+        #Nodal load and displacement, and reset the index
+        nid = 0
+        for node in self.nodes:
+            node.hid = nid                
+            load = np.array(node.load)
+            disp = np.array(node.disp)
+            Fn=np.dot(node.transform_matrix.transpose(),load)
+            Dn=np.dot(node.transform_matrix.transpose(),disp)
+            for i in range(6):
+                if nid*6+i in id_dic.keys():
+                    v=id_dic[nid*6+i]
+                    self.__F_bar[v]=Fn[i]
+            self.__Dvec[nid * 6: nid * 6 + 6] = Dn
+            nid+=1
+        
+        #Beam load and displacement, and reset the index
+        nid = 0    
+        for beam in self.beams:
+            beam.Id = nid
+            i = beam.nodeI.hid
+            j = beam.nodeJ.hid
+            T=beam.transform_matrix
+            Tt = T.transpose()
+
+            #Transform matrix
+            Vl=np.matrix(beam.local_csys.transform_matrix)
+            V=np.zeros((6, 6))
+            V[:3,:3] =V[3:,3:]= Vl
+            Vt = V.transpose()
+
+            Kij, Mij, rij = beam.static_condensation()
+
+            Ke = np.dot(np.dot(Tt,Kij),T)
+            Keii = Ke[:6,:6]
+            Keij = Ke[:6,6:]
+            Keji = Ke[6:,:6]
+            Kejj = Ke[6:,6:]
+            
+            Me = np.dot(np.dot(Tt,Mij),T)
+            Meii = Me[:6,:6]
+            Meij = Me[:6,6:]
+            Meji = Me[6:,:6]
+            Mejj = Me[6:,6:]
+            
+            for k in range(6):
+                if i*6+k in id_dic.keys():
+                    v=id_dic[i*6+k]
+                    self.__F_bar[v] += np.dot(Vt,rij[:6])[k]
+                if j*6+k in id_dic.keys():
+                    v=id_dic[j*6+k]
+                    self.__F_bar[v] += np.dot(Vt,rij[:6])[k]
+                
+            for k in range(6):
+                for r in range(6):
+                    if i*6+k in id_dic.keys() and i*6+r in id_dic.keys():
+                        u=id_dic[i*6+k]
+                        v=id_dic[i*6+r]
+                        self.__K_bar[u, v] += Keii[k,r]
+                        self.__M_bar[u, v] += Meii[k,r]
+                    
+                    if j*6+k in id_dic.keys() and j*6+r in id_dic.keys(): 
+                        u=id_dic[j*6+k]
+                        v=id_dic[j*6+r]
+                        self.__K_bar[u, v] += Kejj[k,r]
+                        self.__M_bar[u, v] += Mejj[k,r]
+                
+                    if i*6+k in id_dic.keys() and j*6+r in id_dic.keys():
+                        u=id_dic[i*6+k]
+                        v=id_dic[j*6+r]
+                        self.__K_bar[u, v] += Keij[k,r]
+                        self.__M_bar[u, v] += Meij[k,r]       
+                    if j*6+k in id_dic.keys() and i*6+r in id_dic.keys():
+                        u=id_dic[j*6+k]
+                        v=id_dic[i*6+r]
+                        self.__K_bar[u, v] += Keji[k,r]
+                        self.__M_bar[u, v] += Meji[k,r] 
+            nid+=1
+        
+    def clear_result(self):
+        for node in self.__nodes:
+            node.clear_result()
+        for beam in self.__beams:
+            beam.clear_result()
+        self.is_solved=False
+            
+    def resolve_result(self,delta):      
         for node in self.__nodes:
             node.res_disp=np.dot(node.transform_matrix,delta[node.hid*6:node.hid*6+6])
          
         #calculate element displacement and forces     
         for beam in self.__beams:
-            Kij_bar=np.zeros((12, 12))
-            rij_bar=np.zeros((12,1))
-            Kij_bar,rij_bar=beam.static_condensation(Kij_bar, rij_bar)
+            Kij_bar,Mij_bar_,rij_bar=beam.static_condensation()
             uij=np.zeros(12)
             fij=np.zeros(12)
             

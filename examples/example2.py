@@ -6,7 +6,7 @@ Created on Thu Jun 23 21:32:57 2016
 """
 
 import sys
-sys.path.append('C:/Users/Dell/documents/Python Scripts/StructEngPy/')
+sys.path.append('..')
 
 import Material,Section,Node,Element
 from Model import fem_model
@@ -24357,8 +24357,8 @@ m.set_node_restraint(4624,[True]*6)
 
 m.save()
 
-m.assemble() 
-d=Static.solve_linear(m)
-m.write_result(d)
+m.assemble2() 
+d=Static.solve_linear2(m)
+m.resolve_result(d)
 if m.is_solved:
     m.save_result()

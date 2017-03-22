@@ -225,6 +225,12 @@ class C_section(section):
 
 class L_section(section):
     pass
+
+class quad_virtual_section(section):
+    pass
+
+class quad_section(section):
+    pass
    
 if __name__=='__main__':
     pass
