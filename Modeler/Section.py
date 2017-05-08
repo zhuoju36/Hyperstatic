@@ -6,7 +6,7 @@ Created on Thu Jun 23 21:32:16 2016
 """
 import uuid
 import math
-import Material
+from Modeler import Material
 
 class section(object):
     def __init__(self,mat:Material.material,A,J,I33,I22,W33,W22,name=None):

@@ -7,7 +7,7 @@ Created on Thu Jun 23 21:32:57 2016
 
 import numpy as np
 import scipy.sparse as sp
-import Material,Section,Loadcase,LoadCombination,Node,Element
+from Modeler import Material,Section,Load,Loadcase,LoadCombination,Node,Element
 import Logger
 
 class fem_model:
@@ -252,12 +252,11 @@ class fem_model:
         self.__load_quad_distributed.append(load)
         
     def add_quad_to_beam(self,load):
-        self.__load_quad_to_beam.append(load)
-        
+        self.__load_quad_to_beam.append(load)      
         
     def assemble(self):      
         
-        Logger.info("Assembleing %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
+        Logger.info("Assembling %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
         
         n_nodes=self.node_count
         self.__Kmat = np.zeros((n_nodes*6, n_nodes*6))
@@ -361,7 +360,7 @@ class fem_model:
         """
         lc: name of the loadcase to be assemble.
         """
-        Logger.info("Assembleing %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
+        Logger.info("Assembling %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
         for load in self.__load_beam_concentrate:
             if load.lc!=lc:
                 continue
@@ -544,54 +543,54 @@ class fem_model:
         return False
         
         
-if __name__=='__main__':   
-    from Solver import Static     
-    m=fem_model('d:/fem_model')
-    steel=Material.linear_elastic(2.000E11, 0.3, 7849.0474, 1.17e-5)#Q345
-    #i_section=Section.I_section(steel, 200,150,8,10)#H200x150x8x10
-    i_section=Section.section(steel,4.265e-3,9.651e-8,6.572e-5,3.301e-6,4.313e-4,5.199e-5)
-    m.add_material(steel)
-    m.add_section(i_section)
-    
-#simple-supported beam
-    m.add_node(Node.node(0, 0, 0))
-    m.add_node(Node.node(14.28,0,0))
-    m.add_node(Node.node(20,0,0))
-    m.add_beam(Element.beam(m.nodes[0], m.nodes[1], i_section))
-    m.add_beam(Element.beam(m.nodes[1], m.nodes[2], i_section))
-    qi=(0,-10000,0,0,0,0)
-    qj=(0,-10000,0,0,0,0)
-    m.set_beam_distributed(0,qi,qj)
-    m.set_beam_distributed(1,qi,qj)
-    res1=[True,True,True,False,False,False]
-    res2=[True,True,True,True,False,False]
-    m.set_node_restraint(0,res1)
-    m.set_node_restraint(2,res2)
-
-##cantilever beam
+#if __name__=='__main__':   
+#    from Solver import Static     
+#    m=fem_model('d:/fem_model')
+#    steel=Material.linear_elastic(2.000E11, 0.3, 7849.0474, 1.17e-5)#Q345
+#    #i_section=Section.I_section(steel, 200,150,8,10)#H200x150x8x10
+#    i_section=Section.section(steel,4.265e-3,9.651e-8,6.572e-5,3.301e-6,4.313e-4,5.199e-5)
+#    m.add_material(steel)
+#    m.add_section(i_section)
+#    m.add_loadcase(Loadcase.loadcase('D'))
+##simple-supported beam
 #    m.add_node(Node.node(0, 0, 0))
-#    m.add_node(Node.node(5,0,0))
+#    m.add_node(Node.node(14.28,0,0))
+#    m.add_node(Node.node(20,0,0))
 #    m.add_beam(Element.beam(m.nodes[0], m.nodes[1], i_section))
-#    qi=(0,0,-100,0,0,0)
-#    qj=(0,0,-100,0,0,0)
-#    m.set_beam_distributed(0,qi,qj)
-#    res=[True]*6
-#    m.set_node_restraint(0,res)
-    m.save()
-    m.assemble() 
-
-#    T,d=Solver.solve_modal(m,6)
-#    print(T)
-#    m.write_result(d[0])
-    d=Static.solve_linear(m)
-    m.write_result(d)
-    if m.is_solved:
-        m.save_result()
-        
-#            f=open('d:/fem_model/K_o','w+')
-#            K=Ke
-#            for i in range(K.shape[0]):
-#                for j in range(K.shape[1]):
-#                    f.write('%10.0f '%K[i,j])
-#                f.write('\n')
-#            f.close()
+#    m.add_beam(Element.beam(m.nodes[1], m.nodes[2], i_section))
+#    qi=(0,-10000,0,0,0,0)
+#    qj=(0,-10000,0,0,0,0)
+#    m.add_beam_distributed(Load.beam_distributed(0,qi,qj))
+#    m.add_beam_distributed(Load.beam_distributed(1,qi,qj))
+#    res1=[True,True,True,False,False,False]
+#    res2=[True,True,True,True,False,False]
+#    m.set_node_restraint(0,res1)
+#    m.set_node_restraint(2,res2)
+#
+###cantilever beam
+##    m.add_node(Node.node(0, 0, 0))
+##    m.add_node(Node.node(5,0,0))
+##    m.add_beam(Element.beam(m.nodes[0], m.nodes[1], i_section))
+##    qi=(0,0,-100,0,0,0)
+##    qj=(0,0,-100,0,0,0)
+##    m.set_beam_distributed(0,qi,qj)
+##    res=[True]*6
+##    m.set_node_restraint(0,res)
+#    m.save()
+#    m.assemble() 
+#
+##    T,d=Solver.solve_modal(m,6)
+##    print(T)
+##    m.write_result(d[0])
+#    d=Static.solve_linear(m)
+#    m.write_result(d)
+#    if m.is_solved:
+#        m.save_result()
+#        
+##            f=open('d:/fem_model/K_o','w+')
+##            K=Ke
+##            for i in range(K.shape[0]):
+##                for j in range(K.shape[1]):
+##                    f.write('%10.0f '%K[i,j])
+##                f.write('\n')
+##            f.close()

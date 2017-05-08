@@ -6,7 +6,7 @@ Created on Wed Jun 22 21:50:29 2016
 """
 import uuid
 import numpy as np
-import CoordinateSystem
+from Modeler import CoordinateSystem
 
 class node(object):
     def __init__(self,x,y,z,name=None):

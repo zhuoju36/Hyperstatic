@@ -3,11 +3,13 @@
 Created on Fri Dec 30 09:56:44 2016
 
 @author: HZJ
+
+This example analyzes a simple-supported beam.
 """
 import sys
 sys.path.append('..')
 
-import Material,Section,Node,Element,Loadcase,LoadCombination,Load
+from Modeler import Material,Section,Node,Element,Loadcase,LoadCombination,Load
 from Model import fem_model
 from Solver import Static
 
@@ -15,7 +17,7 @@ from Solver import Static
 m=fem_model('d:/fem_model')
 
 #step 2: construct material objects and add them to the model.
-steel=Material.linear_elastic(2.000E11, 0.3, 7849.0474, 1.17e-5)#Q345
+steel=Material.isotropy_elastic(7849.0474,2.000E11,0.3,1.17e-5)#Q345
 m.add_material(steel)
 
 #step 3: construct section objects and add them to the model.
@@ -25,7 +27,7 @@ m.add_section(i_section)
 
 #step 4: construct load case and load combination objects and add them to the model.
 lc1=Loadcase.loadcase('S') #self-weight
-lc2=Loadcase.loadcase('D') #superimposed deadload
+lc2=Loadcase.loadcase('D') #superimposed dead load
 lc3=Loadcase.loadcase('L') #live load
 comb1=LoadCombination.combination('SLS:S+D+L',{'S':1.0,'D':1.0,'L':1.0})
 comb2=LoadCombination.combination('ULS:1.35SD+0.98L',{'S':1.35,'D':1.35,'L':0.98})
@@ -36,7 +38,6 @@ m.add_loadcase(lc3)
 m.add_combination
 
 #step 5: construct nodes and elements and add them to the model.
-#simple-supported beam
 m.add_node(Node.node(0, 0, 0))
 m.add_node(Node.node(14.28,0,0))
 m.add_node(Node.node(20,0,0))

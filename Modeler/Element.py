@@ -7,8 +7,7 @@ Created on Wed Jun 22 22:17:28 2016
 import uuid
 import numpy as np
 import scipy as sp
-import CoordinateSystem
-import Section
+from Modeler import CoordinateSystem,Section
 
 class element(object):
     def __init__(self,name=None):
