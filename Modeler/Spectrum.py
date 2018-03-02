@@ -33,9 +33,11 @@ class code_spectrum(object):
         return self.__spectrum
         
 if __name__=='__main__':
-    cs1=code_spectrum(0.12,0.45,0.02)
-    cs2=code_spectrum(0.34,0.45,0.02)
-    cs3=code_spectrum(0.72,0.45,0.02)
+    Tg=0.90
+    xi=0.02
+    cs1=code_spectrum(0.12,Tg,xi)
+    cs2=code_spectrum(0.34,Tg,xi)
+    cs3=code_spectrum(0.72,Tg,xi)
     
     font = FontProperties(fname=r"C:\\WINDOWS\\Fonts\\simsun.ttc", size=14)#C:\WINDOWS\Fonts
     plt.xlabel('T(s)',fontproperties=font)
@@ -44,3 +46,61 @@ if __name__=='__main__':
     plt.plot(cs2.spectrum['T'],cs2.spectrum['alpha'],label=u'中震')
     plt.plot(cs3.spectrum['T'],cs3.spectrum['alpha'],label=u'大震')
     plt.legend(prop=font)
+    
+    cs=cs1
+    for (t,a) in zip(cs.spectrum['T'],cs.spectrum['alpha']):
+        if np.mod(t*100,10)==0:
+            print(t,a)
+
+def wind_vibration_factor():         
+    g=2.5
+    I10=0.12
+    xi1=0.01
+    k_w=1.28
+    f1=1/1.38
+    w0=0.65
+    k=0.944
+    a1=0.155
+    H=30
+    B=max(100,2*H)
+    rho_z=10*np.sqrt(H+60*np.e**(-H/60)-60)/H
+    rho_x=10*np.sqrt(H+50*np.e**(-H/60)-50)/B
+    mu_z=1.67
+    phi1=1
+    Bz=k*H**a1*rho_x*rho_z*phi1/mu_z
+    x1=min([30*f1/np.sqrt(k_w*w0),5])
+    R=np.sqrt(np.pi*x1**2/(6*xi1*(1+x1**2)**(4/3)))
+    beta_z=1+2*g*I10*Bz*np.sqrt(1+R**2)
+    print(beta_z)
+
+
+mass=2.22831e3*0.011*7850+641172+276159.5-12370.6
+print(mass)
+#mass=(2.22831e3*0.021+3.4817e3*0.025+1.05e3*0.14+0.739e3*0.012)*7850+37202
+area=3.481e3
+print(mass/1000)
+print(mass/area)
+#
+def comfortablity():
+    C=2
+    B=95.7
+    L=43.5
+    w_=12+0.3
+    p0=0.3
+    g=9.8
+    beta=0.02
+    w=w_*C*L*L
+    fn=2.47
+    Fp=p0*np.exp(-0.35*fn)
+    a_p=Fp/(beta*w)*g
+#    print(w)
+#    print(Fp)
+#    print(a_p)
+
+weight=(3.482e3*0.020+2.631e3*0.012+649*0.008+1.25e3*0.012)*7.85
+print('weight(t)')
+print(weight)
+
+w1=274*1.2
+w2=(196+1000)*1.2
+print(w1)
