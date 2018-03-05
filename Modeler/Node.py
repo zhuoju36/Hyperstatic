@@ -6,9 +6,9 @@ Created on Wed Jun 22 21:50:29 2016
 """
 import uuid
 import numpy as np
-from Modeler import CoordinateSystem
+from . import CoordinateSystem
 
-class node(object):
+class Node(object):
     def __init__(self,x,y,z,name=None):
         self.__x=x
         self.__y=y

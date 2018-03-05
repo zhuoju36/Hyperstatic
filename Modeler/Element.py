@@ -7,7 +7,7 @@ Created on Wed Jun 22 22:17:28 2016
 import uuid
 import numpy as np
 import scipy as sp
-from Modeler import CoordinateSystem,Section
+from . import CoordinateSystem,Section
 
 class Element(object):
     def __init__(self,name=None):
@@ -34,7 +34,7 @@ class Element(object):
         return T
                 
 class Beam(Element):
-    def __init__(self,i, j, sec:Section.section, name=None):
+    def __init__(self,i, j, sec:Section.Section, name=None):
         self.__nodeI=i
         self.__nodeJ=j
         self.loadI=[0]*6
@@ -286,7 +286,123 @@ class Beam(Element):
     @res_force.setter
     def res_force(self,force):
         self.__res_force=force
+        
+class TriMembrane(Element):
+    def __init__(self,node_i, node_j, node_k, sec ,name=None):
+        Element.__init__(self)
+        self.nodes=[node_i,node_j,node_k]
+        self.x0=np.array([(node.x,node.y) for node in self.nodes])
+        self.area=0.5*np.linalg.det(np.array([[1,1,1],
+                                         [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
+                                         [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
+        self.t=sec.t
+        self.__sec=sec
 
+    @property
+    def section(self):
+        return self.__sec
+        
+    def abc(self,j,m):
+        """
+        conversion constant.
+        """
+        x,y=self.x0[:,0],self.x0[:,1]
+        a=x[j]*y[m]-x[m]*y[j]
+        b=y[j]-y[m]
+        c=-x[j]+x[m]
+        return np.array([a,b,c])
+
+    def N(self,x):
+        """
+        interpolate function.
+        return: 3x1 array represent x,y
+        """
+        return self.L(x)
+        
+    def N_(self,x):
+        """
+        reversed interpolate function.
+        return: 3x1 array represent x,y
+        """
+        return self.x0.T
+        
+    def L(self,x):
+        """
+        convert csys from x to L
+        return: 3x1 array represent x,y
+        """
+        x,y=x[0],x[1]
+        L=np.array((3,1))
+        L[0]=self.abc(1,2).dot(np.array([1,x,y]))/2/self.area
+        L[1]=self.abc(2,0).dot(np.array([1,x,y]))/2/self.area
+        L[2]=self.abc(0,1).dot(np.array([1,x,y]))/2/self.area
+        return L.reshape(3,1)
+    
+    def x(self,L):
+        """
+        convert csys from L to x
+        return: 2x1 array represent x,y
+        """
+        return np.dot(np.array(L).reshape(1,3),self.x0).reshape(2,1)
+
+    def B(self,x):
+        """
+        strain matrix, which is derivative of intepolate function
+        """
+        abc0=self.abc(1,2)
+        abc1=self.abc(2,0)
+        abc2=self.abc(0,1)
+        B0= np.array([[abc0[1],      0],
+                      [      0,abc0[1]],
+                      [abc0[2],abc0[2]]])
+        B1= np.array([[abc1[1],     0],
+                      [      0,abc1[1]],
+                      [abc1[2],abc1[2]]])
+        B2= np.array([[abc2[1],      0],
+                      [      0,abc2[1]],
+                      [abc2[2],abc2[2]]])
+        return np.hstack([B0,B1,B2])/2/self.area
+    
+    def S(self,x):
+        """
+        stress matrix
+        """
+        return np.dot(self.D,self.B(x))
+    
+    @property  
+    def J(self):
+        """
+        Jacobi matrix
+        """
+        dxdL1=self.x0[0,0]
+        dxdL2=self.x0[1,0]
+        dydL1=self.x0[0,1]
+        dydL2=self.x0[1,1]
+        return np.array([[dxdL1,dydL1],
+                        [dxdL2,dydL2]])
+                               
+    @property  
+    def K(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        E=self.__sec.material.E
+        mu=self.__sec.material.mu
+        D0=E/(1-mu**2)
+        D=np.array([[1,mu,0],
+                    [mu,1,0],
+                    [0,0,(1-mu)/2]])*D0
+#        res=np.zeros((6,6))
+#        def gfunc(x):
+#            return 0
+#        def hfunc(x):
+#            return 1-x
+        res=np.dot(np.dot(self.B(0).T,D),self.B(0))*self.area*self.t
+#        for i in range(6):
+#            for j in range(6):
+#                res[i,j]=sp.integrate.dblquad(lambda x,y:A[i,j],0,1,gfunc,hfunc)[0]*self.t                 
+        return res
+    
 class IsoParametric(Element):
     def __init__(self,dim,name=None):
         Element.__init__(self)
@@ -334,9 +450,6 @@ class IsoParametric(Element):
         
     def K(self):
         return np.dot(np.dot(self.G.T,self.P),self.G)
-    
-    def P_(self):
-        pass
     
     def P(self):
         return np.dot(self.G.T,self.P)
@@ -722,12 +835,12 @@ class Plate(IsoParametric):
 #    ]
     
         
-if __name__=='__main__':
-    import Node
-    import Material
-    import Section
-    m = Material.material(2.000E11, 0.3, 7849.0474, 1.17e-5)
-    s = Section.section(m, 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6)
-    n1=Node.node(1,2,3)
-    n2=Node.node(2,3,4)
-    b=beam(n1,n2,s)
+#if __name__=='__main__':
+#    import Node
+#    import Material
+#    import Section
+#    m = Material.material(2.000E11, 0.3, 7849.0474, 1.17e-5)
+#    s = Section.section(m, 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6)
+#    n1=Node.node(1,2,3)
+#    n2=Node.node(2,3,4)
+#    b=beam(n1,n2,s)

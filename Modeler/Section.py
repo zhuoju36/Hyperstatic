@@ -6,10 +6,10 @@ Created on Thu Jun 23 21:32:16 2016
 """
 import uuid
 import math
-from Modeler import Material
+from . import Material
 
-class section(object):
-    def __init__(self,mat:Material.material,A,J,I33,I22,W33,W22,name=None):
+class Section(object):
+    def __init__(self,mat:Material.Material,A,J,I33,I22,W33,W22,name=None):
         """
         mat: material
         A: area
@@ -67,7 +67,7 @@ class section(object):
         return self.__mat
         
         
-class rectangle(section):
+class Rectangle(Section):
     def __init__(self,mat,h,b,name=None):
         """
         h - height\n
@@ -85,7 +85,7 @@ class rectangle(section):
 #        self.gamma22=1.05
 
 
-class circle(section):
+class Rircle(Section):
     def __init__(self,mat,d,name=None):
         """
         d - diameter
@@ -100,7 +100,7 @@ class circle(section):
 #        self.gamma33=1.15
 #        self.gamma22=1.15
         
-class pipe(section):
+class Pipe(Section):
     def __init__(self,mat,d,t,fab='r',name=None):
         """
         d - diameter\n
@@ -128,7 +128,7 @@ class pipe(section):
         else:
             raise ValueError('wrong fabrication!')
 
-class hollow_box(section):
+class HollowBox(Section):
     def __init__(self,mat,h,b,tw,tf,fab='r',name=None):
         """
         h - height\n
@@ -155,7 +155,7 @@ class hollow_box(section):
         self.cls22='c'
         
 
-class I_section(section):
+class ISection(Section):
     def __init__(self,mat,h,b,tw,tf,fab='r',name=None):
         """
         h - height\n
@@ -182,7 +182,7 @@ class I_section(section):
         self.cls33='c'
         self.cls22='c'
         
-class I_section_2(section):
+class ISection2(Section):
     def __init__(self,mat,h,b1,tf1,tw,b2,tf2,fab='r',name=None):
         """
         h - height\n
@@ -217,20 +217,23 @@ class I_section_2(section):
         self.cls33='c'
         self.cls22='c'
         
-class T_section(section):
+class TSection(Section):
     pass
 
-class C_section(section):
+class CSection(Section):
     pass
 
-class L_section(section):
+class LSection(Section):
     pass
 
-class quad_virtual_section(section):
-    pass
-
-class quad_section(section):
-    pass
+class AreaSection(object):
+    def __init__(self,mat,t):
+        self.__mat=mat
+        self.t=t
+    
+    @property
+    def material(self):
+        return self.__mat
    
 if __name__=='__main__':
     pass

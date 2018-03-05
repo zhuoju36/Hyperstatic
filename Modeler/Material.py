@@ -28,7 +28,7 @@ import numpy as np
 #    def __init__(self,E,mu,gamma,alpha,name=None):
 #        super().__init__(E,mu,gamma,alpha,name)
         
-class material(object):
+class Material(object):
     def __init__(self,gamma,name=None):
         """
         gamma: density.
@@ -45,12 +45,12 @@ class material(object):
     def gamma(self):
         return self.__gamma
         
-class elastic(material):
+class Elastic(Material):
     def __init__(self,gamma,C,alpha,name=None):
         """
         gamma: density.
         C: flexity matrix, 6x6 matrix.
-        alpha: expansion coefficient, 1x6 vector.
+        alpha: expansion coefficient, 6x1 vector.
         name: optional, an uuid is given by default.
         """
         self.__C=C
@@ -88,10 +88,10 @@ class elastic(material):
     def f(self,d,dT):
         return self.__E.dot(d)+self.f0(dT)
         
-class orthogonal_elastic(elastic):
+class Orthogonal_elastic(Material):
     pass
         
-class isotropy_elastic(elastic):
+class IsotropyElastic(Material):
     def __init__(self,gamma,E,mu,alpha,name=None):
         """
         gamma: density.
@@ -101,15 +101,14 @@ class isotropy_elastic(elastic):
         name: optional, an uuid is given by default.
         """
         self.__G=E/2/(1+mu)
-        G=self.__G
-        C=np.array([[  1/E,-mu/E,-mu/E,  0,  0,  0],
-                    [-mu/E,  1/E,-mu/E,  0,  0,  0],
-                    [-mu/E,-mu/E,  1/E,  0,  0,  0],
-                    [    0,    0,    0,1/G,  0,  0],
-                    [    0,    0,    0,  0,1/G,  0],
-                    [    0,    0,    0,  0,  0,1/G]])
+        self.__E=E
+        self.__mu=mu
         alpha=alpha*np.array([1,1,1,0,0,0])
-        super().__init__(gamma,C,alpha,name)
+        super().__init__(gamma,name)
+        
+    @property
+    def mu(self):
+        return self.__mu
     
     @property
     def G(self):
@@ -117,9 +116,33 @@ class isotropy_elastic(elastic):
     
     @property
     def E(self):
-        return 1/self.C_matrix[1,1]
+        return self.__E
+    
+    @property    
+    def C(self):
+        mu=self.__mu
+        E=self.E
+        G=self.G
+        return np.array([[  1/E,-mu/E,-mu/E,  0,  0,  0],
+                        [-mu/E,  1/E,-mu/E,  0,  0,  0],
+                        [-mu/E,-mu/E,  1/E,  0,  0,  0],
+                        [    0,    0,    0,1/G,  0,  0],
+                        [    0,    0,    0,  0,1/G,  0],
+                        [    0,    0,    0,  0,  0,1/G]])
+    
+    @property                    
+    def D(self):
+        lamb=self.E*self.__mu/(1+self.__mu)/(1-2*self.__mu)
+        G=self.G
+        return np.array([[lamb+2*G,lamb,lamb,0,0,0],
+                         [lamb,lamb+2*G,lamb,0,0,0],
+                         [lamb,lamb,lamb+2*G,0,0,0],
+                         [   0,   0,       0,G,0,0],
+                         [   0,   0,       0,0,G,0],
+                         [   0,   0,       0,0,0,G]])
         
 if __name__=='__main__':
-    steel=isotropy_elastic(7849.0474,2.000E11,0.3,1.17e-5)#Q345
+    steel=IsotropyElastic(7849.0474,2.000E11,0.3,1.17e-5)#Q345
+    print(steel.D)
         
     
