@@ -5,7 +5,9 @@ Created on Wed Jun 22 21:50:29 2016
 @author: HZJ
 """
 import uuid
+
 import numpy as np
+
 from . import CoordinateSystem
 
 class Node(object):

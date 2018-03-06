@@ -5,78 +5,86 @@ Created on Wed Jun 22 22:17:28 2016
 @author: HZJ
 """
 import uuid
+
 import numpy as np
 import scipy as sp
+
 from . import CoordinateSystem,Section
+from . import config
 
 class Element(object):
     def __init__(self,name=None):
         self.__name=uuid.uuid1() if name==None else name
-        self.nodes=[]
+        self.__hid=None #hidden id
         
     @property
     def name(self):
         return self.__name
         
     @property
-    def elm_stiff_matrix(self):
+    def hid(self):
+        return self.__hid
+    @hid.setter
+    def hid(self,hid):
+        self.__hid=hid
+        
+    @property
+    def nodes(self):
+        return self.__nodes
+        
+    @property
+    def Ke(self):
+        """
+        element stiffness matrix.
+        """
         return self.__Kij
 
     @property
-    def elm_mass_matrix(self):
+    def Me(self):
+        """
+        element mass matrix.
+        """
         return self.__Mij
     
     @property
-    def transform_matrix(self):
+    def T(self):
+        """
+        element local-global csys transform matrix.
+        """
         T=np.zeros((12,12))
         V=self.local_csys.transform_matrix
         T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
         return T
                 
 class Beam(Element):
-    def __init__(self,i, j, sec:Section.Section, name=None):
-        self.__nodeI=i
-        self.__nodeJ=j
-        self.loadI=[0]*6
-        self.loadJ=[0]*6
-        self.__releaseI=[False]*6
-        self.__releaseJ=[False]*6
-        self.__section=sec
-        self.__rotation=0
-        
-        self.__load_d=[] #distributed
-        self.__load_c=[] #concentrated
-        self.__load_s=[] #strain
-        self.__load_t=[] #temperature
-        
-        tol = 1E-6
-        #results
-        self.__res_force=None
-        self.__res_disp=None
-        self.__measure=[] #result measure locations
-        self.__ms_forces=[]
-        self.__ms_disps=[]
-        
+    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None):
+        r"""
+        node_i,node_j: ends of beam.
+        E: elastic modulus
+        mu: Possion ratio        
+        A: section area
+        I2: inertia about 2-2
+        I3: inertia about 3-3
+        J: torsianl constant
+        rho: mass density
+        """
+        Element.__init__(self,name)
+        self.__nodes=[node_i,node_j]
+
         #Initialize local CSys
-        o = [ self.nodeI.x, self.nodeI.y, self.nodeI.z ]
-        pt1 = [ self.nodeJ.x, self.nodeJ.y, self.nodeJ.z ]
-        pt2 = [ self.nodeI.x, self.nodeI.y, self.nodeI.z ]
-        if abs(self.nodeI.x - self.nodeJ.x) < tol and abs(self.nodeI.y - self.nodeJ.y) < tol:
+        o = [ node_i.x, node_i.y, node_i.z ]
+        pt1 = [ node_j.x, node_j.y, node_j.z ]
+        pt2 = [ node_i.x, node_i.y, node_i.z ]
+        if abs(node_i.x - node_j.x) < config['TOL'] and abs(node_i.y - node_j.y) < config['TOL']:
             pt2[0] += 1
         else:
             pt2[2] += 1
         self.local_csys = CoordinateSystem.cartisian(o, pt1, pt2)
+        
+        l=self.length
+        G=E/2/(1+mu)
 
         #Initialize local stiffness matrix
-        l = self.length
-        E = self.section.material.E
-        A = self.section.A
-        J = self.section.J
-        G = self.section.material.G
-        I2 = self.section.I22
-        I3 = self.section.I33
-        rho = self.section.material.gamma
-
         self.__Kij = np.zeros((12, 12))
         self.__Mij = np.zeros((12, 12))
         self.__Mij_=np.zeros((12,12))
@@ -165,64 +173,33 @@ class Beam(Element):
         for i in range(12):
             self.__Mij[i, i]=1
         self.__Mij*=rho*A*l/2
-        super().__init__(name)
-    
-    @property
-    def nodeI(self):
-        return self.__nodeI
-    
-    @property
-    def nodeJ(self):
-        return self.__nodeJ
-    
-    @property
-    def section(self):
-        return self.__section
         
     @property
-    def releaseI(self):
-        return self.__releaseI
-        
-    @property
-    def releaseJ(self):
-        return self.__releaseJ
-
+    def nodes(self):
+        return self.__nodes
+    
     @property
     def length(self):
-        nodeI=self.nodeI
-        nodeJ=self.nodeJ
+        nodeI=self.__nodes[0]
+        nodeJ=self.__nodes[1]
         return np.sqrt((nodeI.x - nodeJ.x)*(nodeI.x - nodeJ.x) + (nodeI.y - nodeJ.y)*(nodeI.y - nodeJ.y) + (nodeI.z - nodeJ.z)*(nodeI.z - nodeJ.z))
     
     @property
-    def nodal_force(self):
-        l = self.length
-        loadI=self.loadI
-        loadJ=self.loadJ
-        #recheck!!!!!!!!!!!!
-        #i
-        v=np.zeros(12)
-        v[0]=(loadI[0] + loadJ[0]) * l / 2#P
-        v[1]=(loadI[1] * 7 / 20 + loadJ[1] * 3 / 20) * l#V2
-        v[2]=(loadI[2] * 7 / 20 + loadJ[2] * 3 / 20) * l#V3
-        v[3]=loadI[3] - loadJ[3]#T
-        v[4]=(loadI[2] / 20 + loadJ[2] / 30) * l * l + loadI[4]#M22
-        v[5]=(loadI[1] / 20 + loadJ[1] / 30) * l * l + loadI[5]#M33
-        #j
-        v[6]=(loadJ[0] + loadI[0]) * l / 2#P
-        v[7]=(loadJ[1] * 7 / 20 + loadI[1] * 3 / 20) * l#V2
-        v[8]=(loadJ[2] * 7 / 20 + loadI[2] * 3 / 20) * l#V3
-        v[9] = loadJ[3] - loadI[3]#T
-        v[10] = -(loadJ[2] / 20 + loadI[2] / 30) * l * l + loadJ[4]#M22
-        v[11] = -(loadJ[1] / 20 + loadI[1] / 30) * l * l + loadJ[5]#M33
-        return v
+    def Ke(self):
+        return self.__Kij
+    
+    @property
+    def Me(self):
+        return self.__Mij
+
         
     def initialize_csys(self):
-        nodeI=self.nodeI
-        nodeJ=self.nodeJ
-        o = np.array([nodeI.x, nodeI.y, nodeI.z])
-        pt1 = np.array([nodeJ.x, nodeJ.y, nodeJ.z])
+        node_i=self.__nodes[0]
+        node_j=self.__nodes[1]
+        o = np.array([node_i.x, node_i.y, node_i.z])
+        pt1 = np.array([node_j.x, node_j.y, node_j.z])
         pt2 = np.array([0,0,0])
-        if self.nodeI.x != self.nodeJ.x and self.nodeI.y != self.nodeJ.y:
+        if node_i.x != node_j.x and node_i.y != node_j.y:
             pt2[2] = 1
         else:
             pt2[0] = 1
@@ -256,38 +233,105 @@ class Beam(Element):
                     rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
         return kij_bar, mij_bar, rij_bar
 
-    def elm_force(self,uij,fij):
-        """
-        uij,fij: 12x1 sparse vector
-        """
-#        fij = np.zeros(12)
-#        Kij = sp.csc_matrix(12, 12)
-#        rij = sp.csc_matrix(12,1)
-        Kij, Mij, rij = self.static_condensation()
-        fij = Kij * uij + self.nodal_force
-        return fij
-
-    #to be revised
-    def load_distributed(self,qi, qj):
-        """
-        qi,qj: 6x1 vector
-        """
-        self.loadI=qi
-        self.loadJ=qj
-        
-    def clear_result(self):
-        self.__res_force=None
-        
-    #result force
-    @property
-    def res_force(self):
-        return self.__res_force
-    
-    @res_force.setter
-    def res_force(self,force):
-        self.__res_force=force
-        
 class TriMembrane(Element):
+    def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):
+        r"""
+        node_i,node_j,node_k: corners of triangle.
+        t: thickness
+        E: elastic modulus
+        mu: Poisson ratio
+        rho: mass density
+        """
+        Element.__init__(self)
+        self.__nodes=[node_i,node_j,node_k]
+        self.__x0=np.array([(node.x,node.y) for node in self.__nodes])
+        self.area=0.5*np.linalg.det(np.array([[1,1,1],
+                                         [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
+                                         [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
+        self.__t=t
+        self.__E=E
+        self.__mu=mu
+        self.__rho=rho
+
+    @property
+    def section(self):
+        return self.__sec
+        
+    def abc(self,j,m):
+        """
+        conversion constant.
+        """
+        x,y=self.__x0[:,0],self.__x0[:,1]
+        a=x[j]*y[m]-x[m]*y[j]
+        b=y[j]-y[m]
+        c=-x[j]+x[m]
+        return np.array([a,b,c])
+
+    def N(self,x):
+        """
+        interpolate function.
+        return: 3x1 array represent x,y
+        """
+        return self.L(x)
+        
+    def L(self,x):
+        """
+        convert csys from x to L
+        return: 3x1 array represent x,y
+        """
+        x,y=x[0],x[1]
+        L=np.array((3,1))
+        L[0]=self.abc(1,2).dot(np.array([1,x,y]))/2/self.area
+        L[1]=self.abc(2,0).dot(np.array([1,x,y]))/2/self.area
+        L[2]=self.abc(0,1).dot(np.array([1,x,y]))/2/self.area
+        return L.reshape(3,1)
+    
+    def x(self,L):
+        """
+        convert csys from L to x
+        return: 2x1 array represent x,y
+        """
+        return np.dot(np.array(L).reshape(1,3),self.x0).reshape(2,1)
+
+    def B(self,x):
+        """
+        strain matrix, which is derivative of intepolate function
+        """
+        abc0=self.abc(1,2)
+        abc1=self.abc(2,0)
+        abc2=self.abc(0,1)
+        B0= np.array([[abc0[1],      0],
+                      [      0,abc0[2]],
+                      [abc0[2],abc0[1]]])
+        B1= np.array([[abc1[1],     0],
+                      [      0,abc1[2]],
+                      [abc1[2],abc1[1]]])
+        B2= np.array([[abc2[1],      0],
+                      [      0,abc2[2]],
+                      [abc2[2],abc2[1]]])
+        return np.hstack([B0,B1,B2])/2/self.area
+    
+    def S(self,x):
+        """
+        stress matrix
+        """
+        return np.dot(self.D,self.B(x))
+                                 
+    @property  
+    def Ke(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        E=self.__E
+        mu=self.__mu
+        D0=E/(1-mu**2)
+        D=np.array([[1,mu,0],
+                    [mu,1,0],
+                    [0,0,(1-mu)/2]])*D0
+        res=np.dot(np.dot(self.B(0).T,D),self.B(0))*self.area*self.__t               
+        return res
+        
+class TriPlate(Element):
     def __init__(self,node_i, node_j, node_k, sec ,name=None):
         Element.__init__(self)
         self.nodes=[node_i,node_j,node_k]
@@ -353,14 +397,14 @@ class TriMembrane(Element):
         abc1=self.abc(2,0)
         abc2=self.abc(0,1)
         B0= np.array([[abc0[1],      0],
-                      [      0,abc0[1]],
-                      [abc0[2],abc0[2]]])
+                      [      0,abc0[2]],
+                      [abc0[2],abc0[1]]])
         B1= np.array([[abc1[1],     0],
-                      [      0,abc1[1]],
-                      [abc1[2],abc1[2]]])
+                      [      0,abc1[2]],
+                      [abc1[2],abc1[1]]])
         B2= np.array([[abc2[1],      0],
-                      [      0,abc2[1]],
-                      [abc2[2],abc2[2]]])
+                      [      0,abc2[2]],
+                      [abc2[2],abc2[1]]])
         return np.hstack([B0,B1,B2])/2/self.area
     
     def S(self,x):
