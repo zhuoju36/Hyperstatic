@@ -5,7 +5,8 @@ from Modeler.Section import AreaSection
 from Modeler.Node import Node
 from Modeler.Element import Beam,TriMembrane
 from Modeler.FEModel import FEModel
-import Logger
+#import Logger
+from Modeler.FEModel import solve_linear
 
 
 if __name__=='__main__':
@@ -24,6 +25,7 @@ if __name__=='__main__':
     model.add_force(1,(0,0,-1,0,0,0))
     model.add_restraint(1,[True]*6)
     model.assemble()
+    print(solve_linear(model))
     
     
 

@@ -15,11 +15,9 @@ class FEModel:
         self.__beams={}
         self.__quads={}
         self.__forces={}
-        self.__restraints={}
         self.__displacements={}
-        
-        self.__is_solved=False
-        
+        self.__restraints={}
+                
         self.__index=[]
         self.__dof=None
         #without restraint
@@ -28,6 +26,8 @@ class FEModel:
         #with restraint
         self.__K_bar=self.__M_bar=self.__C_bar=None
         self.__F_bar=self.__D_bar=None
+        
+        self.is_solved=False
         
     @property
     def node_count(self):
@@ -43,21 +43,11 @@ class FEModel:
 
     @property
     def is_assembled(self):
-        if self.__dof == None:
-            return False
-        return True
+        return self.__dof != None
         
     @property 
     def index(self):
         return self.__index
-        
-    @property
-    def is_solved(self):
-        return self.__is_solved
-        
-    @is_solved.setter
-    def is_solved(self,solved):
-        self.__is_solved=solved
 
     @property
     def DOF(self):
@@ -177,13 +167,9 @@ class FEModel:
 #            Kij=sp.bsr_matrix((12, 12))
 #            Mij=sp.bsr_matrix((12, 12))
 #            rij=sp.bsr_matrix((12))
-
-            Kij, Mij, rij = beam.static_condensation()
-
-            #Assemble nodal force vector
-            self.__Fvec[i*6:i*6+6] += np.dot(Vt,rij[:6])
-            self.__Fvec[j*6:j*6+6] += np.dot(Vt,rij[6:])
-
+            Kij=beam.Ke
+            Mij=beam.Me
+            
             #Assemble Total Stiffness Matrix
             Ke = np.dot(np.dot(Tt,Kij),T)
             Keii = Ke[:6,:6]
@@ -207,6 +193,7 @@ class FEModel:
             self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj
 
         self.eliminate_matrix()
+        
 
     def eliminate_matrix(self):
         """
@@ -219,19 +206,20 @@ class FEModel:
 #        Logger.info('Eliminating matrix...')
         k = self.K
         m=self.M
-        f = self.F
+        f = self.__Fvec
         to_rmv=[]
         Id=np.arange(len(f))
         for i in range(self.node_count-1,-1,-1):
             for j in range(5,-1,-1):
-                if self.nodes[i].restraint[j] == True or self.nodes[i].disp[j] != 0:
+                if self.__nodes[i].restraint[j] == True or self.__nodes[i].disp[j] != 0:
                     to_rmv.append(i*6+j)
         k=np.delete(k,to_rmv,axis=0)
         k=np.delete(k,to_rmv,axis=1)
         m=np.delete(m,to_rmv,axis=0)
         m=np.delete(m,to_rmv,axis=1)
         f=np.delete(f,to_rmv)
-        Id=np.delete(Id,to_rmv)        
+        Id=np.delete(Id,to_rmv)
+        
         self.__K_bar = k
         self.__M_bar = m
         self.__F_bar = f
@@ -258,3 +246,29 @@ class FEModel:
         A=nodes[:mid]
         B=nodes[mid:]
         return self.find(A,target) or self.find(B,target)
+
+import scipy.sparse as sp
+from scipy.sparse import linalg as sl        
+def solve_linear(model):
+    K_bar,F_bar,index=model.K_,model.F_,model.index
+    Dvec=model.D
+    n_nodes=model.node_count
+    try:
+        #sparse matrix solution
+        delta_bar = sl.spsolve(sp.csr_matrix(K_bar),F_bar,sym_pos=True)
+        delta = delta_bar
+        #fill original displacement vector
+        prev = 0
+        for idx in index:
+            gap=idx-prev
+            if gap>0:
+                delta=np.insert(delta,prev,[0]*gap)
+            prev = idx + 1               
+            if idx==index[-1] and idx!=n_nodes-1:
+                delta = np.insert(delta,prev, [0]*(n_nodes*6-prev))
+        delta += Dvec
+    except Exception as e:
+        print(e)
+        return None
+    model.is_solved=True
+    return delta

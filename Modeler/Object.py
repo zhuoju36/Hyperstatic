@@ -282,9 +282,8 @@ class Frame(object):
         """
         if self.__hid==None:
             raise Exception('The object must be meshed first!')
+        #convert beam force to nodal force
         model[0].add_nodal_force(self.__hid,self.__load)
-        model[0].add_nodal_displacement(self.__hid,self.__displacement)       
         
-
 class Area(Object):
     pass

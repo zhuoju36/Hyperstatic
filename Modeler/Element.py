@@ -205,7 +205,7 @@ class Beam(Element):
             pt2[0] = 1
         self.local_csys.set_by_3pts(o, pt1, pt2)
 
-    def static_condensation(self, coor_mass=False):
+    def static_condensation(self,rij,releaseI,releaseJ):
         """
         kij_bar: 12x12 matrix
         rij_bar: 12x1 vector
@@ -213,25 +213,25 @@ class Beam(Element):
         """
         kij=self.__Kij
         mij=self.__Mij
-        rij=self.nodal_force
         kij_bar = kij
         mij_bar = mij
         rij_bar = rij
-
         for n in range(0,6):
-            if self.releaseI[n] == True:
+            if releaseI[n] == True:
                 for i in range(12):
                     for j in range(12):
                         kij_bar[i, j] = kij[i, j] - kij[i, n]* kij[n, j] / kij[n, n]
                         mij_bar[i, j] = mij[i, j] - mij[i, n]* mij[n, j] / mij[n, n]
                     rij_bar[i] = rij[i] - rij[n] * kij[n, i] / kij[n, n]
-            if self.releaseJ[n] == True:
+            if releaseJ[n] == True:
                 for i in range(12):
                     for j in range(12):
                         kij_bar[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
                         mij_bar[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
                     rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
-        return kij_bar, mij_bar, rij_bar
+        self.__Kij=kij_bar
+        self.__Mij=mij_bar
+        return rij_bar
 
 class TriMembrane(Element):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):
