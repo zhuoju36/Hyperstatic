@@ -132,24 +132,12 @@ class FEModel:
                 raise(ValueError('restraint must be a 6 bool array.'))
         self.__restraints[hid]=res
         
-        
-    
-        
-    def assemble(self):      
-        
-#        Logger.info("Assembling %d nodes, %d beams and %d quads..."%(self.node_count,self.beam_count,self.quad_count))
-        
+    def assemble_structure(self):
         n_nodes=self.node_count
         self.__Kmat = np.zeros((n_nodes*6, n_nodes*6))
         self.__Mmat = np.zeros((n_nodes*6, n_nodes*6))
         self.__Fvec = np.zeros((n_nodes*6,1))
-        self.__Dvec = np.zeros((n_nodes*6,1))
-
-        for force in self.__forces.items():
-            nid=force[0]
-            self.__Fvec[nid * 6: nid * 6 + 6] = force[1].reshape(6,1)
-#            self.__Dvec[nid * 6: nid * 6 + 6] = np.dot(node.transform_matrix.transpose(),disp)
-        
+        self.__Dvec = np.zeros((n_nodes*6,1))        
         #Beam load and displacement, and reset the index   
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
@@ -157,20 +145,10 @@ class FEModel:
             T=beam.T
             Tt = T.transpose()
 
-            #Transform matrix
-            Vl=np.matrix(beam.local_csys.transform_matrix)
-            V=np.zeros((6, 6))
-            V[:3,:3] =V[3:,3:]= Vl
-            Vt = V.transpose()
-
-            #Static condensation to consider releases
-#            Kij=sp.bsr_matrix((12, 12))
-#            Mij=sp.bsr_matrix((12, 12))
-#            rij=sp.bsr_matrix((12))
             Kij=beam.Ke
             Mij=beam.Me
             
-            #Assemble Total Stiffness Matrix
+            #Assemble Integrated Stiffness Matrix
             Ke = np.dot(np.dot(Tt,Kij),T)
             Keii = Ke[:6,:6]
             Keij = Ke[:6,6:]
@@ -192,8 +170,49 @@ class FEModel:
             self.__Mmat[j*6:j*6+6, i*6:i*6+6] += Meji
             self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj
 
-        self.eliminate_matrix()
-        
+    def assemble_load(self):
+        n_nodes=self.node_count
+        self.__Fvec = np.zeros((n_nodes*6,1))
+        self.__Dvec = np.zeros((n_nodes*6,1))        
+        #Beam load and displacement, and reset the index
+        for node in self.__nodes.values():
+            self.__Fvec[node.hid]+=node.P#transform?
+            
+            
+        for beam in self.__beams.values():
+            i = beam.nodes[0].hid
+            j = beam.nodes[1].hid
+            T=beam.T
+            Tt = T.transpose()
+
+            Kij=beam.Ke
+            Mij=beam.Me
+            
+            #Assemble nodal force vector
+            self.__Fvec[i*6:i*6+6] += np.dot(Vt,rij[:6])
+            self.__Fvec[j*6:j*6+6] += np.dot(Vt,rij[6:])
+            
+            #Assemble Integrated Stiffness Matrix
+            Ke = np.dot(np.dot(Tt,Kij),T)
+            Keii = Ke[:6,:6]
+            Keij = Ke[:6,6:]
+            Keji = Ke[6:,:6]
+            Kejj = Ke[6:,6:]
+            self.__Kmat[i*6:i*6+6, i*6:i*6+6] += Keii
+            self.__Kmat[i*6:i*6+6, j*6:j*6+6] += Keij
+            self.__Kmat[j*6:j*6+6, i*6:i*6+6] += Keji
+            self.__Kmat[j*6:j*6+6, j*6:j*6+6] += Kejj
+            
+            #Assembel Mass Matrix        
+            Me = np.dot(np.dot(Tt,Mij),T)
+            Meii = Me[:6,:6]
+            Meij = Me[:6,6:]
+            Meji = Me[6:,:6]
+            Mejj = Me[6:,6:]
+            self.__Mmat[i*6:i*6+6, i*6:i*6+6] += Meii
+            self.__Mmat[i*6:i*6+6, j*6:j*6+6] += Meij
+            self.__Mmat[j*6:j*6+6, i*6:i*6+6] += Meji
+            self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj        
 
     def eliminate_matrix(self):
         """

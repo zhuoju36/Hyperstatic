@@ -70,7 +70,9 @@ class Beam(Element):
         """
         Element.__init__(self,name)
         self.__nodes=[node_i,node_j]
-
+        self.__releases=[[False,False,False,False,False,False],
+                         [False,False,False,False,False,False]]
+        
         #Initialize local CSys
         o = [ node_i.x, node_i.y, node_i.z ]
         pt1 = [ node_j.x, node_j.y, node_j.z ]
@@ -88,6 +90,7 @@ class Beam(Element):
         self.__Kij = np.zeros((12, 12))
         self.__Mij = np.zeros((12, 12))
         self.__Mij_=np.zeros((12,12))
+        self.__rij =np.zeros((6,1))
         #form the stiffness matrix:
         self.__Kij[0, 0]=E*A / l
         self.__Kij[0, 6]=self.__Kij[6, 0]=-E*A / l
@@ -128,51 +131,54 @@ class Beam(Element):
         self.__Kij[11, 11]=4 * E*I3 / l
 
         #form mass matrix    
-        #Coordinated mass matrix
-        self.__Mij_[0, 0]=140
-        self.__Mij_[0, 6]=70
-
-        self.__Mij_[1, 1]=156
-        self.__Mij_[1, 5]=self.__Mij_[5, 1]=22 * l
-        self.__Mij_[1, 7]=self.__Mij_[7, 1]=54
-        self.__Mij_[1, 11]=self.__Mij_[11, 1]=-13 * l
-
-        self.__Mij_[2, 2]=156
-        self.__Mij_[2, 4]=self.__Mij_[4, 2]=-22 * l
-        self.__Mij_[2, 8]=self.__Mij_[8, 2]=54
-        self.__Mij_[2, 10]=self.__Mij_[10, 2]=13 * l
-
-        self.__Mij_[3, 3]=140 * J / A
-        self.__Mij_[3, 9]=self.__Mij_[9, 3]=70 * J / A
-
-        self.__Mij_[4, 4]=4 * l *l
-        self.__Mij_[4, 8]=self.__Mij_[8, 4]=-13 * l
-        self.__Mij_[4, 10]=self.__Mij_[10, 4]=-3 * l*l
-
-        self.__Mij_[5, 5]=4 * l*l
-        self.__Mij_[5, 7]=self.__Mij_[7, 5]=13 * l
-        self.__Mij_[5, 11]=self.__Mij_[11, 5]=-3 * l*l
-
-        self.__Mij_[6, 6]=140
-
-        self.__Mij_[7, 7]=156
-        self.__Mij_[7, 11]=self.__Mij_[11, 7]=-22 * l
-
-        self.__Mij_[8, 8]=156
-        self.__Mij_[8, 10]=self.__Mij_[10, 8]=22 * l
-
-        self.__Mij_[9, 9]=140 * J / A
-
-        self.__Mij_[10, 10]=4 * l*l
-
-        self.__Mij_[11, 11]=4 * l*l
-
-        self.__Mij_*= (rho*A*l / 420)
+#        #Coordinated mass matrix
+#        self.__Mij[0, 0]=140
+#        self.__Mij[0, 6]=70
+#
+#        self.__Mij[1, 1]=156
+#        self.__Mij[1, 5]=self.__Mij_[5, 1]=22 * l
+#        self.__Mij[1, 7]=self.__Mij_[7, 1]=54
+#        self.__Mij[1, 11]=self.__Mij_[11, 1]=-13 * l
+#
+#        self.__Mij[2, 2]=156
+#        self.__Mij[2, 4]=self.__Mij_[4, 2]=-22 * l
+#        self.__Mij[2, 8]=self.__Mij_[8, 2]=54
+#        self.__Mij[2, 10]=self.__Mij_[10, 2]=13 * l
+#
+#        self.__Mij[3, 3]=140 * J / A
+#        self.__Mij[3, 9]=self.__Mij_[9, 3]=70 * J / A
+#
+#        self.__Mij[4, 4]=4 * l *l
+#        self.__Mij[4, 8]=self.__Mij_[8, 4]=-13 * l
+#        self.__Mij[4, 10]=self.__Mij_[10, 4]=-3 * l*l
+#
+#        self.__Mij[5, 5]=4 * l*l
+#        self.__Mij[5, 7]=self.__Mij_[7, 5]=13 * l
+#        self.__Mij[5, 11]=self.__Mij_[11, 5]=-3 * l*l
+#
+#        self.__Mij[6, 6]=140
+#
+#        self.__Mij[7, 7]=156
+#        self.__Mij[7, 11]=self.__Mij_[11, 7]=-22 * l
+#
+#        self.__Mij[8, 8]=156
+#        self.__Mij[8, 10]=self.__Mij_[10, 8]=22 * l
+#
+#        self.__Mij[9, 9]=140 * J / A
+#
+#        self.__Mij[10, 10]=4 * l*l
+#
+#        self.__Mij[11, 11]=4 * l*l
+#
+#        self.__Mij*= (rho*A*l / 420)
 
         #Concentrated mass matrix
         for i in range(12):
             self.__Mij[i, i]=1
         self.__Mij*=rho*A*l/2
+        
+        self.__Kij_=self.__Kij
+        self.__Mij_=self.__Mij
         
     @property
     def nodes(self):
@@ -191,7 +197,12 @@ class Beam(Element):
     @property
     def Me(self):
         return self.__Mij
-
+    
+    def Ke_(self):
+        return self.__Kij_
+    
+    def Me_(self):
+        return self.__Mij_
         
     def initialize_csys(self):
         node_i=self.__nodes[0]
@@ -205,14 +216,17 @@ class Beam(Element):
             pt2[0] = 1
         self.local_csys.set_by_3pts(o, pt1, pt2)
 
-    def static_condensation(self,rij,releaseI,releaseJ):
+    def static_condensation(self):
         """
         kij_bar: 12x12 matrix
         rij_bar: 12x1 vector
         mij_bar: 12x12 matrix
         """
+        releaseI=self.__releases[0]
+        releaseJ=self.__releases[1]
         kij=self.__Kij
         mij=self.__Mij
+        rij=self.__rij
         kij_bar = kij
         mij_bar = mij
         rij_bar = rij
@@ -229,9 +243,9 @@ class Beam(Element):
                         kij_bar[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
                         mij_bar[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
                     rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
-        self.__Kij=kij_bar
-        self.__Mij=mij_bar
-        return rij_bar
+        self.__Kij_=kij_bar
+        self.__Mij_=mij_bar
+        self.__rij_=rij_bar
 
 class TriMembrane(Element):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):

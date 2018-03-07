@@ -275,7 +275,7 @@ class Frame(object):
         beam=Beam(node_i, node_j, E, mu, A, I2, I3, J, rho, name=None)
         model.add_beam(beam)
         
-    def load_to_mesh(self,model,locase):
+    def attribute_load(self,model,locase):
         """
         add certain loads and displacements to mesh.
         model: FEModel warpped in list.
@@ -284,6 +284,26 @@ class Frame(object):
             raise Exception('The object must be meshed first!')
         #convert beam force to nodal force
         model[0].add_nodal_force(self.__hid,self.__load)
+        l = self.Length()
+        loadI=self.loadI
+        loadJ=self.loadJ
+        #recheck!!!!!!!!!!!!
+        #i
+        v=np.zeros(12)
+        v[0]=(loadI[0] + loadJ[0]) * l / 2#P
+        v[1]=(loadI[1] * 7 / 20 + loadJ[1] * 3 / 20) * l#V2
+        v[2]=(loadI[2] * 7 / 20 + loadJ[2] * 3 / 20) * l#V3
+        v[3]=loadI[3] - loadJ[3]#T
+        v[4]=(loadI[2] / 20 + loadJ[2] / 30) * l * l + loadI[4]#M22
+        v[5]=(loadI[1] / 20 + loadJ[1] / 30) * l * l + loadI[5]#M33
+        #j
+        v[6]=(loadJ[0] + loadI[0]) * l / 2#P
+        v[7]=(loadJ[1] * 7 / 20 + loadI[1] * 3 / 20) * l#V2
+        v[8]=(loadJ[2] * 7 / 20 + loadI[2] * 3 / 20) * l#V3
+        v[9] = loadJ[3] - loadI[3]#T
+        v[10] = -(loadJ[2] / 20 + loadI[2] / 30) * l * l + loadJ[4]#M22
+        v[11] = -(loadJ[1] / 20 + loadI[1] / 30) * l * l + loadJ[5]#M33
+        return v
         
 class Area(Object):
     pass
