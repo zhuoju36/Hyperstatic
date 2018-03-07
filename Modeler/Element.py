@@ -90,7 +90,7 @@ class Beam(Element):
         self.__Kij = np.zeros((12, 12))
         self.__Mij = np.zeros((12, 12))
         self.__Mij_=np.zeros((12,12))
-        self.__rij =np.zeros((6,1))
+        self.__rij =np.zeros((12,1))
         #form the stiffness matrix:
         self.__Kij[0, 0]=E*A / l
         self.__Kij[0, 6]=self.__Kij[6, 0]=-E*A / l
@@ -197,13 +197,23 @@ class Beam(Element):
     @property
     def Me(self):
         return self.__Mij
+        
+    @property
+    def Re(self):
+        return self.__rij
     
+    @property
     def Ke_(self):
         return self.__Kij_
     
+    @property
     def Me_(self):
         return self.__Mij_
-        
+    
+    @property    
+    def Re_(self):
+        return self.__rij_
+    @property    
     def initialize_csys(self):
         node_i=self.__nodes[0]
         node_j=self.__nodes[1]

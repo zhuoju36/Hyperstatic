@@ -55,16 +55,6 @@ class Point(object):
     @property
     def local_csys(self):
         return self.__local_csys
-    
-    @property
-    def T(self):
-        """
-        point local-global csys transform matrix.
-        """
-        V=self.__local_csys.transform_matrix
-        V_=np.zeros((6,6))
-        V_[:3,:3]=V_[3:,3:]=V
-        return V_
 
     def initialize_csys(self):
         self.__local_csys.align_with_global();
@@ -127,6 +117,7 @@ class Point(object):
         model: FEModel warpped in list.
         """
         node=Node(self.x,self.y,self.z)
+        node.local_csys=self.local_csys
         self.__hid=model[0].add_node(node)
         
     def load_to_mesh(self,model,locase):
@@ -150,10 +141,10 @@ class Frame(object):
         self.__section=sec
         self.__rotation=0
         
-        self.__load_d=[] #distributed
-        self.__load_c=[] #concentrated
-        self.__load_s=[] #strain
-        self.__load_t=[] #temperature
+        self.__load_distributed={}
+        self.__load_concentrate={} #concentrated
+        self.__load_strain={} #strain
+        self.__load_temperature={} #temperature
 
         #results
         self.__res_force=None
@@ -247,12 +238,13 @@ class Frame(object):
         return v
         
         #to be revised
-    def load_distributed(self,qi, qj):
+    def load_distributed(self,loadcase, qi, qj):
         """
         qi,qj: 6x1 vector
         """
-        self.loadI=qi
-        self.loadJ=qj
+        self.__load_distributed[loadcase]=np.zeros((12,1))
+        self.__load_distributed[loadcase][:6]=qi
+        self.__load_distributed[loadcase][6:]=qj
         
     def mesh(self,model):
         """
@@ -273,9 +265,10 @@ class Frame(object):
         node_i=model.node[nid_i]
         node_j=model.node[nid_j]
         beam=Beam(node_i, node_j, E, mu, A, I2, I3, J, rho, name=None)
+        beam.local_csys=self.local_csys
         model.add_beam(beam)
         
-    def attribute_load(self,model,locase):
+    def attribute_load(self,model,loadcase):
         """
         add certain loads and displacements to mesh.
         model: FEModel warpped in list.
@@ -283,10 +276,9 @@ class Frame(object):
         if self.__hid==None:
             raise Exception('The object must be meshed first!')
         #convert beam force to nodal force
-        model[0].add_nodal_force(self.__hid,self.__load)
-        l = self.Length()
-        loadI=self.loadI
-        loadJ=self.loadJ
+        l = self.length()
+        loadI=self.load_distrib[loadcase][:6]
+        loadJ=self.load_distrib[loadcase][6:]
         #recheck!!!!!!!!!!!!
         #i
         v=np.zeros(12)

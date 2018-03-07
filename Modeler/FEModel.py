@@ -14,8 +14,6 @@ class FEModel:
         self.__nodes={}
         self.__beams={}
         self.__quads={}
-        self.__forces={}
-        self.__displacements={}
         self.__restraints={}
                 
         self.__index=[]
@@ -55,38 +53,43 @@ class FEModel:
     @property
     def K(self):
         if not self.is_assembled:
-            return None
-        return self.__Kmat
+            Exception('The model has to be assembled first.')
+        return self.__K
     @property
     def M(self):
         if not self.is_assembled:
-            return None
-        return self.__Mmat        
+            Exception('The model has to be assembled first.')
+        return self.__M    
     @property
     def F(self):
         if not self.is_assembled:
-            return None
-        return self.__Fvec        
+            Exception('The model has to be assembled first.')
+        return self.__F
     @property
     def D(self):
         if not self.is_assembled:
-            return None
-        return self.__Dvec
+            Exception('The model has to be assembled first.')
+        return self.__D
     @property
     def K_(self):
         if not self.is_assembled:
-            return None
+            raise Exception('The model has to be assembled first.')
         return self.__K_bar
     @property
     def M_(self):
         if not self.is_assembled:
-            return None
+            Exception('The model has to be assembled first.')
         return self.__M_bar
     @property
     def F_(self):
         if not self.is_assembled:
-            return None
+            Exception('The model has to be assembled first.')
         return self.__F_bar
+    @property
+    def D_(self):
+        if not self.is_assembled:
+            Exception('The model has to be assembled first.')
+        return self.__D_bar
         
     def add_node(self,node,tol=1e-6):
         """
@@ -120,24 +123,20 @@ class FEModel:
         else:
             res=res[0]
         return res
-        
-    def add_force(self,hid,load):
-        if hid not in self.__forces.keys():
-            self.__forces[hid]=np.zeros((6,1))
-        self.__forces[hid]+=np.array(load).reshape(6,1)
             
     def add_restraint(self,hid,res):
         for i in range(6):
             if type(res[i])!=bool:
-                raise(ValueError('restraint must be a 6 bool array.'))
+                raise(ValueError('Restraint must be a 6 bool array.'))
         self.__restraints[hid]=res
         
-    def assemble_structure(self):
+    def assemble_KM(self):
+        """
+        Assemble integrated stiffness matrix and mass matrix.
+        """
         n_nodes=self.node_count
-        self.__Kmat = np.zeros((n_nodes*6, n_nodes*6))
-        self.__Mmat = np.zeros((n_nodes*6, n_nodes*6))
-        self.__Fvec = np.zeros((n_nodes*6,1))
-        self.__Dvec = np.zeros((n_nodes*6,1))        
+        self.__K = np.zeros((n_nodes*6, n_nodes*6))
+        self.__M = np.zeros((n_nodes*6, n_nodes*6))       
         #Beam load and displacement, and reset the index   
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
@@ -145,19 +144,20 @@ class FEModel:
             T=beam.T
             Tt = T.transpose()
 
+            #Static condensation to consider releases
             Kij=beam.Ke
             Mij=beam.Me
             
-            #Assemble Integrated Stiffness Matrix
+            #Assemble Total Stiffness Matrix
             Ke = np.dot(np.dot(Tt,Kij),T)
             Keii = Ke[:6,:6]
             Keij = Ke[:6,6:]
             Keji = Ke[6:,:6]
             Kejj = Ke[6:,6:]
-            self.__Kmat[i*6:i*6+6, i*6:i*6+6] += Keii
-            self.__Kmat[i*6:i*6+6, j*6:j*6+6] += Keij
-            self.__Kmat[j*6:j*6+6, i*6:i*6+6] += Keji
-            self.__Kmat[j*6:j*6+6, j*6:j*6+6] += Kejj
+            self.__K[i*6:i*6+6, i*6:i*6+6] += Keii
+            self.__K[i*6:i*6+6, j*6:j*6+6] += Keij
+            self.__K[j*6:j*6+6, i*6:i*6+6] += Keji
+            self.__K[j*6:j*6+6, j*6:j*6+6] += Kejj
             
             #Assembel Mass Matrix        
             Me = np.dot(np.dot(Tt,Mij),T)
@@ -165,54 +165,37 @@ class FEModel:
             Meij = Me[:6,6:]
             Meji = Me[6:,:6]
             Mejj = Me[6:,6:]
-            self.__Mmat[i*6:i*6+6, i*6:i*6+6] += Meii
-            self.__Mmat[i*6:i*6+6, j*6:j*6+6] += Meij
-            self.__Mmat[j*6:j*6+6, i*6:i*6+6] += Meji
-            self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj
+            self.__M[i*6:i*6+6, i*6:i*6+6] += Meii
+            self.__M[i*6:i*6+6, j*6:j*6+6] += Meij
+            self.__M[j*6:j*6+6, i*6:i*6+6] += Meji
+            self.__M[j*6:j*6+6, j*6:j*6+6] += Mejj
+        #### other elements
 
-    def assemble_load(self):
+    def assemble_FD(self):
+        """
+        Assemble load vector and displacement vector.
+        """
         n_nodes=self.node_count
-        self.__Fvec = np.zeros((n_nodes*6,1))
-        self.__Dvec = np.zeros((n_nodes*6,1))        
+        self.__F = np.zeros((n_nodes*6,1))
+        self.__D = np.zeros((n_nodes*6,1))        
         #Beam load and displacement, and reset the index
         for node in self.__nodes.values():
-            self.__Fvec[node.hid]+=node.P#transform?
-            
+            T=node.transform_matrix.transpose()
+            self.__F[node.hid*6:node.hid*6+6]=np.dot(T,node.Fn)
+            self.__D[node.hid*6:node.hid*6+6]=np.dot(T,node.Dn)
             
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
-            j = beam.nodes[1].hid
-            T=beam.T
-            Tt = T.transpose()
-
-            Kij=beam.Ke
-            Mij=beam.Me
-            
+            j = beam.nodes[1].hid 
+            #Transform matrix
+            Vl=np.matrix(beam.local_csys.transform_matrix)
+            V=np.zeros((6, 6))
+            V[:3,:3] =V[3:,3:]= Vl
+            Vt = V.transpose()
             #Assemble nodal force vector
-            self.__Fvec[i*6:i*6+6] += np.dot(Vt,rij[:6])
-            self.__Fvec[j*6:j*6+6] += np.dot(Vt,rij[6:])
-            
-            #Assemble Integrated Stiffness Matrix
-            Ke = np.dot(np.dot(Tt,Kij),T)
-            Keii = Ke[:6,:6]
-            Keij = Ke[:6,6:]
-            Keji = Ke[6:,:6]
-            Kejj = Ke[6:,6:]
-            self.__Kmat[i*6:i*6+6, i*6:i*6+6] += Keii
-            self.__Kmat[i*6:i*6+6, j*6:j*6+6] += Keij
-            self.__Kmat[j*6:j*6+6, i*6:i*6+6] += Keji
-            self.__Kmat[j*6:j*6+6, j*6:j*6+6] += Kejj
-            
-            #Assembel Mass Matrix        
-            Me = np.dot(np.dot(Tt,Mij),T)
-            Meii = Me[:6,:6]
-            Meij = Me[:6,6:]
-            Meji = Me[6:,:6]
-            Mejj = Me[6:,6:]
-            self.__Mmat[i*6:i*6+6, i*6:i*6+6] += Meii
-            self.__Mmat[i*6:i*6+6, j*6:j*6+6] += Meij
-            self.__Mmat[j*6:j*6+6, i*6:i*6+6] += Meji
-            self.__Mmat[j*6:j*6+6, j*6:j*6+6] += Mejj        
+            self.__F[i*6:i*6+6] += np.dot(Vt,beam.Re[:6])
+            self.__F[j*6:j*6+6] += np.dot(Vt,beam.Re[6:])
+        #### other elements
 
     def eliminate_matrix(self):
         """
@@ -223,14 +206,14 @@ class FEModel:
         index: vector
         """
 #        Logger.info('Eliminating matrix...')
-        k = self.K
-        m=self.M
-        f = self.__Fvec
+        k = self.__K
+        m=self.__M
+        f = self.__F
         to_rmv=[]
         Id=np.arange(len(f))
         for i in range(self.node_count-1,-1,-1):
             for j in range(5,-1,-1):
-                if self.__nodes[i].restraint[j] == True or self.__nodes[i].disp[j] != 0:
+                if self.__nodes[i].restraint[j] == True or self.__nodes[i].Dn[j] != 0:
                     to_rmv.append(i*6+j)
         k=np.delete(k,to_rmv,axis=0)
         k=np.delete(k,to_rmv,axis=1)
@@ -270,24 +253,24 @@ import scipy.sparse as sp
 from scipy.sparse import linalg as sl        
 def solve_linear(model):
     K_bar,F_bar,index=model.K_,model.F_,model.index
-    Dvec=model.D
+    D=model.D
     n_nodes=model.node_count
-    try:
-        #sparse matrix solution
-        delta_bar = sl.spsolve(sp.csr_matrix(K_bar),F_bar,sym_pos=True)
-        delta = delta_bar
-        #fill original displacement vector
-        prev = 0
-        for idx in index:
-            gap=idx-prev
-            if gap>0:
-                delta=np.insert(delta,prev,[0]*gap)
-            prev = idx + 1               
-            if idx==index[-1] and idx!=n_nodes-1:
-                delta = np.insert(delta,prev, [0]*(n_nodes*6-prev))
-        delta += Dvec
-    except Exception as e:
-        print(e)
-        return None
+    
+    #sparse matrix solution
+    delta_ = sl.spsolve(sp.csr_matrix(K_bar),F_bar)
+    
+    delta = delta_
+    #fill original displacement vector
+    prev = 0
+    for idx in index:
+        gap=idx-prev
+        if gap>0:
+            delta=np.insert(delta,prev,[0]*gap)
+        prev = idx + 1               
+        if idx==index[-1] and idx!=n_nodes-1:
+            delta = np.insert(delta,prev, [0]*(n_nodes*6-prev))
+    delta=delta.reshape((n_nodes*6,1))
+    delta += D
+    
     model.is_solved=True
     return delta

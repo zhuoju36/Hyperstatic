@@ -22,10 +22,14 @@ if __name__=='__main__':
     model.add_node(n3)
     model.add_beam(b1)
     model.add_beam(b2)
-    model.add_force(1,(0,0,-1,0,0,0))
-    model.add_restraint(1,[True]*6)
-    model.assemble()
-    print(solve_linear(model))
+    n2.Fn=(0,0,-1,0,0,0)
+    n1.restraint=[True]*6
+    n3.restraint=[True]*6
+    model.assemble_KM()
+    model.assemble_FD()
+    model.eliminate_matrix()
+    res=solve_linear(model)
+    print(res)
     
     
 

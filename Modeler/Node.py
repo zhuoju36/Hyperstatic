@@ -20,8 +20,8 @@ class Node(object):
         pt2=[x,y+1,z]
         self.__local_csys=CoordinateSystem.cartisian(o,pt1,pt2)
         self.__restraint=[False]*6
-        self.__load=[0]*6
-        self.__disp=[0]*6
+        self.__load=np.zeros((6,1))
+        self.__disp=np.zeros((6,1))
         self.__name=uuid.uuid1() if name==None else name
         self.__hid=None #hidden id
         
@@ -67,20 +67,22 @@ class Node(object):
         self.__local_csys.align_with_global();
 
     @property
-    def load(self):
+    def Fn(self):
         return self.__load
-    @load.setter
-    def load(self,load):
+    @Fn.setter
+    def Fn(self,load):
         """
         load: a number vector indicates a nodal load.
         """
-        self.__load=load
+        if len(load)!=6:
+            raise ValueError('Should be a 6-array')
+        self.__load=np.array(load).reshape((6,1))
 
     @property
-    def disp(self):
+    def Dn(self):
         return self.__disp
-    @disp.setter
-    def disp(self,disp):
+    @Dn.setter
+    def Dn(self,disp):
         """
         disp: a boolean vector indicates a nodal displacement.
         """
