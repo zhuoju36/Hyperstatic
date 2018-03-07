@@ -12,18 +12,19 @@ from . import CoordinateSystem
 
 class Node(object):
     def __init__(self,x,y,z,name=None):
+        self.__name=uuid.uuid1() if name==None else name
+        self.__hid=None #hidden id
+        
         self.__x=x
         self.__y=y
         self.__z=z
         o=[x,y,z]
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
-        self.__local_csys=CoordinateSystem.cartisian(o,pt1,pt2)
-        self.__restraint=[False]*6
+        self.__local_csys=CoordinateSystem.Cartisian(o,pt1,pt2)
+        
+        self.__disp=np.array([None,None,None,None,None,None]).reshape((6,1))
         self.__load=np.zeros((6,1))
-        self.__disp=np.zeros((6,1))
-        self.__name=uuid.uuid1() if name==None else name
-        self.__hid=None #hidden id
         
         #results
         self.__res_disp=None
@@ -67,10 +68,10 @@ class Node(object):
         self.__local_csys.align_with_global();
 
     @property
-    def Fn(self):
+    def fn(self):
         return self.__load
-    @Fn.setter
-    def Fn(self,load):
+    @fn.setter
+    def fn(self,load):
         """
         load: a number vector indicates a nodal load.
         """
@@ -79,27 +80,15 @@ class Node(object):
         self.__load=np.array(load).reshape((6,1))
 
     @property
-    def Dn(self):
+    def dn(self):
         return self.__disp
-    @Dn.setter
-    def Dn(self,disp):
+    @dn.setter
+    def dn(self,disp):
         """
         disp: a boolean vector indicates a nodal displacement.
         """
-        self.__disp=disp   
-        
-    @property
-    def restraint(self):
-        return self.__restraint
-        
-    @restraint.setter
-    def restraint(self,res):
-        """
-        res: a boolean vector indicates a nodal restraint.
-        """
-        self.__restraint=res
-    
-            
+        self.__disp=disp
+               
     def clear_result(self):
         self.__res_disp=None
         self.__res_force=None
@@ -110,7 +99,9 @@ class Node(object):
     
     @res_disp.setter
     def res_disp(self,disp):
-        self.__res_disp=disp
+        if len(disp)!=6:
+            raise ValueError('Should be a 6-array')    
+        self.__disp=np.array(disp).reshape((6,1))
         
     @property
     def res_force(self):

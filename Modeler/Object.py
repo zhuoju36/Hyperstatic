@@ -20,7 +20,7 @@ class Point(object):
         o=[x,y,z]
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
-        self.__local_csys=CoordinateSystem.cartisian(o,pt1,pt2)
+        self.__local_csys=CoordinateSystem.Cartisian(o,pt1,pt2)
         self.__restraint=[False]*6
         self.__load=[0]*6
         self.__disp=[0]*6
@@ -152,6 +152,9 @@ class Frame(object):
         self.__measure=[] #result measure locations
         self.__ms_forces=[]
         self.__ms_disps=[]
+        
+        self.__local_csys=CoordinateSystem.Cartisian(o,pt1,pt2)
+
 
     def initialize_csys(self):
         node_i=self.__nodes[0]

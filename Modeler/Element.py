@@ -31,30 +31,7 @@ class Element(object):
     @property
     def nodes(self):
         return self.__nodes
-        
-    @property
-    def Ke(self):
-        """
-        element stiffness matrix.
-        """
-        return self.__Kij
 
-    @property
-    def Me(self):
-        """
-        element mass matrix.
-        """
-        return self.__Mij
-    
-    @property
-    def T(self):
-        """
-        element local-global csys transform matrix.
-        """
-        T=np.zeros((12,12))
-        V=self.local_csys.transform_matrix
-        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
-        return T
                 
 class Beam(Element):
     def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None):
@@ -81,7 +58,7 @@ class Beam(Element):
             pt2[0] += 1
         else:
             pt2[2] += 1
-        self.local_csys = CoordinateSystem.cartisian(o, pt1, pt2)
+        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)
         
         l=self.length
         G=E/2/(1+mu)
@@ -199,8 +176,14 @@ class Beam(Element):
         return self.__Mij
         
     @property
-    def Re(self):
+    def re(self):
         return self.__rij
+    
+    @re.setter
+    def re(self,force):
+        if len(force)!=12:
+            raise ValueError('element nodal force must be a 12 array')
+        self.__re=np.array(force).reshape((12,1))
     
     @property
     def Ke_(self):
@@ -211,8 +194,19 @@ class Beam(Element):
         return self.__Mij_
     
     @property    
-    def Re_(self):
+    def re_(self):
         return self.__rij_
+    
+    @property
+    def releases(self):
+        return self.__releases
+    
+    @releases.setter
+    def releases(self,rls):
+        if len(rls)!=12:
+            raise ValueError('rls must be a 12 boolean array')
+        self.__releases=np.array(rls).reshape((2,6))
+    
     @property    
     def initialize_csys(self):
         node_i=self.__nodes[0]
@@ -225,6 +219,13 @@ class Beam(Element):
         else:
             pt2[0] = 1
         self.local_csys.set_by_3pts(o, pt1, pt2)
+        
+    @property
+    def transform_matrix(self):
+        T=np.zeros((12,12))
+        V=self.local_csys.transform_matrix
+        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
+        return T
 
     def static_condensation(self):
         """
@@ -237,9 +238,9 @@ class Beam(Element):
         kij=self.__Kij
         mij=self.__Mij
         rij=self.__rij
-        kij_bar = kij
-        mij_bar = mij
-        rij_bar = rij
+        kij_bar = kij.copy()
+        mij_bar = mij.copy()
+        rij_bar = rij.copy()
         for n in range(0,6):
             if releaseI[n] == True:
                 for i in range(12):
@@ -276,10 +277,6 @@ class TriMembrane(Element):
         self.__E=E
         self.__mu=mu
         self.__rho=rho
-
-    @property
-    def section(self):
-        return self.__sec
         
     def abc(self,j,m):
         """
@@ -517,10 +514,10 @@ class IsoParametric(Element):
         return sp.integrate.quad(f,-1,1)
         
     def K(self):
-        return np.dot(np.dot(self.G.T,self.P),self.G)
+        return np.dot(np.dot(self.G.T,self.f),self.G)
     
-    def P(self):
-        return np.dot(self.G.T,self.P)
+    def f(self):
+        return np.dot(self.G.T,self.f)
         
 class Plate(IsoParametric):
     def __init__(self,sec,node_i, node_j, node_k, node_l, name=None):

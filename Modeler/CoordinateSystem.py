@@ -7,7 +7,7 @@ Created on Wed Jun 22 21:57:50 2016
 import numpy as np
 import uuid
 
-class cartisian(object):
+class Cartisian(object):
     def __init__(self,origin, pt1, pt2, name=None):
         """
         origin: 3x1 vector
