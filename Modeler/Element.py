@@ -60,6 +60,8 @@ class Beam(Element):
             pt2[2] += 1
         self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)
         
+        self.__length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
+        
         l=self.length
         G=E/2/(1+mu)
 
@@ -150,9 +152,7 @@ class Beam(Element):
 #        self.__Mij*= (rho*A*l / 420)
 
         #Concentrated mass matrix
-        for i in range(12):
-            self.__Mij[i, i]=1
-        self.__Mij*=rho*A*l/2
+        self.__Mij=np.eye(12)*rho*A*l/2
         
         self.__Kij_=self.__Kij
         self.__Mij_=self.__Mij
@@ -163,9 +163,7 @@ class Beam(Element):
     
     @property
     def length(self):
-        nodeI=self.__nodes[0]
-        nodeJ=self.__nodes[1]
-        return np.sqrt((nodeI.x - nodeJ.x)*(nodeI.x - nodeJ.x) + (nodeI.y - nodeJ.y)*(nodeI.y - nodeJ.y) + (nodeI.z - nodeJ.z)*(nodeI.z - nodeJ.z))
+        return self.__length
     
     @property
     def Ke(self):
@@ -206,19 +204,6 @@ class Beam(Element):
         if len(rls)!=12:
             raise ValueError('rls must be a 12 boolean array')
         self.__releases=np.array(rls).reshape((2,6))
-    
-    @property    
-    def initialize_csys(self):
-        node_i=self.__nodes[0]
-        node_j=self.__nodes[1]
-        o = np.array([node_i.x, node_i.y, node_i.z])
-        pt1 = np.array([node_j.x, node_j.y, node_j.z])
-        pt2 = np.array([0,0,0])
-        if node_i.x != node_j.x and node_i.y != node_j.y:
-            pt2[2] = 1
-        else:
-            pt2[0] = 1
-        self.local_csys.set_by_3pts(o, pt1, pt2)
         
     @property
     def transform_matrix(self):
@@ -267,10 +252,10 @@ class TriMembrane(Element):
         mu: Poisson ratio
         rho: mass density
         """
-        Element.__init__(self)
+        Element.__init__(self,name)
         self.__nodes=[node_i,node_j,node_k]
         self.__x0=np.array([(node.x,node.y) for node in self.__nodes])
-        self.area=0.5*np.linalg.det(np.array([[1,1,1],
+        self.__area=0.5*np.linalg.det(np.array([[1,1,1],
                                          [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
         self.__t=t
@@ -278,7 +263,48 @@ class TriMembrane(Element):
         self.__mu=mu
         self.__rho=rho
         
-    def abc(self,j,m):
+        #Initialize local CSys
+        o=[(node_i.x+node_j.x+node_k.x)/3,
+            (node_i.y+node_j.y+node_k.y)/3,
+            (node_i.z+node_j.z+node_k.z)/3]
+        pt1 = [ node_j.x, node_j.y, node_j.z ]
+        pt2 = [ node_i.x, node_i.y, node_i.z ]
+        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)        
+        
+        E=self.__E
+        mu=self.__mu
+        D0=E/(1-mu**2)
+        D=np.array([[1,mu,0],
+                    [mu,1,0],
+                    [0,0,(1-mu)/2]])*D0
+        __Ke_=np.dot(np.dot(self.__B(0).T,D),self.__B(0))*self.area*self.__t
+
+        row=[a for a in range(0*2,0*2+2)]+[a for a in range(1*2,1*2+2)]+[a for a in range(2*2,2*2+2)]
+        col=[a for a in range(0*6,0*6+2)]+[a for a in range(1*6,1*6+2)]+[a for a in range(2*6,2*6+2)]
+        elm_node_count=3
+        elm_dof=2
+        data=[1]*(elm_node_count*elm_dof)
+        G=sp.sparse.csr_matrix((data,(row,col)),shape=(elm_node_count*elm_dof,elm_node_count*6))
+        self.__Ke=G.transpose()*__Ke_*G
+
+        #Concentrated mass matrix, may be wrong
+        self.__Me=np.eye(18)*rho*self.area*t/3
+        
+        self.__re =np.zeros((18,1))
+        
+    @property
+    def nodes(self):
+        return self.__nodes
+        
+    @property
+    def node_count(self):
+        return 3
+        
+    @property
+    def area(self):
+        return self.__area
+        
+    def __abc(self,j,m):
         """
         conversion constant.
         """
@@ -288,39 +314,39 @@ class TriMembrane(Element):
         c=-x[j]+x[m]
         return np.array([a,b,c])
 
-    def N(self,x):
+    def __N(self,x):
         """
         interpolate function.
         return: 3x1 array represent x,y
         """
-        return self.L(x)
+        return self.__L(x)
         
-    def L(self,x):
+    def __L(self,x):
         """
         convert csys from x to L
         return: 3x1 array represent x,y
         """
         x,y=x[0],x[1]
         L=np.array((3,1))
-        L[0]=self.abc(1,2).dot(np.array([1,x,y]))/2/self.area
-        L[1]=self.abc(2,0).dot(np.array([1,x,y]))/2/self.area
-        L[2]=self.abc(0,1).dot(np.array([1,x,y]))/2/self.area
+        L[0]=self.__abc(1,2).dot(np.array([1,x,y]))/2/self.area
+        L[1]=self.__abc(2,0).dot(np.array([1,x,y]))/2/self.area
+        L[2]=self.__abc(0,1).dot(np.array([1,x,y]))/2/self.area
         return L.reshape(3,1)
     
-    def x(self,L):
+    def __x(self,L):
         """
         convert csys from L to x
         return: 2x1 array represent x,y
         """
         return np.dot(np.array(L).reshape(1,3),self.x0).reshape(2,1)
 
-    def B(self,x):
+    def __B(self,x):
         """
         strain matrix, which is derivative of intepolate function
         """
-        abc0=self.abc(1,2)
-        abc1=self.abc(2,0)
-        abc2=self.abc(0,1)
+        abc0=self.__abc(1,2)
+        abc1=self.__abc(2,0)
+        abc2=self.__abc(0,1)
         B0= np.array([[abc0[1],      0],
                       [      0,abc0[2]],
                       [abc0[2],abc0[1]]])
@@ -332,7 +358,7 @@ class TriMembrane(Element):
                       [abc2[2],abc2[1]]])
         return np.hstack([B0,B1,B2])/2/self.area
     
-    def S(self,x):
+    def __S(self,x):
         """
         stress matrix
         """
@@ -343,14 +369,31 @@ class TriMembrane(Element):
         """
         integrate to get stiffness matrix.
         """
-        E=self.__E
-        mu=self.__mu
-        D0=E/(1-mu**2)
-        D=np.array([[1,mu,0],
-                    [mu,1,0],
-                    [0,0,(1-mu)/2]])*D0
-        res=np.dot(np.dot(self.B(0).T,D),self.B(0))*self.area*self.__t               
-        return res
+        return self.__Ke
+        
+    @property  
+    def Me(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        return self.__Me
+        
+    @property
+    def re(self):
+        return self.__re
+    
+    @re.setter
+    def re(self,force):
+        if len(force)!=18:
+            raise ValueError('element nodal force must be a 12 array')
+        self.__re=np.array(force).reshape((18,1))
+        
+    @property
+    def transform_matrix(self):
+        T=np.zeros((18,18))
+        V=self.local_csys.transform_matrix
+        T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:12,9:12]=T[12:15,12:15]=T[15:,15:]=V
+        return T
         
 class TriPlate(Element):
     def __init__(self,node_i, node_j, node_k, sec ,name=None):
@@ -362,6 +405,10 @@ class TriPlate(Element):
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
         self.t=sec.t
         self.__sec=sec
+        
+    @property
+    def nodes(self):
+        return self.__nodes
 
     @property
     def section(self):

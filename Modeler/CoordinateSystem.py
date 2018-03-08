@@ -82,10 +82,9 @@ class Cartisian(object):
         self.origin = (x,y,z)
     
     def align_with_global(self):
-        self.x=np.array([1,0,0])
-        self.y=np.array([0,1,0])
-        self.z=np.array([0,0,1])
+        self.__x=np.array([1,0,0])
+        self.__y=np.array([0,1,0])
+        self.__z=np.array([0,0,1])
 
 if __name__=='__main__':
-    csys=cartisian((0,0,0),(1,1,0),(0,1,0))
-    csys.align_with_global()
+    csys=Cartisian((0,0,0),(1,1,0),(0,1,0))

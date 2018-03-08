@@ -7,13 +7,14 @@ Created on Tue Mar  6 15:36:52 2018
 
 import numpy as np
 
-from .Node import Node
+import scipy.sparse as sp
+from scipy.sparse import linalg as sl
 
 class FEModel:
     def __init__(self):
         self.__nodes={}
         self.__beams={}
-        self.__quads={}
+        self.__tri_membranes={}
                 
         self.__index=[]
         self.__dof=None
@@ -116,7 +117,7 @@ class FEModel:
     def add_beam(self,beam):
         """
         add beam to model
-        if beam already exits, beam will not be added.
+        if beam already exits, it will not be added.
         return: beam hidden id
         """
         res=[a.hid for a in self.__beams.values() 
@@ -130,14 +131,25 @@ class FEModel:
             res=res[0]
         return res
         
+    def add_tri_membrane(self,tri_membrane):
+        """
+        add membrane to model
+        if membrane already exits, it will not be added.
+        return: membrane hidden id
+        """
+        res=len(self.__tri_membranes)
+        tri_membrane.hid=res
+        self.__tri_membranes[res]=tri_membrane
+        return res
+        
     def assemble_KM(self):
         """
         Assemble integrated stiffness matrix and mass matrix.
         """
         n_nodes=self.node_count
-        self.__K = np.zeros((n_nodes*6, n_nodes*6))
-        self.__M = np.zeros((n_nodes*6, n_nodes*6))       
-        #Beam load and displacement, and reset the index   
+        self.__K = sp.lil_matrix((n_nodes*6, n_nodes*6))
+        self.__M = sp.lil_matrix((n_nodes*6, n_nodes*6))     
+        #Beam load and displacement, and reset the index 
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
             j = beam.nodes[1].hid
@@ -148,28 +160,38 @@ class FEModel:
             beam.static_condensation()
             Kij=beam.Ke_
             Mij=beam.Me_
+
+            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
+            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
+            data=[1]*(2*6)
+            G=sp.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
             
-            #Assemble Total Stiffness Matrix
-            Ke = np.dot(np.dot(Tt,Kij),T)
-            Keii = Ke[:6,:6]
-            Keij = Ke[:6,6:]
-            Keji = Ke[6:,:6]
-            Kejj = Ke[6:,6:]
-            self.__K[i*6:i*6+6, i*6:i*6+6] += Keii
-            self.__K[i*6:i*6+6, j*6:j*6+6] += Keij
-            self.__K[j*6:j*6+6, i*6:i*6+6] += Keji
-            self.__K[j*6:j*6+6, j*6:j*6+6] += Kejj
+            Ke = sp.csr_matrix(np.dot(np.dot(Tt,Kij),T))
+            Me = sp.csr_matrix(np.dot(np.dot(Tt,Mij),T))
+            self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
+            self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
+        
+        for elm in self.__tri_membranes.values():
+            i = elm.nodes[0].hid
+            j = elm.nodes[1].hid
+            k = elm.nodes[2].hid
             
-            #Assembel Mass Matrix        
-            Me = np.dot(np.dot(Tt,Mij),T)
-            Meii = Me[:6,:6]
-            Meij = Me[:6,6:]
-            Meji = Me[6:,:6]
-            Mejj = Me[6:,6:]
-            self.__M[i*6:i*6+6, i*6:i*6+6] += Meii
-            self.__M[i*6:i*6+6, j*6:j*6+6] += Meij
-            self.__M[j*6:j*6+6, i*6:i*6+6] += Meji
-            self.__M[j*6:j*6+6, j*6:j*6+6] += Mejj
+            T=elm.transform_matrix
+            Tt = T.transpose()
+
+            Ke=elm.Ke
+            Me=elm.Me
+
+            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]+[a for a in range(2*6,2*6+6)]
+            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]+[a for a in range(k*6,k*6+6)]
+            elm_node_count=3
+            data=[1]*(elm_node_count*6)
+            G=sp.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
+            
+            Ke = sp.csr_matrix(np.dot(np.dot(Tt,Ke),T))
+            Me = sp.csr_matrix(np.dot(np.dot(Tt,Me),T))
+            self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
+            self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
         #### other elements
 
     def assemble_f(self):
@@ -177,23 +199,27 @@ class FEModel:
         Assemble load vector and displacement vector.
         """
         n_nodes=self.node_count
-        self.__f = np.zeros((n_nodes*6,1))
+        self.__f = sp.lil_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
         for node in self.__nodes.values():
             T=node.transform_matrix.transpose()
-            self.__f[node.hid*6:node.hid*6+6]=np.dot(T,node.fn)        
+            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(T,node.fn)        
             
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
             j = beam.nodes[1].hid 
             #Transform matrix
             Vl=np.matrix(beam.local_csys.transform_matrix)
-            V=np.zeros((6, 6))
-            V[:3,:3] =V[3:,3:]= Vl
+            V=np.zeros((12, 12))
+            V[:3,:3] =V[3:6,3:6]=V[6:9,6:9]=V[9:,9:]=Vl
             Vt = V.transpose()
+            
+            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
+            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
+            data=[1]*(2*6)
+            G=sp.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
             #Assemble nodal force vector
-            self.__f[i*6:i*6+6] += np.dot(Vt,beam.re[:6])
-            self.__f[j*6:j*6+6] += np.dot(Vt,beam.re[6:])
+            self.__f += G.transpose()*np.dot(Vt,beam.re)
         #### other elements
 
     def assemble_boundary(self):
@@ -232,12 +258,19 @@ class FEModel:
         B=nodes[mid:]
         return self.find(A,target) or self.find(B,target)
 
-import scipy.sparse as sp
-from scipy import linalg as sl 
-
 def solve_linear(model):
     K_,f_=model.K_,model.f_
     #sparse matrix solution
-    delta =np.dot(sl.pinv(K_),f_)
+#    u,s,vt=sl.svds(sp.csr_matrix(K_),k=model.K_.shape[0]-1)
+#    print(s)
+#    pinv=np.dot(np.dot(vt.T,np.linalg.pinv(np.diag(s))),u.T)
+##    pinv=np.linalg.pinv(K_.toarray())
+#    delta =np.dot(pinv,f_.toarray())
+    delta,info=sl.gmres(K_,f_.toarray())
     model.is_solved=True
-    return delta
+    return delta.reshape((model.node_count*6,1))
+    
+if __name__=='__main__':
+    np.set_printoptions(precision=1,suppress=True)
+    
+#FEModel Test
