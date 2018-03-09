@@ -243,7 +243,7 @@ class Beam(Element):
         self.__Mij_=mij_bar
         self.__rij_=rij_bar
 
-class TriMembrane(Element):
+class Membrane3(Element):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):
         r"""
         node_i,node_j,node_k: corners of triangle.
@@ -395,7 +395,7 @@ class TriMembrane(Element):
         T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:12,9:12]=T[12:15,12:15]=T[15:,15:]=V
         return T
         
-class TriPlate(Element):
+class Plate3(Element):
     def __init__(self,node_i, node_j, node_k, sec ,name=None):
         Element.__init__(self)
         self.nodes=[node_i,node_j,node_k]
@@ -527,19 +527,22 @@ class IsoParametric(Element):
         self.nodes=[]
         
     #interpolate function
-    def N(s):
+    def __N(s):
+        pass
+    
+    def __J(s):
         pass
     
     #strain matrix
-    def B(self,s):
+    def __B(self,s):
         pass
     
     #stress matrix
-    def S(self,s):
+    def __S(self,s):
         return np.dot(self.D,self.B(s))
     
     #csys transformation
-    def x(self,s):
+    def __x(self,s):
         """
         s: DIMx1 vector
         """
@@ -548,16 +551,16 @@ class IsoParametric(Element):
         N=np.hstack([(np.eye(self.dim)*Ni) for Ni in self.N(s)]) #DIMx3*DIM matrix
         return np.dot(N,x0)
         
-    def d(self,s,u):
+    def __d(self,s,u):
         """
         compute strain with local coordinate s and displacement u.
         s: 
         """
-        return np.dot(B(s),self.u)
+        return np.dot(self.__B(s),self.u)
         
     def K_(self):
         def f(s):
-            return np.dot(np.dot(np.dot(self.B(s).T,self.E),self.B(s)),self.J(s))
+            return np.dot(np.dot(np.dot(self.B(s).T,self.E),self.B(s)),self.__J(s))
         return sp.integrate.quad(f,-1,1)
         
     def K(self):
@@ -565,31 +568,170 @@ class IsoParametric(Element):
     
     def f(self):
         return np.dot(self.G.T,self.f)
+
+class Membrane4(Element):
+    def __init__(self,node_i, node_j, node_k, node_l, t, E, mu, rho, name=None):
+        r"""
+        node_i,node_j,node_k: corners of triangle.
+        t: thickness
+        E: elastic modulus
+        mu: Poisson ratio
+        rho: mass density
+        """
+        Element.__init__(self,name)
+        self.__nodes=[node_i,node_j,node_k,node_l]
+        self.x0=np.array([(node.x,node.y) for node in self.__nodes])
         
-class Plate(IsoParametric):
-    def __init__(self,sec,node_i, node_j, node_k, node_l, name=None):
+        self.__area=0.5*np.linalg.det(np.array([[1,1,1],
+                                         [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
+                                         [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
+        
+        self.__area+=0.5*np.linalg.det(np.array([[1,1,1],
+                                         [node_l.x-node_k.x,node_l.y-node_k.y,node_l.z-node_i.z],
+                                         [node_i.x-node_k.x,node_i.y-node_k.y,node_i.z-node_i.z]]))
+        self.__t=t
+        self.__E=E
+        self.__mu=mu
+        self.__rho=rho
+        
+        #Initialize local CSys
+        o=[(node_i.x+node_j.x+node_k.x+node_l.x)/4,
+            (node_i.y+node_j.y+node_k.y+node_l.y)/4,
+            (node_i.z+node_j.z+node_k.z+node_l.z)/4]
+        pt1 = [(node_i.x+node_j.x)/2,(node_i.y+node_j.y)/2,(node_i.z+node_j.z)/2]
+        pt2 = [(node_j.x+node_k.x)/2,(node_j.y+node_k.y)/2,(node_j.z+node_k.z)/2]
+        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)        
+        
+        E=self.__E
+        mu=self.__mu
+        D0=E/(1-mu**2)
+        D=np.array([[1,mu,0],
+                    [mu,1,0],
+                    [0,0,(1-mu)/2]])*D0
+
+        elm_node_count=4
+        node_dof=2
+        
+        __Ke_=np.zeros((8,8))
+        for i in range(elm_node_count*node_dof):
+            for j in range(elm_node_count*node_dof):
+                __Ke_[i,j]=sp.integrate.dblquad(
+                        lambda y,x:(np.dot(np.dot(self.__B((x,y)).T,D),self.__B((x,y)))*np.linalg.det(self.__J((x,y))))[i,j],
+                        -1,1,lambda a:-1, lambda a:1
+                        )[0]
+        print(__Ke_)
+        row=[]
+        col=[]
+        for i in range(elm_node_count):
+            row+=[a for a in range(i*node_dof,i*node_dof+node_dof)]
+            col+=[a for a in range(i*6,i*6+node_dof)]
+        data=[1]*(elm_node_count*node_dof)
+        G=sp.sparse.csr_matrix((data,(row,col)),shape=(elm_node_count*node_dof,elm_node_count*6))
+        self.__Ke=G.transpose()*__Ke_*G
+
+        #Concentrated mass matrix, may be wrong
+        self.__Me=G.transpose()*np.eye(node_dof*elm_node_count)*G*rho*self.area*t/4
+        
+        self.__re =np.zeros((elm_node_count*6,1))
+        
+    @property
+    def nodes(self):
+        return self.__nodes
+        
+    @property
+    def node_count(self):
+        return 4
+        
+    @property
+    def area(self):
+        return self.__area
+        
+    def __N(self,x):
+        """
+        convert csys from x to N
+        return: 3x1 array represent x,y
+        """
+        x,y=x[0],x[1]
+        N=[]
+        for i in range(4):
+            N.append((1-x*self.x0[i,0])*(1-y*self.x0[i,1])/4)
+        return np.array(N).reshape(4,1)
+    
+    def __J(self,x):
+        x,y=x[0],x[1]
+        L=np.array([[-self.x0[0,0]*(1-y*self.x0[0,1])/4,-self.x0[0,1]*(1-x*self.x0[0,0])/4],
+                 [-self.x0[1,0]*(1-y*self.x0[1,1])/4,-self.x0[1,1]*(1-x*self.x0[1,0])/4],
+                 [-self.x0[2,0]*(1-y*self.x0[2,1])/4,-self.x0[2,1]*(1-x*self.x0[2,0])/4],
+                 [-self.x0[3,0]*(1-y*self.x0[3,1])/4,-self.x0[3,1]*(1-x*self.x0[3,0])/4],]).transpose()
+        R=self.x0
+        return np.dot(L,R)
+    
+    def __x(self,N):
+        """
+        convert csys from L to x
+        return: 2x1 array represent x,y
+        """
+        return np.dot(np.array(N).reshape(1,4),self.x0).reshape(2,1)
+
+    def __B(self,x):
+        """
+        strain matrix, which is derivative of intepolate function
+        """
+        B=[]
+        x,y=x[0],x[1]
+        for i in range(4):
+            B.append(np.array([[-self.x0[i,0]*(1-y*self.x0[i,1])/4,                                 0],
+                               [                                 0,-self.x0[i,1]*(1-x*self.x0[i,0])/4],
+                               [-self.x0[i,1]*(1-x*self.x0[i,0])/4,-self.x0[i,0]*(1-y*self.x0[i,1])/4]]))
+        return np.hstack(B)
+    
+    def __S(self,x):
+        """
+        stress matrix
+        """
+        return np.dot(self.D,self.B(x))
+                                 
+    @property  
+    def Ke(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        return self.__Ke
+        
+    @property  
+    def Me(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        return self.__Me
+        
+    @property
+    def re(self):
+        return self.__re
+    
+    @re.setter
+    def re(self,force):
+        if len(force)!=18:
+            raise ValueError('element nodal force must be a 12 array')
+        self.__re=np.array(force).reshape((18,1))
+        
+    @property
+    def transform_matrix(self):
+        T=np.zeros((24,24))
+        V=self.local_csys.transform_matrix
+        for i in range(4):
+            T[i*3:i*3+3,i*3:i*3+3]=V
+        return T
+
+class Plate4(IsoParametric):
+    def __init__(self,node_i, node_j, node_k, node_l,t, E, mu, rho, name=None):
         #8-nodes
         self.__nodes.append(node_i)
         self.__nodes.append(node_j)
         self.__nodes.append(node_k)
         self.__nodes.append(node_l)
-        self.__nodes.append((node_i+node_j)/2)
-        self.__nodes.append((node_j+node_k)/2)
-        self.__nodes.append((node_k+node_l)/2)
-        self.__nodes.append((node_l+node_i)/2)
 
-        self.load_i=[0]*6
-        self.load_j=[0]*6
-        self.load_k=[0]*6
-        self.load_l=[0]*6
-        
-        self.__section=sec
-        self.__rotation=0
-        
-        self.__load_d=[]
-        self.__load_c=[]
-        self.__load_s=[]
-        self.__load_t=[]
+        self.__t=t
         
         center=np.mean([node_i,node_j,node_k,node_l])
 #        self.local_csys = CoordinateSystem.cartisian(center,nodes[4],nodes[5])

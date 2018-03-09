@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-
-from Modeler.Material import IsotropyElastic
-from Modeler.Section import AreaSection
-from Modeler.Node import Node
-from Modeler.Element import Beam,TriMembrane
-from Modeler.FEModel import FEModel
-#import Logger
-from Modeler.FEModel import solve_linear
-import numpy as np
-import scipy.sparse as spr
     
 def shear_test():
     model=FEModel()
@@ -18,9 +8,9 @@ def shear_test():
     n4=Node(10,0,5)
     n5=Node(10,0,0)
     
-    a1=TriMembrane(n1,n2,n3,0.25,2e11,0.3,7849)
-    a2=TriMembrane(n3,n4,n5,0.25,2e11,0.3,7849)
-    a3=TriMembrane(n1,n3,n5,0.25,2e11,0.3,7849)
+    a1=Membrane3(n1,n2,n3,0.25,2e11,0.3,7849)
+    a2=Membrane3(n3,n4,n5,0.25,2e11,0.3,7849)
+    a3=Membrane3(n1,n3,n5,0.25,2e11,0.3,7849)
     
     model.add_node(n1)
     model.add_node(n2)

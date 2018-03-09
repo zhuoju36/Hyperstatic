@@ -1,14 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from Modeler.Material import IsotropyElastic
-from Modeler.Section import AreaSection
-from Modeler.Node import Node
-from Modeler.Element import Beam,TriMembrane
-from Modeler.FEModel import FEModel
-#import Logger
-from Modeler.FEModel import solve_linear
-import numpy as np
-
 def cantilever_beam_test():
     #FEModel Test
     model=FEModel()

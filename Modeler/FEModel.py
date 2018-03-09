@@ -14,7 +14,8 @@ class FEModel:
     def __init__(self):
         self.__nodes={}
         self.__beams={}
-        self.__tri_membranes={}
+        self.__membrane3s={}
+        self.__membrane4s={}
                 
         self.__index=[]
         self.__dof=None
@@ -131,15 +132,26 @@ class FEModel:
             res=res[0]
         return res
         
-    def add_tri_membrane(self,tri_membrane):
+    def add_membrane3(self,elm):
         """
         add membrane to model
         if membrane already exits, it will not be added.
         return: membrane hidden id
         """
-        res=len(self.__tri_membranes)
-        tri_membrane.hid=res
-        self.__tri_membranes[res]=tri_membrane
+        res=len(self.__membrane3s)
+        elm.hid=res
+        self.__membrane3s[res]=elm
+        return res
+    
+    def add_membrane4(self,elm):
+        """
+        add membrane to model
+        if membrane already exits, it will not be added.
+        return: membrane hidden id
+        """
+        res=len(self.__membrane4s)
+        elm.hid=res
+        self.__membrane4s[res]=elm
         return res
         
     def assemble_KM(self):
@@ -171,7 +183,7 @@ class FEModel:
             self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
             self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
         
-        for elm in self.__tri_membranes.values():
+        for elm in self.__membrane3s.values():
             i = elm.nodes[0].hid
             j = elm.nodes[1].hid
             k = elm.nodes[2].hid
@@ -185,6 +197,33 @@ class FEModel:
             row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]+[a for a in range(2*6,2*6+6)]
             col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]+[a for a in range(k*6,k*6+6)]
             elm_node_count=3
+            data=[1]*(elm_node_count*6)
+            G=sp.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
+            
+            Ke = sp.csr_matrix(np.dot(np.dot(Tt,Ke),T))
+            Me = sp.csr_matrix(np.dot(np.dot(Tt,Me),T))
+            self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
+            self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
+            
+        for elm in self.__membrane4s.values():
+            i = elm.nodes[0].hid
+            j = elm.nodes[1].hid
+            k = elm.nodes[2].hid
+            l = elm.nodes[3].hid
+            
+            T=elm.transform_matrix
+            Tt = T.transpose()
+
+            Ke=elm.Ke
+            Me=elm.Me
+            
+            row=[]
+            col=[]
+            for i in range(4):
+                row+=[a for a in range(i*6,i*6+6)]
+            for _i in [i,j,k,l]:
+                col+=[a for a in range(_i*6,_i*6+6)]
+            elm_node_count=4
             data=[1]*(elm_node_count*6)
             G=sp.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
             
