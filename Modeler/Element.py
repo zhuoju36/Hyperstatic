@@ -8,6 +8,7 @@ import uuid
 
 import numpy as np
 import scipy as sp
+import scipy.sparse as spr
 
 from . import CoordinateSystem,Section
 from . import config
@@ -254,7 +255,6 @@ class Membrane3(Element):
         """
         Element.__init__(self,name)
         self.__nodes=[node_i,node_j,node_k]
-        self.__x0=np.array([(node.x,node.y) for node in self.__nodes])
         self.__area=0.5*np.linalg.det(np.array([[1,1,1],
                                          [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
@@ -269,7 +269,11 @@ class Membrane3(Element):
             (node_i.z+node_j.z+node_k.z)/3]
         pt1 = [ node_j.x, node_j.y, node_j.z ]
         pt2 = [ node_i.x, node_i.y, node_i.z ]
-        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)        
+        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2) 
+        
+        x0=np.array([(node.x,node.y,node.z) for node in self.__nodes])
+        V=self.local_csys.transform_matrix
+        self.__x0=np.dot(x0,V)[:,:2]
         
         E=self.__E
         mu=self.__mu
@@ -399,12 +403,14 @@ class Plate3(Element):
     def __init__(self,node_i, node_j, node_k, sec ,name=None):
         Element.__init__(self)
         self.nodes=[node_i,node_j,node_k]
-        self.x0=np.array([(node.x,node.y) for node in self.nodes])
         self.area=0.5*np.linalg.det(np.array([[1,1,1],
                                          [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
         self.t=sec.t
         self.__sec=sec
+        x0=np.array([(node.x,node.y,node.z) for node in self.__nodes])
+        V=self.local_csys.transform_matrix
+        self.x0=np.dot(x0,V)[:,:2]
         
     @property
     def nodes(self):
@@ -580,13 +586,12 @@ class Membrane4(Element):
         """
         Element.__init__(self,name)
         self.__nodes=[node_i,node_j,node_k,node_l]
-        self.x0=np.array([(node.x,node.y) for node in self.__nodes])
         
-        self.__area=0.5*np.linalg.det(np.array([[1,1,1],
+        self.__area=0.5*sp.linalg.det(np.array([[1,1,1],
                                          [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
         
-        self.__area+=0.5*np.linalg.det(np.array([[1,1,1],
+        self.__area+=0.5*sp.linalg.det(np.array([[1,1,1],
                                          [node_l.x-node_k.x,node_l.y-node_k.y,node_l.z-node_i.z],
                                          [node_i.x-node_k.x,node_i.y-node_k.y,node_i.z-node_i.z]]))
         self.__t=t
@@ -600,26 +605,30 @@ class Membrane4(Element):
             (node_i.z+node_j.z+node_k.z+node_l.z)/4]
         pt1 = [(node_i.x+node_j.x)/2,(node_i.y+node_j.y)/2,(node_i.z+node_j.z)/2]
         pt2 = [(node_j.x+node_k.x)/2,(node_j.y+node_k.y)/2,(node_j.z+node_k.z)/2]
-        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)        
+        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2) 
+        
+        x0=np.array([(node.x,node.y,node.z) for node in self.__nodes])
+        V=self.local_csys.transform_matrix
+        self.x0=np.dot(x0,V)[:,:2]
         
         E=self.__E
         mu=self.__mu
         D0=E/(1-mu**2)
-        D=np.array([[1,mu,0],
+        self.__D=np.array([[1,mu,0],
                     [mu,1,0],
                     [0,0,(1-mu)/2]])*D0
 
         elm_node_count=4
         node_dof=2
+                
+        import quadpy
+
+        __Ke_ = quadpy.quadrilateral.integrate(
+            lambda x: self.__BtDB(x),
+            quadpy.quadrilateral.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
+            quadpy.quadrilateral.Stroud('C2 7-2')
+            )            
         
-        __Ke_=np.zeros((8,8))
-        for i in range(elm_node_count*node_dof):
-            for j in range(elm_node_count*node_dof):
-                __Ke_[i,j]=sp.integrate.dblquad(
-                        lambda y,x:(np.dot(np.dot(self.__B((x,y)).T,D),self.__B((x,y)))*np.linalg.det(self.__J((x,y))))[i,j],
-                        -1,1,lambda a:-1, lambda a:1
-                        )[0]
-        print(__Ke_)
         row=[]
         col=[]
         for i in range(elm_node_count):
@@ -660,9 +669,9 @@ class Membrane4(Element):
     def __J(self,x):
         x,y=x[0],x[1]
         L=np.array([[-self.x0[0,0]*(1-y*self.x0[0,1])/4,-self.x0[0,1]*(1-x*self.x0[0,0])/4],
-                 [-self.x0[1,0]*(1-y*self.x0[1,1])/4,-self.x0[1,1]*(1-x*self.x0[1,0])/4],
-                 [-self.x0[2,0]*(1-y*self.x0[2,1])/4,-self.x0[2,1]*(1-x*self.x0[2,0])/4],
-                 [-self.x0[3,0]*(1-y*self.x0[3,1])/4,-self.x0[3,1]*(1-x*self.x0[3,0])/4],]).transpose()
+                    [-self.x0[1,0]*(1-y*self.x0[1,1])/4,-self.x0[1,1]*(1-x*self.x0[1,0])/4],
+                    [-self.x0[2,0]*(1-y*self.x0[2,1])/4,-self.x0[2,1]*(1-x*self.x0[2,0])/4],
+                    [-self.x0[3,0]*(1-y*self.x0[3,1])/4,-self.x0[3,1]*(1-x*self.x0[3,0])/4],]).T
         R=self.x0
         return np.dot(L,R)
     
@@ -673,17 +682,23 @@ class Membrane4(Element):
         """
         return np.dot(np.array(N).reshape(1,4),self.x0).reshape(2,1)
 
-    def __B(self,x):
+    def __BtDB(self,x):
         """
         strain matrix, which is derivative of intepolate function
         """
         B=[]
+        x0,y0=self.x0[:,0],self.x0[:,1]
         x,y=x[0],x[1]
         for i in range(4):
-            B.append(np.array([[-self.x0[i,0]*(1-y*self.x0[i,1])/4,                                 0],
-                               [                                 0,-self.x0[i,1]*(1-x*self.x0[i,0])/4],
-                               [-self.x0[i,1]*(1-x*self.x0[i,0])/4,-self.x0[i,0]*(1-y*self.x0[i,1])/4]]))
-        return np.hstack(B)
+            B.append(np.array([[-x0[i]*(1-y*y0[i])/4,                 x*0],
+                               [                 y*0,-y0[i]*(1-x*x0[i])/4],
+                               [-y0[i]*(1-x*x0[i])/4,-x0[i]*(1-y*y0[i])/4]]))
+        B=np.hstack(B)
+        D=self.__D
+        B_=np.zeros((8,8,B.shape[2]))
+        for k in range(B.shape[2]):
+            B_[:,:,k]=B[:,:,k].transpose().dot(D).dot(B[:,:,k])
+        return B_
     
     def __S(self,x):
         """

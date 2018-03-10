@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-    
+import numpy as np
+import scipy.sparse as spr
+from Modeler.Node import Node
+from Modeler.Element import Beam,Membrane3,Membrane4
+from Modeler.Material import IsotropyElastic
+from Modeler.Section import AreaSection
+from Modeler.FEModel import FEModel,solve_linear
+
 def shear_test():
     model=FEModel()
     n1=Node(0,0,0)
@@ -18,9 +25,9 @@ def shear_test():
     model.add_node(n4)
     model.add_node(n5)
 
-    model.add_tri_membrane(a1)
-    model.add_tri_membrane(a2)
-    model.add_tri_membrane(a3)
+    model.add_membrane3(a1)
+    model.add_membrane3(a2)
+    model.add_membrane3(a3)
 
     n3.fn=(0,0,-100000,0,0,0)
     n1.dn=[0,0,0,0,0,0]
@@ -34,10 +41,10 @@ def shear_test():
     model.assemble_boundary()
     res=solve_linear(model)
         
+    np.set_printoptions(precision=6,suppress=True)
     print(res)
+    print(r"correct answer should be about ???")
 
-np.set_printoptions(precision=6,suppress=True)
-shear_test()
 #    from random import random
 #    model=FEModel()
 #    for i in range(333):
