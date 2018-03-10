@@ -7,8 +7,9 @@ Created on Tue Mar  6 15:36:52 2018
 
 import numpy as np
 
-import scipy.sparse as sp
+import scipy.sparse as spr
 from scipy.sparse import linalg as sl
+import Logger as log
 
 class FEModel:
     def __init__(self):
@@ -158,9 +159,10 @@ class FEModel:
         """
         Assemble integrated stiffness matrix and mass matrix.
         """
+        log.info('Assembling K and M..')
         n_nodes=self.node_count
-        self.__K = sp.lil_matrix((n_nodes*6, n_nodes*6))
-        self.__M = sp.lil_matrix((n_nodes*6, n_nodes*6))     
+        self.__K = spr.csr_matrix((n_nodes*6, n_nodes*6))
+        self.__M = spr.csr_matrix((n_nodes*6, n_nodes*6))     
         #Beam load and displacement, and reset the index 
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
@@ -176,10 +178,10 @@ class FEModel:
             row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
             col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
             data=[1]*(2*6)
-            G=sp.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
             
-            Ke = sp.csr_matrix(np.dot(np.dot(Tt,Kij),T))
-            Me = sp.csr_matrix(np.dot(np.dot(Tt,Mij),T))
+            Ke = spr.csr_matrix(np.dot(np.dot(Tt,Kij),T))
+            Me = spr.csr_matrix(np.dot(np.dot(Tt,Mij),T))
             self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
             self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
         
@@ -193,15 +195,22 @@ class FEModel:
 
             Ke=elm.Ke
             Me=elm.Me
-
-            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]+[a for a in range(2*6,2*6+6)]
-            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]+[a for a in range(k*6,k*6+6)]
-            elm_node_count=3
-            data=[1]*(elm_node_count*6)
-            G=sp.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
             
-            Ke = sp.csr_matrix(np.dot(np.dot(Tt,Ke),T))
-            Me = sp.csr_matrix(np.dot(np.dot(Tt,Me),T))
+            #expand
+            row=[a for a in range(0*6,0*6+6)]+\
+                [a for a in range(1*6,1*6+6)]+\
+                [a for a in range(2*6,2*6+6)]
+
+            col=[a for a in range(i*6,i*6+6)]+\
+                [a for a in range(j*6,j*6+6)]+\
+                [a for a in range(k*6,k*6+6)]
+            elm_node_count=elm.node_count
+            data=[1]*(elm_node_count*6)
+            G=spr.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
+            
+            Ke = spr.csr_matrix(np.dot(np.dot(Tt,Ke),T))
+            Me = spr.csr_matrix(np.dot(np.dot(Tt,Me),T))
+
             self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
             self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
             
@@ -217,28 +226,37 @@ class FEModel:
             Ke=elm.Ke
             Me=elm.Me
             
-            row=[]
-            col=[]
-            for i in range(4):
-                row+=[a for a in range(i*6,i*6+6)]
-            for _i in [i,j,k,l]:
-                col+=[a for a in range(_i*6,_i*6+6)]
-            elm_node_count=4
-            data=[1]*(elm_node_count*6)
-            G=sp.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
+            #transform
+            Ke_ = spr.csr_matrix(Tt.dot(Ke).dot(T))
+            Me_ = spr.csr_matrix(Tt.dot(Me).dot(T))
             
-            Ke = sp.csr_matrix(np.dot(np.dot(Tt,Ke),T))
-            Me = sp.csr_matrix(np.dot(np.dot(Tt,Me),T))
-            self.__K+=G.transpose()*Ke*G #sparse matrix use * as dot.
-            self.__M+=G.transpose()*Me*G #sparse matrix use * as dot.
+            #expand
+            row=[a for a in range(0*6,0*6+6)]+\
+                [a for a in range(1*6,1*6+6)]+\
+                [a for a in range(2*6,2*6+6)]+\
+                [a for a in range(3*6,3*6+6)]
+
+            col=[a for a in range(i*6,i*6+6)]+\
+                [a for a in range(j*6,j*6+6)]+\
+                [a for a in range(k*6,k*6+6)]+\
+                [a for a in range(l*6,l*6+6)]
+            elm_node_count=elm.node_count
+            data=[1]*(elm_node_count*6)
+            
+            G=spr.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
+            #assemble
+            self.__K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
+            self.__M+=G.transpose()*Me_*G #sparse matrix use * as dot.
+#        print(self.__K)
         #### other elements
 
     def assemble_f(self):
         """
         Assemble load vector and displacement vector.
         """
+        log.info('Assembling f..')
         n_nodes=self.node_count
-        self.__f = sp.lil_matrix((n_nodes*6,1))
+        self.__f = spr.lil_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
         for node in self.__nodes.values():
             T=node.transform_matrix.transpose()
@@ -256,13 +274,13 @@ class FEModel:
             row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
             col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
             data=[1]*(2*6)
-            G=sp.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
             #Assemble nodal force vector
             self.__f += G.transpose()*np.dot(Vt,beam.re)
         #### other elements
 
     def assemble_boundary(self):
-#        Logger.info('Eliminating matrix...')
+        log.info('Assembling boundary condition..')
         self.__K_bar=self.K.copy()
         self.__M_bar=self.M.copy()
         self.__f_bar=self.f.copy()
@@ -271,8 +289,8 @@ class FEModel:
             i=node.hid
             for j in range(6):
                 if node.dn[j]!= None:
-                    self.__K_bar[i*6+j,i*6+j]*=1e10
-                    self.__M_bar[i*6+j,i*6+j]*=1e10
+                    self.__K_bar[i*6+j,i*6+j]*=1e12
+                    self.__M_bar[i*6+j,i*6+j]*=1e12
                     self.__f_bar[i*6+j]=self.__K_bar[i*6+j,i*6+j]*node.dn[j]
                     self.__dof-=1
         
@@ -298,15 +316,18 @@ class FEModel:
         return self.find(A,target) or self.find(B,target)
 
 def solve_linear(model):
+    log.info('solving problem with %d DOFs...'%model.DOF)
     K_,f_=model.K_,model.f_
     #sparse matrix solution
 #    u,s,vt=sl.svds(sp.csr_matrix(K_),k=model.K_.shape[0]-1)
 #    print(s)
 #    pinv=np.dot(np.dot(vt.T,np.linalg.pinv(np.diag(s))),u.T)
-##    pinv=np.linalg.pinv(K_.toarray())
+    
+#    pinv=np.linalg.pinv(K_.toarray())
 #    delta =np.dot(pinv,f_.toarray())
     delta,info=sl.gmres(K_,f_.toarray())
     model.is_solved=True
+    log.info('Done!')
     return delta.reshape((model.node_count*6,1))
     
 if __name__=='__main__':

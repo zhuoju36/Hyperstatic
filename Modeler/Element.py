@@ -9,29 +9,70 @@ import uuid
 import numpy as np
 import scipy as sp
 import scipy.sparse as spr
+import quadpy
 
 from . import CoordinateSystem,Section
 from . import config
 
 class Element(object):
-    def __init__(self,name=None):
-        self.__name=uuid.uuid1() if name==None else name
-        self.__hid=None #hidden id
+    def __init__(self,dim,dof,name=None):
+        self._name=uuid.uuid1() if name==None else name
+        self._hid=None #hidden id
+        
+        self._dim=dim
+        self._dof=dof
+        
         
     @property
     def name(self):
-        return self.__name
+        return self._name
         
     @property
     def hid(self):
-        return self.__hid
+        return self._hid
     @hid.setter
     def hid(self,hid):
-        self.__hid=hid
+        self._hid=hid
         
     @property
     def nodes(self):
-        return self.__nodes
+        return self._nodes
+    
+    @property
+    def node_count(self):
+        return len(self._nodes)
+    
+    @property  
+    def Ke(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        return self._Ke
+        
+    @property  
+    def Me(self):
+        """
+        integrate to get stiffness matrix.
+        """
+        return self._Me
+        
+    @property
+    def re(self):
+        return self._re
+    
+    @re.setter
+    def re(self,force):
+        if len(force)!=self._dof:
+            raise ValueError('element nodal force must be a 12 array')
+        self.__re=np.array(force).reshape((self._dof,1))
+        
+    @property
+    def transform_matrix(self):
+        T=np.zeros((self.node_count*6,self.node_count*6))
+        V=self.local_csys.transform_matrix
+        for i in range(self._dof):
+            T[i*3:i*3+3,i*3:i*3+3]=V
+        return T
 
                 
 class Beam(Element):
@@ -253,15 +294,15 @@ class Membrane3(Element):
         mu: Poisson ratio
         rho: mass density
         """
-        Element.__init__(self,name)
-        self.__nodes=[node_i,node_j,node_k]
-        self.__area=0.5*np.linalg.det(np.array([[1,1,1],
+        super(Membrane3,self).__init__(2,6,name)
+        self._nodes=[node_i,node_j,node_k]
+        self._area=0.5*np.linalg.det(np.array([[1,1,1],
                                          [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
-        self.__t=t
-        self.__E=E
-        self.__mu=mu
-        self.__rho=rho
+        self._t=t
+        self._E=E
+        self._mu=mu
+        self._rho=rho
         
         #Initialize local CSys
         o=[(node_i.x+node_j.x+node_k.x)/3,
@@ -271,86 +312,82 @@ class Membrane3(Element):
         pt2 = [ node_i.x, node_i.y, node_i.z ]
         self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2) 
         
-        x0=np.array([(node.x,node.y,node.z) for node in self.__nodes])
+        x0=np.array([(node.x,node.y,node.z) for node in self._nodes])
         V=self.local_csys.transform_matrix
-        self.__x0=np.dot(x0,V)[:,:2]
+        self._x0=(x0-np.array(o)).dot(V.T)[:,:2]
         
-        E=self.__E
-        mu=self.__mu
+        E=self._E
+        mu=self._mu
         D0=E/(1-mu**2)
         D=np.array([[1,mu,0],
                     [mu,1,0],
                     [0,0,(1-mu)/2]])*D0
-        __Ke_=np.dot(np.dot(self.__B(0).T,D),self.__B(0))*self.area*self.__t
+        _Ke_=np.dot(np.dot(self._B(0).T,D),self._B(0))*self.area*self._t
 
-        row=[a for a in range(0*2,0*2+2)]+[a for a in range(1*2,1*2+2)]+[a for a in range(2*2,2*2+2)]
-        col=[a for a in range(0*6,0*6+2)]+[a for a in range(1*6,1*6+2)]+[a for a in range(2*6,2*6+2)]
+        row=[a for a in range(0*2,0*2+2)]+\
+            [a for a in range(1*2,1*2+2)]+\
+            [a for a in range(2*2,2*2+2)]
+        col=[a for a in range(0*6,0*6+2)]+\
+            [a for a in range(1*6,1*6+2)]+\
+            [a for a in range(2*6,2*6+2)]
         elm_node_count=3
         elm_dof=2
         data=[1]*(elm_node_count*elm_dof)
         G=sp.sparse.csr_matrix((data,(row,col)),shape=(elm_node_count*elm_dof,elm_node_count*6))
-        self.__Ke=G.transpose()*__Ke_*G
+        self._Ke=G.transpose()*_Ke_*G
 
         #Concentrated mass matrix, may be wrong
-        self.__Me=np.eye(18)*rho*self.area*t/3
+        self._Me=np.eye(18)*rho*self.area*t/3
         
-        self.__re =np.zeros((18,1))
-        
-    @property
-    def nodes(self):
-        return self.__nodes
-        
-    @property
-    def node_count(self):
-        return 3
+        self._re =np.zeros((18,1))
         
     @property
     def area(self):
-        return self.__area
+        return self._area
         
-    def __abc(self,j,m):
+    def _abc(self,j,m):
         """
         conversion constant.
         """
-        x,y=self.__x0[:,0],self.__x0[:,1]
+        x,y=self._x0[:,0],self._x0[:,1]
         a=x[j]*y[m]-x[m]*y[j]
         b=y[j]-y[m]
         c=-x[j]+x[m]
         return np.array([a,b,c])
 
-    def __N(self,x):
+    def _N(self,x):
         """
         interpolate function.
         return: 3x1 array represent x,y
         """
-        return self.__L(x)
+        return self._L(x)
         
-    def __L(self,x):
+    def _L(self,x):
         """
         convert csys from x to L
         return: 3x1 array represent x,y
         """
         x,y=x[0],x[1]
         L=np.array((3,1))
-        L[0]=self.__abc(1,2).dot(np.array([1,x,y]))/2/self.area
-        L[1]=self.__abc(2,0).dot(np.array([1,x,y]))/2/self.area
-        L[2]=self.__abc(0,1).dot(np.array([1,x,y]))/2/self.area
+        L[0]=self._abc(1,2).dot(np.array([1,x,y]))/2/self._area
+        L[1]=self._abc(2,0).dot(np.array([1,x,y]))/2/self._area
+        L[2]=self._abc(0,1).dot(np.array([1,x,y]))/2/self._area
         return L.reshape(3,1)
     
-    def __x(self,L):
+    def _x(self,L):
         """
         convert csys from L to x
         return: 2x1 array represent x,y
         """
-        return np.dot(np.array(L).reshape(1,3),self.x0).reshape(2,1)
+        return np.dot(np.array(L).reshape(1,3),self._x0).reshape(2,1)
 
-    def __B(self,x):
+    def _B(self,x):
         """
         strain matrix, which is derivative of intepolate function
         """
-        abc0=self.__abc(1,2)
-        abc1=self.__abc(2,0)
-        abc2=self.__abc(0,1)
+        abc0=self._abc(1,2)
+        abc1=self._abc(2,0)
+        abc2=self._abc(0,1)
         B0= np.array([[abc0[1],      0],
                       [      0,abc0[2]],
                       [abc0[2],abc0[1]]])
@@ -361,194 +398,28 @@ class Membrane3(Element):
                       [      0,abc2[2]],
                       [abc2[2],abc2[1]]])
         return np.hstack([B0,B1,B2])/2/self.area
-    
-    def __S(self,x):
-        """
-        stress matrix
-        """
-        return np.dot(self.D,self.B(x))
-                                 
-    @property  
-    def Ke(self):
-        """
-        integrate to get stiffness matrix.
-        """
-        return self.__Ke
-        
-    @property  
-    def Me(self):
-        """
-        integrate to get stiffness matrix.
-        """
-        return self.__Me
-        
-    @property
-    def re(self):
-        return self.__re
-    
-    @re.setter
-    def re(self,force):
-        if len(force)!=18:
-            raise ValueError('element nodal force must be a 12 array')
-        self.__re=np.array(force).reshape((18,1))
-        
-    @property
-    def transform_matrix(self):
-        T=np.zeros((18,18))
-        V=self.local_csys.transform_matrix
-        T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:12,9:12]=T[12:15,12:15]=T[15:,15:]=V
-        return T
-        
-class Plate3(Element):
-    def __init__(self,node_i, node_j, node_k, sec ,name=None):
-        Element.__init__(self)
-        self.nodes=[node_i,node_j,node_k]
-        self.area=0.5*np.linalg.det(np.array([[1,1,1],
-                                         [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
-                                         [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
-        self.t=sec.t
-        self.__sec=sec
-        x0=np.array([(node.x,node.y,node.z) for node in self.__nodes])
-        V=self.local_csys.transform_matrix
-        self.x0=np.dot(x0,V)[:,:2]
-        
-    @property
-    def nodes(self):
-        return self.__nodes
-
-    @property
-    def section(self):
-        return self.__sec
-        
-    def abc(self,j,m):
-        """
-        conversion constant.
-        """
-        x,y=self.x0[:,0],self.x0[:,1]
-        a=x[j]*y[m]-x[m]*y[j]
-        b=y[j]-y[m]
-        c=-x[j]+x[m]
-        return np.array([a,b,c])
-
-    def N(self,x):
-        """
-        interpolate function.
-        return: 3x1 array represent x,y
-        """
-        return self.L(x)
-        
-    def N_(self,x):
-        """
-        reversed interpolate function.
-        return: 3x1 array represent x,y
-        """
-        return self.x0.T
-        
-    def L(self,x):
-        """
-        convert csys from x to L
-        return: 3x1 array represent x,y
-        """
-        x,y=x[0],x[1]
-        L=np.array((3,1))
-        L[0]=self.abc(1,2).dot(np.array([1,x,y]))/2/self.area
-        L[1]=self.abc(2,0).dot(np.array([1,x,y]))/2/self.area
-        L[2]=self.abc(0,1).dot(np.array([1,x,y]))/2/self.area
-        return L.reshape(3,1)
-    
-    def x(self,L):
-        """
-        convert csys from L to x
-        return: 2x1 array represent x,y
-        """
-        return np.dot(np.array(L).reshape(1,3),self.x0).reshape(2,1)
-
-    def B(self,x):
-        """
-        strain matrix, which is derivative of intepolate function
-        """
-        abc0=self.abc(1,2)
-        abc1=self.abc(2,0)
-        abc2=self.abc(0,1)
-        B0= np.array([[abc0[1],      0],
-                      [      0,abc0[2]],
-                      [abc0[2],abc0[1]]])
-        B1= np.array([[abc1[1],     0],
-                      [      0,abc1[2]],
-                      [abc1[2],abc1[1]]])
-        B2= np.array([[abc2[1],      0],
-                      [      0,abc2[2]],
-                      [abc2[2],abc2[1]]])
-        return np.hstack([B0,B1,B2])/2/self.area
-    
-    def S(self,x):
-        """
-        stress matrix
-        """
-        return np.dot(self.D,self.B(x))
-    
-    @property  
-    def J(self):
-        """
-        Jacobi matrix
-        """
-        dxdL1=self.x0[0,0]
-        dxdL2=self.x0[1,0]
-        dydL1=self.x0[0,1]
-        dydL2=self.x0[1,1]
-        return np.array([[dxdL1,dydL1],
-                        [dxdL2,dydL2]])
-                               
-    @property  
-    def K(self):
-        """
-        integrate to get stiffness matrix.
-        """
-        E=self.__sec.material.E
-        mu=self.__sec.material.mu
-        D0=E/(1-mu**2)
-        D=np.array([[1,mu,0],
-                    [mu,1,0],
-                    [0,0,(1-mu)/2]])*D0
-#        res=np.zeros((6,6))
-#        def gfunc(x):
-#            return 0
-#        def hfunc(x):
-#            return 1-x
-        res=np.dot(np.dot(self.B(0).T,D),self.B(0))*self.area*self.t
-#        for i in range(6):
-#            for j in range(6):
-#                res[i,j]=sp.integrate.dblquad(lambda x,y:A[i,j],0,1,gfunc,hfunc)[0]*self.t                 
-        return res
     
 class IsoParametric(Element):
-    def __init__(self,dim,name=None):
-        Element.__init__(self)
-        self.dim=dim
-        self.A=np.array()
-        self.B=self.A.T
-        self.N
-        self.x=np.array()
-        self.E        
-        self.nodes=[]
+    def __init__(self,dim,dof,name=None):
+        super(IsoParametric,self).__init__(dim,dof,name)
         
     #interpolate function
-    def __N(s):
+    def _N(s):
         pass
     
-    def __J(s):
+    def _J(s):
         pass
     
     #strain matrix
-    def __B(self,s):
+    def _B(self,s):
         pass
     
     #stress matrix
-    def __S(self,s):
+    def _S(self,s):
         return np.dot(self.D,self.B(s))
     
     #csys transformation
-    def __x(self,s):
+    def _x(self,s):
         """
         s: DIMx1 vector
         """
@@ -557,25 +428,14 @@ class IsoParametric(Element):
         N=np.hstack([(np.eye(self.dim)*Ni) for Ni in self.N(s)]) #DIMx3*DIM matrix
         return np.dot(N,x0)
         
-    def __d(self,s,u):
+    def _d(self,s,u):
         """
         compute strain with local coordinate s and displacement u.
         s: 
         """
         return np.dot(self.__B(s),self.u)
-        
-    def K_(self):
-        def f(s):
-            return np.dot(np.dot(np.dot(self.B(s).T,self.E),self.B(s)),self.__J(s))
-        return sp.integrate.quad(f,-1,1)
-        
-    def K(self):
-        return np.dot(np.dot(self.G.T,self.f),self.G)
-    
-    def f(self):
-        return np.dot(self.G.T,self.f)
 
-class Membrane4(Element):
+class Membrane4(IsoParametric):
     def __init__(self,node_i, node_j, node_k, node_l, t, E, mu, rho, name=None):
         r"""
         node_i,node_j,node_k: corners of triangle.
@@ -584,20 +444,20 @@ class Membrane4(Element):
         mu: Poisson ratio
         rho: mass density
         """
-        Element.__init__(self,name)
-        self.__nodes=[node_i,node_j,node_k,node_l]
+        super(Membrane4,self).__init__(2,8,name)
+        self._nodes=[node_i,node_j,node_k,node_l]
         
-        self.__area=0.5*sp.linalg.det(np.array([[1,1,1],
+        self._area=0.5*sp.linalg.det(np.array([[1,1,1],
                                          [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z],
                                          [node_k.x-node_i.x,node_k.y-node_i.y,node_k.z-node_i.z]]))
         
-        self.__area+=0.5*sp.linalg.det(np.array([[1,1,1],
+        self._area+=0.5*sp.linalg.det(np.array([[1,1,1],
                                          [node_l.x-node_k.x,node_l.y-node_k.y,node_l.z-node_i.z],
                                          [node_i.x-node_k.x,node_i.y-node_k.y,node_i.z-node_i.z]]))
-        self.__t=t
-        self.__E=E
-        self.__mu=mu
-        self.__rho=rho
+        self._t=t
+        self._E=E
+        self._mu=mu
+        self._rho=rho
         
         #Initialize local CSys
         o=[(node_i.x+node_j.x+node_k.x+node_l.x)/4,
@@ -607,28 +467,25 @@ class Membrane4(Element):
         pt2 = [(node_j.x+node_k.x)/2,(node_j.y+node_k.y)/2,(node_j.z+node_k.z)/2]
         self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2) 
         
-        x0=np.array([(node.x,node.y,node.z) for node in self.__nodes])
+        x0=np.array([(node.x,node.y,node.z) for node in self._nodes])
         V=self.local_csys.transform_matrix
-        self.x0=np.dot(x0,V)[:,:2]
+        self._x0=(x0-np.array(o)).dot(V.T)[:,:2]
         
-        E=self.__E
-        mu=self.__mu
+        E=self._E
+        mu=self._mu
         D0=E/(1-mu**2)
-        self.__D=np.array([[1,mu,0],
+        self._D=np.array([[1,mu,0],
                     [mu,1,0],
                     [0,0,(1-mu)/2]])*D0
 
         elm_node_count=4
         node_dof=2
-                
-        import quadpy
-
-        __Ke_ = quadpy.quadrilateral.integrate(
-            lambda x: self.__BtDB(x),
+        
+        Ke = quadpy.quadrilateral.integrate(
+            lambda s: self._BtDB(s)*np.linalg.det(self._J(s)),
             quadpy.quadrilateral.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
             quadpy.quadrilateral.Stroud('C2 7-2')
-            )            
-        
+            )   
         row=[]
         col=[]
         for i in range(elm_node_count):
@@ -636,107 +493,83 @@ class Membrane4(Element):
             col+=[a for a in range(i*6,i*6+node_dof)]
         data=[1]*(elm_node_count*node_dof)
         G=sp.sparse.csr_matrix((data,(row,col)),shape=(elm_node_count*node_dof,elm_node_count*6))
-        self.__Ke=G.transpose()*__Ke_*G
-
+        self._Ke=G.transpose()*Ke*G
+#        np.set_printoptions(precision=1,suppress=True)
         #Concentrated mass matrix, may be wrong
-        self.__Me=G.transpose()*np.eye(node_dof*elm_node_count)*G*rho*self.area*t/4
+        self._Me=G.transpose()*np.eye(node_dof*elm_node_count)*G*rho*self._area*t/4
         
-        self.__re =np.zeros((elm_node_count*6,1))
-        
-    @property
-    def nodes(self):
-        return self.__nodes
-        
-    @property
-    def node_count(self):
-        return 4
+        self._re =np.zeros((elm_node_count*6,1))
         
     @property
     def area(self):
-        return self.__area
+        return self._area
         
-    def __N(self,x):
+    def _N(self,x):
         """
         convert csys from x to N
         return: 3x1 array represent x,y
         """
         x,y=x[0],x[1]
+        x0,y0=self._x0[:,0],self._x0[:,1]
         N=[]
         for i in range(4):
-            N.append((1-x*self.x0[i,0])*(1-y*self.x0[i,1])/4)
+            N.append((1-x*x0[i])*(1-y*y0[i])/4)
         return np.array(N).reshape(4,1)
     
-    def __J(self,x):
+    def _J(self,x):
         x,y=x[0],x[1]
-        L=np.array([[-self.x0[0,0]*(1-y*self.x0[0,1])/4,-self.x0[0,1]*(1-x*self.x0[0,0])/4],
-                    [-self.x0[1,0]*(1-y*self.x0[1,1])/4,-self.x0[1,1]*(1-x*self.x0[1,0])/4],
-                    [-self.x0[2,0]*(1-y*self.x0[2,1])/4,-self.x0[2,1]*(1-x*self.x0[2,0])/4],
-                    [-self.x0[3,0]*(1-y*self.x0[3,1])/4,-self.x0[3,1]*(1-x*self.x0[3,0])/4],]).T
-        R=self.x0
+        x0,y0=self._x0[:,0],self._x0[:,1]
+        L=np.array([[-x0[0]*(1-y*y0[0])/4,-y0[0]*(1-x*x0[0])/4],
+                    [-x0[1]*(1-y*y0[1])/4,-y0[1]*(1-x*x0[1])/4],
+                    [-x0[2]*(1-y*y0[2])/4,-y0[2]*(1-x*x0[2])/4],
+                    [-x0[3]*(1-y*y0[3])/4,-y0[3]*(1-x*x0[3])/4],]).T
+        R=self._x0
         return np.dot(L,R)
     
-    def __x(self,N):
-        """
-        convert csys from L to x
-        return: 2x1 array represent x,y
-        """
-        return np.dot(np.array(N).reshape(1,4),self.x0).reshape(2,1)
-
-    def __BtDB(self,x):
+    def _B(self,x):
         """
         strain matrix, which is derivative of intepolate function
         """
         B=[]
-        x0,y0=self.x0[:,0],self.x0[:,1]
+        x0,y0=self._x0[:,0],self._x0[:,1]
+        x,y=x[0],x[1]
+        for i in range(4):
+            B.append(np.array([[-x0[i]*(1-y*y0[i])/4,                   0],
+                               [                   0,-y0[i]*(1-x*x0[i])/4],
+                               [-y0[i]*(1-x*x0[i])/4,-x0[i]*(1-y*y0[i])/4]]))
+        B=np.hstack(B)
+        return B
+    
+    def _x(self,N):
+        """
+        convert csys from L to x
+        return: 2x1 array represent x,y
+        """
+        return np.dot(np.array(N).reshape(1,4),self._x0).reshape(2,1)
+
+    def _BtDB(self,x):
+        """
+        strain matrix, which is derivative of intepolate function
+        """
+        B=[]
+        x0,y0=self._x0[:,0],self._x0[:,1]
         x,y=x[0],x[1]
         for i in range(4):
             B.append(np.array([[-x0[i]*(1-y*y0[i])/4,                 x*0],
                                [                 y*0,-y0[i]*(1-x*x0[i])/4],
                                [-y0[i]*(1-x*x0[i])/4,-x0[i]*(1-y*y0[i])/4]]))
         B=np.hstack(B)
-        D=self.__D
-        B_=np.zeros((8,8,B.shape[2]))
+        D=self._D
+        BtDB=np.zeros((8,8,B.shape[2]))
         for k in range(B.shape[2]):
-            B_[:,:,k]=B[:,:,k].transpose().dot(D).dot(B[:,:,k])
-        return B_
+            BtDB[:,:,k]=B[:,:,k].transpose().dot(D).dot(B[:,:,k])
+        return BtDB
     
-    def __S(self,x):
+    def _S(self,x):
         """
         stress matrix
         """
-        return np.dot(self.D,self.B(x))
-                                 
-    @property  
-    def Ke(self):
-        """
-        integrate to get stiffness matrix.
-        """
-        return self.__Ke
-        
-    @property  
-    def Me(self):
-        """
-        integrate to get stiffness matrix.
-        """
-        return self.__Me
-        
-    @property
-    def re(self):
-        return self.__re
-    
-    @re.setter
-    def re(self,force):
-        if len(force)!=18:
-            raise ValueError('element nodal force must be a 12 array')
-        self.__re=np.array(force).reshape((18,1))
-        
-    @property
-    def transform_matrix(self):
-        T=np.zeros((24,24))
-        V=self.local_csys.transform_matrix
-        for i in range(4):
-            T[i*3:i*3+3,i*3:i*3+3]=V
-        return T
+        return np.dot(self._D,self._B(x))
 
 class Plate4(IsoParametric):
     def __init__(self,node_i, node_j, node_k, node_l,t, E, mu, rho, name=None):

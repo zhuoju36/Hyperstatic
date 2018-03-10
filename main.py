@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-from Test.membrane3_test import shear_test as st3
-from Test.membrane4_test import shear_test as st4
+import Test.membrane3_test as mt3
+import Test.membrane4_test as mt4
+import Logger as log
 
-st3()
-st4()
+mt4.pseudo_cantilever_test(500,100)
    
 
 #    from random import random
