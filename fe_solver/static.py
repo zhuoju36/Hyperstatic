@@ -9,7 +9,7 @@ from scipy import linalg
 from scipy import sparse as spr
 import scipy.sparse.linalg as sl
 
-from Modeler.FEModel import FEModel
+from fe_model import Model
 import Logger as log
 
 def solve_linear(model):

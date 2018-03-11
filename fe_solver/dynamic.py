@@ -8,7 +8,7 @@ import sys
 sys.path.append('..')
 
 import numpy as np
-import Model
+from fe_model import Model
 from scipy import linalg
 from scipy import sparse as sp
 import scipy.sparse.linalg as sl
@@ -49,7 +49,7 @@ def Riz_mode(model:Model.fem_model,n,F):
 #            mode_=np.array(beta).T
     pass
 
-def spectrum_analysis(model:Model.fem_model,n,spec):
+def spectrum_analysis(model,n,spec):
     """
     sepctrum analysis\n
     n: number of modes to use\n

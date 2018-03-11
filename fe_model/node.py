@@ -8,7 +8,7 @@ import uuid
 
 import numpy as np
 
-from . import CoordinateSystem
+from csys import Cartisian
 
 class Node(object):
     def __init__(self,x,y,z,name=None):
@@ -21,7 +21,7 @@ class Node(object):
         o=[x,y,z]
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
-        self.__local_csys=CoordinateSystem.Cartisian(o,pt1,pt2)
+        self.__local_csys=Cartisian(o,pt1,pt2)
         
         self.__disp=np.array([None,None,None,None,None,None]).reshape((6,1))
         self.__load=np.zeros((6,1))

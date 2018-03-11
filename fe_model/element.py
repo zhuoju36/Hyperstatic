@@ -11,7 +11,7 @@ import scipy as sp
 import scipy.sparse as spr
 import quadpy
 
-from . import CoordinateSystem,Section
+from csys import Cartisian
 from . import config
 
 class Element(object):
@@ -100,7 +100,7 @@ class Beam(Element):
             pt2[0] += 1
         else:
             pt2[2] += 1
-        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)
+        self.local_csys = Cartisian(o, pt1, pt2)
         
         self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
         
@@ -343,7 +343,7 @@ class Membrane3(Element):
             (node_i.z+node_j.z+node_k.z)/3]
         pt1 = [ node_j.x, node_j.y, node_j.z ]
         pt2 = [ node_i.x, node_i.y, node_i.z ]
-        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2) 
+        self.local_csys = Cartisian(o, pt1, pt2) 
         
         x0=np.array([(node.x,node.y,node.z) for node in self._nodes])
         V=self.local_csys.transform_matrix
@@ -498,7 +498,7 @@ class Membrane4(IsoParametric):
             (node_i.z+node_j.z+node_k.z+node_l.z)/4]
         pt1 = [(node_i.x+node_j.x)/2,(node_i.y+node_j.y)/2,(node_i.z+node_j.z)/2]
         pt2 = [(node_j.x+node_k.x)/2,(node_j.y+node_k.y)/2,(node_j.z+node_k.z)/2]
-        self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2) 
+        self.local_csys = Cartisian(o, pt1, pt2) 
         
         x0=np.array([(node.x,node.y,node.z) for node in self._nodes])
         V=self.local_csys.transform_matrix

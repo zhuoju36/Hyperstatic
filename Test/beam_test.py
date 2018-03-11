@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import scipy.sparse as spr
-from Modeler.Node import Node
-from Modeler.Element import Beam,Membrane3,Membrane4
-from Modeler.Material import IsotropyElastic
-from Modeler.Section import AreaSection
-from Modeler.FEModel import FEModel
-from Solver.Static import solve_linear,solve_modal
+
+from fe_model.node import Node
+from fe_model.element import Beam,Membrane3,Membrane4
+from fe_model import Model as FEModel
+from fe_solver.static import solve_linear,solve_modal
 
 def cantilever_beam_test():
     #FEModel Test

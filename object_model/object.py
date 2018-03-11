@@ -1,67 +1,74 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar  6 14:07:55 2018
+Created on Sun Mar 11 12:57:03 2018
 
-@author: Dell
+@author: hzj
 """
 import uuid
-
 import numpy as np
 
-from . import CoordinateSystem,Section
-from .Node import Node
-from .Element import Beam, TriMembrane
+from csys import Cartisian
+from fe_model.node import Node
+from fe_model.element import Beam
 
-class Point(object):
-    def __init__(self,x,y,z,name=None):
-        self.__x=x
-        self.__y=y
-        self.__z=z
-        o=[x,y,z]
-        pt1=[x+1,y,z]
-        pt2=[x,y+1,z]
-        self.__local_csys=CoordinateSystem.Cartisian(o,pt1,pt2)
-        self.__restraint=[False]*6
-        self.__load=[0]*6
-        self.__disp=[0]*6
-        self.__name=uuid.uuid1() if name==None else name
-        self.__node=None
-        self.__hid=None
-        
-        #results
-        self.__res_disp=None
-        self.__res_force=None
+
+class StructuralObject(object):
+    def __init__(self,name):
+        self._uuid=uuid.uuid1()
+        self._name=self._uuid if name==None else name
+        self._hid=[]
         
     @property
     def name(self):
-        return self.__name
-        
+        return self._name
+    
     @property
     def hid(self):
-        return self.__hid
+        return self._hid
+
+    @property
+    def local_csys(self):
+        return self._local_csys
+    
+
+class Point(StructuralObject):
+    def __init__(self,x,y,z,name=None):
+        super(Point,self).__init__(name)
+        self._x=x
+        self._y=y
+        self._z=z
+        o=[x,y,z]
+        pt1=[x+1,y,z]
+        pt2=[x,y+1,z]
+        self._local_csys=Cartisian(o,pt1,pt2)
+        self._restraint=[False]*6
+        self._load={}
+        self._disp={}
+        self._node=[]
+        
+        #results
+        self._res_disp=None
+        self._res_force=None
         
     @property
     def x(self):
-        return self.__x
+        return self._x
     
     @property
     def y(self):
-        return self.__y
+        return self._y
     
     @property
     def z(self):
-        return self.__z
-        
-    @property
-    def local_csys(self):
-        return self.__local_csys
+        return self._z
 
     def initialize_csys(self):
         self.__local_csys.align_with_global();
 
     @property
     def load(self):
-        return self.__load
+        return self._load
     @load.setter
     def load(self,load):
         """
@@ -71,46 +78,36 @@ class Point(object):
 
     @property
     def disp(self):
-        return self.__disp
+        return self._disp
     @disp.setter
     def disp(self,disp):
         """
         disp: a boolean vector indicates a nodal displacement.
         """
-        self.__disp=disp   
+        self._disp=disp   
         
     @property
     def restraint(self):
-        return self.__restraint
+        return self._restraint
         
     @restraint.setter
     def restraint(self,res):
-        """
-        res: a boolean vector indicates a nodal restraint.
-        """
-        self.__restraint=res
+        assert len(res)==6
+        self._restraint=res
     
             
     def clear_result(self):
-        self.__res_disp=None
-        self.__res_force=None
+        self._res_disp=None
+        self._res_force=None
         
     @property
     def res_disp(self):
-        return self.__res_disp
-    
-    @res_disp.setter
-    def res_disp(self,disp):
-        self.__res_disp=disp
-        
+        return self._res_disp
+            
     @property
     def res_force(self):
         return self.__res_force
-    
-    @res_force.setter
-    def res_force(self,force):
-        self.__res_force=force
-        
+            
     def mesh(self,model):
         """
         mesh to nodes
@@ -120,40 +117,41 @@ class Point(object):
         node.local_csys=self.local_csys
         self.__hid=model[0].add_node(node)
         
-    def load_to_mesh(self,model,locase):
+    def apply_force(self,model,lc):
         """
         add certain loads and displacements to mesh.
         model: FEModel warpped in list.
+        lc: loadcase name
         """
         if self.__hid==None:
             raise Exception('The object must be meshed first!')
-        model[0].add_nodal_force(self.__hid,self.__load)
+        model[0].add_nodal_force(self.__hid,self.__load[lc])
         model[0].add_nodal_displacement(self.__hid,self.__displacement)        
 
-class Frame(object):
-    def __init__(self,pt_i,pt_j,sec:Section.Section):
-        self.__pt_i=pt_i
-        self.__pt_j=pt_j
-        self.__loadI=[0]*6
-        self.__loadJ=[0]*6
-        self.__releaseI=[False]*6
-        self.__releaseJ=[False]*6
-        self.__section=sec
-        self.__rotation=0
+class Frame(StructuralObject):
+    def __init__(self,pt_i,pt_j,sec,name):
+        self._pt_i=pt_i
+        self._pt_j=pt_j
+        self._loadI=[0]*6
+        self._loadJ=[0]*6
+        self._releaseI=[False]*6
+        self._releaseJ=[False]*6
+        self._section=sec
+        self._rotation=0
         
-        self.__load_distributed={}
-        self.__load_concentrate={} #concentrated
-        self.__load_strain={} #strain
-        self.__load_temperature={} #temperature
+        self._load_distributed={}
+        self._load_concentrate={} #concentrated
+        self._load_strain={} #strain
+        self._load_temperature={} #temperature
 
         #results
-        self.__res_force=None
-        self.__res_disp=None
-        self.__measure=[] #result measure locations
-        self.__ms_forces=[]
-        self.__ms_disps=[]
+        self._res_force=None
+        self._res_disp=None
+        self._measure=[] #result measure locations
+        self._ms_forces=[]
+        self._ms_disps=[]
         
-        self.__local_csys=CoordinateSystem.Cartisian(o,pt1,pt2)
+        self.initialize_csys()
 
 
     def initialize_csys(self):
@@ -300,5 +298,5 @@ class Frame(object):
         v[11] = -(loadJ[1] / 20 + loadI[1] / 30) * l * l + loadJ[5]#M33
         return v
         
-class Area(Object):
+class Area(object):
     pass

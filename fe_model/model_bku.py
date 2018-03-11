@@ -11,7 +11,7 @@ import scipy.sparse as spr
 from scipy.sparse import linalg as sl
 import Logger as log
 
-class FEModel:
+class Model:
     def __init__(self):
         self.__nodes={}
         self.__beams={}

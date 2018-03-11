@@ -6,27 +6,6 @@ Created on Thu Jun 23 21:30:59 2016
 """
 import uuid
 import numpy as np
-
-#class material(object):
-#    def __init__(self,E,mu,gamma,alpha,name=None):
-#        self.E = E
-#        self.mu = mu
-#        self.gamma = gamma
-#        self.alpha = alpha
-#        self.shearModulus = E / 2 / (1 + mu)
-#        self.__name=uuid.uuid1() if name==None else name
-#        
-#    @property
-#    def name(self):
-#        return self.__name
-#
-#    @property
-#    def G(self):
-#        return self.shearModulus
-#    
-#class linear_elastic(material):
-#    def __init__(self,E,mu,gamma,alpha,name=None):
-#        super().__init__(E,mu,gamma,alpha,name)
         
 class Material(object):
     def __init__(self,gamma,name=None):
@@ -34,16 +13,16 @@ class Material(object):
         gamma: density.
         name: optional, an uuid is given by default.
         """
-        self.__gamma = gamma
-        self.__name=uuid.uuid1() if name==None else name
+        self._gamma = gamma
+        self._name=uuid.uuid1() if name==None else name
     
     @property
     def name(self):
-        return self.__name
+        return self._name
         
     @property
     def gamma(self):
-        return self.__gamma
+        return self._gamma
         
 class Elastic(Material):
     def __init__(self,gamma,C,alpha,name=None):
@@ -53,45 +32,45 @@ class Elastic(Material):
         alpha: expansion coefficient, 6x1 vector.
         name: optional, an uuid is given by default.
         """
-        self.__C=C
-        self.__alpha=alpha
-        self.__E=np.linalg.inv(C)
-        super().__init__(gamma,name)
+        super(Elastic,self).__init__(gamma,name)
+        self._C=C
+        self._alpha=alpha
+        self._E=np.linalg.inv(C)
         
     @property
-    def C_matrix(self):
+    def C(self):
         """
         flexity matrix.
         """
-        return self.__C
+        return self._C
         
     @property
-    def alpha_vector(self):
+    def alpha(self):
         """
         expansion conefficient vector.
         """
-        return self.__alpha
+        return self._alpha
         
     @property
-    def E_matrix(self):
+    def E(self):
         """
         stiffness matrix.
         """
-        return self.__E
+        return self._E
         
     def d(self,f,dT):
-        return self.__C.dot(f)+dT*self.__alpha
+        return self._C.dot(f)+dT*self._alpha
         
     def f0(self,dT):
-        return -dT*self.__E.dot(self.alpha)
+        return -dT*self._E.dot(self._alpha)
         
     def f(self,d,dT):
-        return self.__E.dot(d)+self.f0(dT)
+        return self._E.dot(d)+self.f0(dT)
         
-class Orthogonal_elastic(Material):
+class OrthogonalElastic(Material):
     pass
         
-class IsotropyElastic(Material):
+class IsotropyElastic(Elastic):
     def __init__(self,gamma,E,mu,alpha,name=None):
         """
         gamma: density.
@@ -100,39 +79,31 @@ class IsotropyElastic(Material):
         alpha: expansion coefficient.
         name: optional, an uuid is given by default.
         """
-        self.__G=E/2/(1+mu)
-        self.__E=E
-        self.__mu=mu
+        self._G=E/2/(1+mu)
+        self._Emod=E #Young's Modulus
+        self._mu=mu
         alpha=alpha*np.array([1,1,1,0,0,0])
-        super().__init__(gamma,name)
         
-    @property
-    def mu(self):
-        return self.__mu
-    
-    @property
-    def G(self):
-        return self.__G
-    
-    @property
-    def E(self):
-        return self.__E
-    
-    @property    
-    def C(self):
-        mu=self.__mu
-        E=self.E
-        G=self.G
-        return np.array([[  1/E,-mu/E,-mu/E,  0,  0,  0],
+        G=self._G
+        C=np.array([[  1/E,-mu/E,-mu/E,  0,  0,  0],
                         [-mu/E,  1/E,-mu/E,  0,  0,  0],
                         [-mu/E,-mu/E,  1/E,  0,  0,  0],
                         [    0,    0,    0,1/G,  0,  0],
                         [    0,    0,    0,  0,1/G,  0],
                         [    0,    0,    0,  0,  0,1/G]])
+        super(IsotropyElastic,self).__init__(gamma,C,alpha,name)
+        
+    @property
+    def mu(self):
+        return self._mu
+    
+    @property
+    def G(self):
+        return self._G
     
     @property                    
     def D(self):
-        lamb=self.E*self.__mu/(1+self.__mu)/(1-2*self.__mu)
+        lamb=self.E*self._mu/(1+self._mu)/(1-2*self._mu)
         G=self.G
         return np.array([[lamb+2*G,lamb,lamb,0,0,0],
                          [lamb,lamb+2*G,lamb,0,0,0],
@@ -140,6 +111,36 @@ class IsotropyElastic(Material):
                          [   0,   0,       0,G,0,0],
                          [   0,   0,       0,0,G,0],
                          [   0,   0,       0,0,0,G]])
+    
+    @property
+    def Emod(self):
+        return self._Emod
+
+class Metal(IsotropyElastic):
+    def __init__(self,gamma,E,mu,alpha,fy,name=None):
+        self._fy=fy
+        super(Metal,self).__init__(gamma,E,mu,alpha,name) 
+    
+    @property
+    def fy(self):
+        return self._fy
+    
+class Concrete(IsotropyElastic):
+    def __init__(self,gamma,E,mu,alpha,fc,ft,name=None):
+        self._fc=fc
+        self._ft=ft
+        super(Concrete,self).__init__(gamma,E,mu,alpha,name) 
+    
+    @property
+    def fc(self):
+        return self._fc
+
+    @property
+    def ft(self):
+        return self._ft
+    
+class Timber(OrthogonalElastic):
+    pass
         
 if __name__=='__main__':
     steel=IsotropyElastic(7849.0474,2.000E11,0.3,1.17e-5)#Q345
