@@ -87,9 +87,9 @@ class Beam(Element):
         J: torsianl constant
         rho: mass density
         """
-        Element.__init__(self,name)
-        self.__nodes=[node_i,node_j]
-        self.__releases=[[False,False,False,False,False,False],
+        super(Beam,self).__init__(1,6,name)
+        self._nodes=[node_i,node_j]
+        self._releases=[[False,False,False,False,False,False],
                          [False,False,False,False,False,False]]
         
         #Initialize local CSys
@@ -102,150 +102,149 @@ class Beam(Element):
             pt2[2] += 1
         self.local_csys = CoordinateSystem.Cartisian(o, pt1, pt2)
         
-        self.__length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
+        self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
         
         l=self.length
         G=E/2/(1+mu)
 
         #Initialize local stiffness matrix
-        self.__Kij = np.zeros((12, 12))
-        self.__Mij = np.zeros((12, 12))
-        self.__Mij_=np.zeros((12,12))
-        self.__rij =np.zeros((12,1))
+        self._Ke = np.zeros((12, 12))
+        self._Me = np.zeros((12, 12))
+        self._re =np.zeros((12,1))
         #form the stiffness matrix:
-        self.__Kij[0, 0]=E*A / l
-        self.__Kij[0, 6]=self.__Kij[6, 0]=-E*A / l
+        self._Ke[0, 0]=E*A / l
+        self._Ke[0, 6]=self._Ke[6, 0]=-E*A / l
 
-        self.__Kij[1, 1]=12 * E*I3 / l / l / l
-        self.__Kij[1, 5]=self.__Kij[5, 1]=6 * E*I3 / l / l
-        self.__Kij[1, 7]=self.__Kij[7, 1]=-12 * E*I3 / l / l / l
-        self.__Kij[1, 11]=self.__Kij[11, 1]=6 * E*I3 / l / l
+        self._Ke[1, 1]=12 * E*I3 / l / l / l
+        self._Ke[1, 5]=self._Ke[5, 1]=6 * E*I3 / l / l
+        self._Ke[1, 7]=self._Ke[7, 1]=-12 * E*I3 / l / l / l
+        self._Ke[1, 11]=self._Ke[11, 1]=6 * E*I3 / l / l
 
-        self.__Kij[2, 2]=12 * E*I2 / l / l / l
-        self.__Kij[2, 4]=self.__Kij[4, 2]=-6 * E*I2 / l / l
-        self.__Kij[2, 8]=self.__Kij[8, 2]=-12 * E*I2 / l / l / l
-        self.__Kij[2, 10]=self.__Kij[10, 2]=-6 * E*I2 / l / l
+        self._Ke[2, 2]=12 * E*I2 / l / l / l
+        self._Ke[2, 4]=self._Ke[4, 2]=-6 * E*I2 / l / l
+        self._Ke[2, 8]=self._Ke[8, 2]=-12 * E*I2 / l / l / l
+        self._Ke[2, 10]=self._Ke[10, 2]=-6 * E*I2 / l / l
 
-        self.__Kij[3, 3]=G*J / l
-        self.__Kij[3, 9]=self.__Kij[9, 3]=-G*J / l
+        self._Ke[3, 3]=G*J / l
+        self._Ke[3, 9]=self._Ke[9, 3]=-G*J / l
 
-        self.__Kij[4, 4]=4 * E*I2 / l
-        self.__Kij[4, 8]=self.__Kij[8, 4]=6 * E*I2 / l / l
-        self.__Kij[4, 10]=self.__Kij[10, 4]=2 * E*I2 / l
+        self._Ke[4, 4]=4 * E*I2 / l
+        self._Ke[4, 8]=self._Ke[8, 4]=6 * E*I2 / l / l
+        self._Ke[4, 10]=self._Ke[10, 4]=2 * E*I2 / l
 
-        self.__Kij[5, 5]=4 * E*I3 / l
-        self.__Kij[5, 7]=self.__Kij[7, 5]=-6 * E*I3 / l / l
-        self.__Kij[5, 11]=self.__Kij[11, 5]=2 * E*I3 / l
+        self._Ke[5, 5]=4 * E*I3 / l
+        self._Ke[5, 7]=self._Ke[7, 5]=-6 * E*I3 / l / l
+        self._Ke[5, 11]=self._Ke[11, 5]=2 * E*I3 / l
 
-        self.__Kij[6, 6]=E*A / l
+        self._Ke[6, 6]=E*A / l
 
-        self.__Kij[7, 7]=12 * E*I3 / l / l / l
-        self.__Kij[7, 11]=self.__Kij[11, 7]=-6 * E*I3 / l / l
+        self._Ke[7, 7]=12 * E*I3 / l / l / l
+        self._Ke[7, 11]=self._Ke[11, 7]=-6 * E*I3 / l / l
 
-        self.__Kij[8, 8]=12 * E*I2 / l / l / l
-        self.__Kij[8, 10]=self.__Kij[10, 8]=6 * E*I2 / l / l
+        self._Ke[8, 8]=12 * E*I2 / l / l / l
+        self._Ke[8, 10]=self._Ke[10, 8]=6 * E*I2 / l / l
 
-        self.__Kij[9, 9]=G*J / l
+        self._Ke[9, 9]=G*J / l
 
-        self.__Kij[10, 10]=4 * E*I2 / l
+        self._Ke[10, 10]=4 * E*I2 / l
 
-        self.__Kij[11, 11]=4 * E*I3 / l
+        self._Ke[11, 11]=4 * E*I3 / l
 
         #form mass matrix    
 #        #Coordinated mass matrix
-#        self.__Mij[0, 0]=140
-#        self.__Mij[0, 6]=70
+#        self._Me[0, 0]=140
+#        self._Me[0, 6]=70
 #
-#        self.__Mij[1, 1]=156
-#        self.__Mij[1, 5]=self.__Mij_[5, 1]=22 * l
-#        self.__Mij[1, 7]=self.__Mij_[7, 1]=54
-#        self.__Mij[1, 11]=self.__Mij_[11, 1]=-13 * l
+#        self._Me[1, 1]=156
+#        self._Me[1, 5]=self._Me_[5, 1]=22 * l
+#        self._Me[1, 7]=self._Me_[7, 1]=54
+#        self._Me[1, 11]=self._Me_[11, 1]=-13 * l
 #
-#        self.__Mij[2, 2]=156
-#        self.__Mij[2, 4]=self.__Mij_[4, 2]=-22 * l
-#        self.__Mij[2, 8]=self.__Mij_[8, 2]=54
-#        self.__Mij[2, 10]=self.__Mij_[10, 2]=13 * l
+#        self._Me[2, 2]=156
+#        self._Me[2, 4]=self._Me_[4, 2]=-22 * l
+#        self._Me[2, 8]=self._Me_[8, 2]=54
+#        self._Me[2, 10]=self._Me_[10, 2]=13 * l
 #
-#        self.__Mij[3, 3]=140 * J / A
-#        self.__Mij[3, 9]=self.__Mij_[9, 3]=70 * J / A
+#        self._Me[3, 3]=140 * J / A
+#        self._Me[3, 9]=self._Me_[9, 3]=70 * J / A
 #
-#        self.__Mij[4, 4]=4 * l *l
-#        self.__Mij[4, 8]=self.__Mij_[8, 4]=-13 * l
-#        self.__Mij[4, 10]=self.__Mij_[10, 4]=-3 * l*l
+#        self._Me[4, 4]=4 * l *l
+#        self._Me[4, 8]=self._Me_[8, 4]=-13 * l
+#        self._Me[4, 10]=self._Me_[10, 4]=-3 * l*l
 #
-#        self.__Mij[5, 5]=4 * l*l
-#        self.__Mij[5, 7]=self.__Mij_[7, 5]=13 * l
-#        self.__Mij[5, 11]=self.__Mij_[11, 5]=-3 * l*l
+#        self._Me[5, 5]=4 * l*l
+#        self._Me[5, 7]=self._Me_[7, 5]=13 * l
+#        self._Me[5, 11]=self._Me_[11, 5]=-3 * l*l
 #
-#        self.__Mij[6, 6]=140
+#        self._Me[6, 6]=140
 #
-#        self.__Mij[7, 7]=156
-#        self.__Mij[7, 11]=self.__Mij_[11, 7]=-22 * l
+#        self._Me[7, 7]=156
+#        self._Me[7, 11]=self._Me_[11, 7]=-22 * l
 #
-#        self.__Mij[8, 8]=156
-#        self.__Mij[8, 10]=self.__Mij_[10, 8]=22 * l
+#        self._Me[8, 8]=156
+#        self._Me[8, 10]=self._Me_[10, 8]=22 * l
 #
-#        self.__Mij[9, 9]=140 * J / A
+#        self._Me[9, 9]=140 * J / A
 #
-#        self.__Mij[10, 10]=4 * l*l
+#        self._Me[10, 10]=4 * l*l
 #
-#        self.__Mij[11, 11]=4 * l*l
+#        self._Me[11, 11]=4 * l*l
 #
-#        self.__Mij*= (rho*A*l / 420)
+#        self._Me*= (rho*A*l / 420)
 
         #Concentrated mass matrix
-        self.__Mij=np.eye(12)*rho*A*l/2
+        self._Me=np.eye(12)*rho*A*l/2
         
-        self.__Kij_=self.__Kij
-        self.__Mij_=self.__Mij
+        self._Ke_=self._Ke
+        self._Me_=self._Me
         
-    @property
-    def nodes(self):
-        return self.__nodes
+#    @property
+#    def nodes(self):
+#        return self.__nodes
     
     @property
     def length(self):
-        return self.__length
+        return self._length
     
-    @property
-    def Ke(self):
-        return self.__Kij
+#    @property
+#    def Ke(self):
+#        return self._Ke
     
-    @property
-    def Me(self):
-        return self.__Mij
-        
-    @property
-    def re(self):
-        return self.__rij
-    
-    @re.setter
-    def re(self,force):
-        if len(force)!=12:
-            raise ValueError('element nodal force must be a 12 array')
-        self.__re=np.array(force).reshape((12,1))
+#    @property
+#    def Me(self):
+#        return self._Me
+#        
+#    @property
+#    def re(self):
+#        return self._re
+#    
+#    @re.setter
+#    def re(self,force):
+#        if len(force)!=12:
+#            raise ValueError('element nodal force must be a 12 array')
+#        self.__re=np.array(force).reshape((12,1))
     
     @property
     def Ke_(self):
-        return self.__Kij_
+        return self._Ke_
     
     @property
     def Me_(self):
-        return self.__Mij_
+        return self._Me_
     
     @property    
     def re_(self):
-        return self.__rij_
+        return self._re_
     
     @property
     def releases(self):
-        return self.__releases
+        return self._releases
     
     @releases.setter
     def releases(self,rls):
         if len(rls)!=12:
             raise ValueError('rls must be a 12 boolean array')
-        self.__releases=np.array(rls).reshape((2,6))
+        self._releases=np.array(rls).reshape((2,6))
         
     @property
     def transform_matrix(self):
@@ -260,11 +259,11 @@ class Beam(Element):
         rij_bar: 12x1 vector
         mij_bar: 12x12 matrix
         """
-        releaseI=self.__releases[0]
-        releaseJ=self.__releases[1]
-        kij=self.__Kij
-        mij=self.__Mij
-        rij=self.__rij
+        releaseI=self._releases[0]
+        releaseJ=self._releases[1]
+        kij=self._Ke
+        mij=self._Me
+        rij=self._re
         kij_bar = kij.copy()
         mij_bar = mij.copy()
         rij_bar = rij.copy()
@@ -281,9 +280,43 @@ class Beam(Element):
                         kij_bar[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
                         mij_bar[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
                     rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
-        self.__Kij_=kij_bar
-        self.__Mij_=mij_bar
-        self.__rij_=rij_bar
+        self._Ke_=kij_bar
+        self._Me_=mij_bar
+        self._re_=rij_bar
+#        ##pythonic code, not finished
+#        Ke=self._Ke.copy()
+#        Me=self._Me.copy()
+#        re=self._re.copy()
+#        n_rls=0
+#        i=0
+#        idx=[]
+#        for rls in self._releases[0]+self.releases[1]:
+#            if rls:
+#                n_rls+=1
+#                Ke[[i,-n_rls],:]=Ke[[-n_rls,i],:]
+#                Ke[:,[i,-n_rls]]=Ke[:,[-n_rls,i]]
+#                Me[[i,-n_rls],:]=Me[[-n_rls,i],:]
+#                Me[:,[i,-n_rls]]=Me[:,[-n_rls,i]]
+#                re[[i,-n_rls],:]=re[[-n_rls,i],:]
+#                idx.append(i)
+#            i+=1
+#
+#        if n_rls==0:
+#            self._Ke_,self._Me_,self._re_=Ke,Me,re
+#            return 
+#        n0=12-n_rls
+#        Ke_=Ke[:n0,:n0]-Ke[:n0,n0:].dot(np.mat(Ke[n0:,n0:]).I).dot(Ke[n0:,:n0])
+#        Me_=Me[:n0,:n0]-Me[:n0,n0:].dot(np.mat(Ke[n0:,n0:]).I).dot(Me[n0:,:n0])
+#        re_=re[:n0]-Ke[:n0,n0:].dot(np.mat(Ke[n0:,n0:]).I).dot(re[:n0])
+#        for i in idx:
+#            Ke_=np.insert(Ke_,i,0,axis=0)
+#            Ke_=np.insert(Ke_,i,0,axis=1)
+#            Me_=np.insert(Me_,i,0,axis=0)
+#            Me_=np.insert(Me_,i,0,axis=1)
+#            re_=np.insert(re_,i,0,axis=0)
+#        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
+                
+                
 
 class Membrane3(Element):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):

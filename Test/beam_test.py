@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+import scipy.sparse as spr
+from Modeler.Node import Node
+from Modeler.Element import Beam,Membrane3,Membrane4
+from Modeler.Material import IsotropyElastic
+from Modeler.Section import AreaSection
+from Modeler.FEModel import FEModel
+from Solver.Static import solve_linear,solve_modal
 
 def cantilever_beam_test():
     #FEModel Test
@@ -18,6 +26,7 @@ def cantilever_beam_test():
     model.assemble_boundary()
     res=solve_linear(model)
     print(np.round(res,6))
+    res=solve_modal(model,3)
 
 def simple_supported_beam_test():
     #FEModel Test
@@ -32,7 +41,7 @@ def simple_supported_beam_test():
     model.add_node(n3)
     model.add_beam(b1)
     model.add_beam(b2)
-    n2.fn=(100000,0,0,100000,0,0)
+    n2.fn=(0,0,-100000,0,0,0)
     n1.dn=[0,0,0,None,None,None]
     n3.dn=[0,0,0,None,None,None]
 #    b1.releases=[False]*3+[True]*3+[False]*6
@@ -41,7 +50,10 @@ def simple_supported_beam_test():
     model.assemble_f()
     model.assemble_boundary()
     res=solve_linear(model)
-    print(np.round(res,6))
+    print(res)
+    res=solve_modal(model,6)
+    print('Periods:')
+    print(res[0])
     
 def simple_released_beam_test():
     #FEModel Test
@@ -65,7 +77,7 @@ def simple_released_beam_test():
     model.assemble_f()
     model.assemble_boundary()
     res=solve_linear(model)
-    print(np.round(res,6))
+    print(res)
     
 def planar_frame_test():
     #FEModel Test
@@ -102,14 +114,3 @@ def planar_frame_test():
     res=solve_linear(model)
     
     print(res)
-
-np.set_printoptions(precision=6,suppress=True)
-planar_frame_test()
-#    from random import random
-#    model=FEModel()
-#    for i in range(333):
-#        model.add_node(Node(random(),random(),random()))
-#    print(model.add_node(Node(1,2,3)))
-#    for i in range(333):
-#        model.add_node(Node(random(),random(),random()))
-#    print(model.add_node(Node(1,2,3)))

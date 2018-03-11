@@ -5,7 +5,8 @@ from Modeler.Node import Node
 from Modeler.Element import Beam,Membrane3,Membrane4
 from Modeler.Material import IsotropyElastic
 from Modeler.Section import AreaSection
-from Modeler.FEModel import FEModel,solve_linear
+from Modeler.FEModel import FEModel
+from Solver.Static import solve_linear
 
 def shear_test():
     model=FEModel()
