@@ -6,67 +6,9 @@ Created on Thu Jun 23 21:32:16 2016
 """
 import uuid
 import numpy as np
-
-class Section(object):
-    def __init__(self,mat,A,J,I33,I22,W33,W22,name=None):
-        """
-        mat: material
-        A: area
-        J: Torsional constant
-        I33,I22: Iteria momentum
-        W33,W22: Bending modulus
-        """        
-        self._mat=mat
-        self._A=A
-        self._J=J
-        self._I33=I33
-        self._I22=I22
-        self._W33=W33
-        self._W22=W22
-        self._name=uuid.uuid1() if name==None else name
+from . import FrameSection
         
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def A(self):
-        return self._A
-        
-    @property
-    def J(self):
-        return self._J
-        
-    @property
-    def I33(self):
-        return self._I33
-    
-    @property
-    def I22(self):
-        return self._I22
-        
-    @property
-    def W33(self):
-        return self._W33
-        
-    @property
-    def W22(self):
-        return self._W22
-        
-    @property
-    def i33(self):
-        return np.sqrt(self._I33/self.__A)
-
-    @property  
-    def i22(self):
-        return np.sqrt(self._I22/self.__A)
-        
-    @property
-    def material(self):
-        return self._mat
-        
-        
-class Rectangle(Section):
+class Rectangle(FrameSection):
     def __init__(self,mat,h,b,name=None):
         """
         h - height\n
@@ -85,7 +27,7 @@ class Rectangle(Section):
 #        self.gamma22=1.05
 
 
-class Circle(Section):
+class Circle(FrameSection):
     def __init__(self,mat,d,name=None):
         """
         d - diameter
@@ -101,7 +43,7 @@ class Circle(Section):
 #        self.gamma33=1.15
 #        self.gamma22=1.15
         
-class Pipe(Section):
+class Pipe(FrameSection):
     def __init__(self,mat,d,t,name=None):
         """
         d - diameter\n
@@ -110,8 +52,8 @@ class Pipe(Section):
             'r' - rolled\n
             'w' - welded\n
         """
-        self.d=d
-        self.t=t
+        self._d=d
+        self._t=t
         A=np.pi*d**2/4-np.pi*(d-2*t)**2/4
         J=np.pi*(d-t)/t*2*A
         I33=np.pi*d**4/64*(1-((d-2*t)/d)**4)
@@ -131,16 +73,13 @@ class Pipe(Section):
 #        else:
 #            raise ValueError('wrong fabrication!')
 
-class HollowBox(Section):
+class HollowBox(FrameSection):
     def __init__(self,mat,h,b,tw,tf,name=None):
         """
         h - height\n
         b - width\n
         tw - thickness of web\n
         tf - thickness of flange\n
-        fab - fabrication\n
-            'r' - rolled\n
-            'w' - welded\n
         """
         self.h=h
         self.b=b
@@ -160,7 +99,7 @@ class HollowBox(Section):
 #        self.cls22='c'
         
 
-class ISection(Section):
+class ISection(FrameSection):
     def __init__(self,mat,h,b,tw,tf,name=None):
         """
         h - height\n
@@ -188,7 +127,7 @@ class ISection(Section):
 #        self.cls33='c'
 #        self.cls22='c'
         
-class ISection2(Section):
+class ISection2(FrameSection):
     def __init__(self,mat,h,b1,tf1,tw,b2,tf2,name=None):
         """
         h - height\n
@@ -226,13 +165,18 @@ class ISection2(Section):
 #        self.cls33='c'
 #        self.cls22='c'
         
-class TSection(Section):
+class TSection(FrameSection):
+    def __init__(self,mat,h,b,tw,tf,name=None):
+        #your codes here
+        pass
+    
+class CSection(FrameSection):
     pass
 
-class CSection(Section):
+class LSection(FrameSection):
     pass
 
-class LSection(Section):
+class ZSection(FrameSection):
     pass
    
 if __name__=='__main__':

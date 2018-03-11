@@ -6,23 +6,7 @@ Created on Thu Jun 23 21:30:59 2016
 """
 import uuid
 import numpy as np
-        
-class Material(object):
-    def __init__(self,gamma,name=None):
-        """
-        gamma: density.
-        name: optional, an uuid is given by default.
-        """
-        self._gamma = gamma
-        self._name=uuid.uuid1() if name==None else name
-    
-    @property
-    def name(self):
-        return self._name
-        
-    @property
-    def gamma(self):
-        return self._gamma
+from . import Material
         
 class Elastic(Material):
     def __init__(self,gamma,C,alpha,name=None):

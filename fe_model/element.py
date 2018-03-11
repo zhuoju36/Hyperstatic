@@ -21,8 +21,7 @@ class Element(object):
         
         self._dim=dim
         self._dof=dof
-        
-        
+               
     @property
     def name(self):
         return self._name

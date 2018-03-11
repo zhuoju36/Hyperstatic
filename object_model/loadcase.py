@@ -5,25 +5,11 @@ Created on Wed Mar 22 19:09:47 2017
 @author: Dell
 """
 
-class LoadCase(object):
-    def __init__(self,name):
-        """
-        name: name of load case
-        """
-        self._name=name
-        
-    @property
-    def name(self):
-        return self._name
-    
-    @name.setter
-    def name(self,name):
-        assert type(name)==str and len(name)<20
-        self._name=name
+from . import LoadCase
         
 class StaticLinear(LoadCase):
     def __init__(self,name):
-        pass
+        super(StaticLinear,self).__init__(name)
 
 class Statc2nd(LoadCase):
     def __init__(self,name,plc):

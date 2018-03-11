@@ -10,7 +10,7 @@ from scipy import sparse as spr
 import scipy.sparse.linalg as sl
 
 from fe_model import Model
-import Logger as log
+import logger as log
 
 def solve_linear(model):
     log.info('solving problem with %d DOFs...'%model.DOF)

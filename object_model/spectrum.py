@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib.font_manager import FontProperties
 from matplotlib import pyplot as plt
 
-class code_spectrum(object):
+class GB50010(object):
     def __init__(self,alpha_max,Tg,xi):
         gamma=0.9+(0.05-xi)/(0.3+6*xi)
         eta1=0.02+(0.05-xi)/(4+32*xi)

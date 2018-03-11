@@ -4,12 +4,9 @@ Created on Mon Jan  2 13:21:57 2017
 
 @author: zhuoj
 """
-
 class Load(object):
-    def __init__(self,lc,targets):
+    def __init__(self,lc):
         self._lc=lc
-        self._targets=targets
-        self._tg_type='object'
         
     @property
     def lc(self):
@@ -19,10 +16,6 @@ class Load(object):
     def lc(self,lc):
         self._lc=lc
         
-    @property
-    def targets(self):
-        return self._targets
-
 class LoadPt(Load):
     def __init__(self,lc,targets,values):
         self._values=values
@@ -82,7 +75,7 @@ class LoadFrmDistrib(Load):
         assert len(val)==6
         self._values_j=val
 
-class LoadFrmStrain(load):
+class LoadFrmStrain(Load):
     def __init__(self,lc,targets,value):
         self._value=value
         super(Load,self).__init__(lc,targets)
@@ -96,7 +89,7 @@ class LoadFrmStrain(load):
         assert type(val)==float and val<1
         self._values=val
 
-class LoadFrmTmpt(load):
+class LoadFrmTmpt(Load):
     def __init__(self,lc,targets,value):
         self._value=value
         super(Load,self).__init__(lc,targets)
