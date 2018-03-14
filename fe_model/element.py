@@ -12,7 +12,6 @@ import scipy.sparse as spr
 import quadpy
 
 from csys import Cartisian
-from . import config
 
 class Element(object):
     def __init__(self,dim,dof,name=None):

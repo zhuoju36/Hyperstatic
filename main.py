@@ -8,34 +8,29 @@
 ##bt.simple_supported_beam_test()
 #  
 
-from object_model import Model
+from object_model.model import Model
 from object_model.quick_material import GB_Q345
 from object_model.frame_section import Pipe
 from object_model.object import Point,Frame
 from object_model.loadcase import StaticLinear
 from object_model.load import LoadPt
 
-
-if __name__=='__main__':
-    model=Model()
-
-    q345=model.add_material(GB_Q345())
-    sec=model.add_frame_section(Pipe(q345,0.4,0.02,'1-L-O400x20'))
+model=Model()
+try:
+#    model.create('D:/Source/StructEngPy/mydev.db.db')
+    model.open('D:/Source/StructEngPy/mydev.db')
     
-    l1=model.add_loadcase(StaticLinear('S'))
-    l2=model.add_loadcase(StaticLinear('D'))
-    l3=model.add_loadcase(StaticLinear('L'))
+    model.add_material('Q345B',7849,'isotropic_elastic',
+                            E=2e11,mu=0.3)
+    model.add_frame_section('Q345','pipe',[400,20])
     
+    model.add_loadcase(StaticLinear('S'))
+    model.add_loadcase(StaticLinear('D'))
+    model.add_loadcase(StaticLinear('L'))
 
-    pt1=model.add_point(Point(0,0,0))
-    pt2=model.add_point(Point(5,5,5))
-    f1=model.add_frame(
-            Frame(
-                    model.get_point(pt1),
-                    model.get_point(pt2),
-                    model.get_frame_section(sec)
-                    )
-            )
+    model.add_point('pt0',0,0,0)
+    model.add_point('pt1',5,5,5)
+    f1=model.add_frame('frm0','pt0','pt1','Q345')
     
     model.set_point_restraint(pt1,[True]*6)
     model.set_point_load(pt2,
@@ -43,6 +38,8 @@ if __name__=='__main__':
                          )
     
     model.run()
-
+except Exception as e:
+    print(e)
+    model.close()
     
     
