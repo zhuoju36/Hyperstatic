@@ -17,8 +17,8 @@ from object_model.model import Model
 
 model=Model()
 
-#model.create('D:/Source/StructEngPy/mydev.db')
-model.open('D:/Source/StructEngPy/mydev.db')
+#model.create('C:/Users\Dell/Documents/Python Scripts/StructEngPy/mydev.db')
+model.open('C:/Users\Dell/Documents/Python Scripts/StructEngPy/mydev.db')
 
 model.add_material('Q345B',7849,'isotropic_elastic',
                         E=2e11,mu=0.3)
@@ -38,5 +38,3 @@ model.set_point_load('pt1','D',[0,0,-1000,0,0,0])
 #model.save()
 model.mesh()
 #model.run(['D'])
-    
-    

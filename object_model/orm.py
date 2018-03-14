@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy import create_engine,\
 Column,Integer,Float,String,Boolean,Text,DateTime,ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship,backref
 
 Base=declarative_base()
 
@@ -31,7 +31,7 @@ class Material(Base):
     name=Column('name',String(32),default=__obj_id,primary_key=True)
     gamma=Column('gamma',Float())
     type=Column('type',String(32))
-    isotropic_elastic=relationship('IsotropicElastic',backref='materials')
+    isotropic_elastic=relationship('IsotropicElastic',backref=backref('material',uselist=False))
     frame_sections=relationship('FrameSection',backref='section_material')
     area_sections=relationship('AreaSection',backref='section_material')
     #other types...
@@ -39,9 +39,11 @@ class Material(Base):
 
 class IsotropicElastic(Base):
     __tablename__='isotropic_elastics'
-    material=Column('material',ForeignKey('materials.name'),primary_key=True)
+    material_name=Column('material',ForeignKey('materials.name'),primary_key=True)
     E=Column('E',Float())
     mu=Column('mu',Float())
+    
+#other material...
 
 class FrameSection(Base):
     __tablename__='frame_sections'
