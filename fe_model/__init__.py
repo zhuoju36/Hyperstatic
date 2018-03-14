@@ -46,6 +46,14 @@ class Model:
         return len(self.__beams.items())
     
     @property
+    def nodes(self):
+        return self.__nodes
+    
+    @property
+    def beams(self):
+        return self.__beams
+    
+    @property
     def quad_count(self):
         return len(self.__quads.items())
 
