@@ -9,12 +9,16 @@ import os
 import shutil
 import time
 
+from sqlalchemy import create_engine
+import sqlalchemy.orm as o
+from datetime import datetime
+
 from .orm import Base,Config,\
 Material,IsotropicElastic,\
-Point,Frame,\
+Point,Frame,Area,\
 FrameSection,\
 LoadCase,LoadCaseStaticLinearSetting,\
-PointRestraint,PointLoad
+PointRestraint,PointLoad,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadStrain,FrameLoadTemperature
 
 from object_model.frame_section import Pipe,Circle,HollowBox,ISection
 
@@ -22,9 +26,9 @@ from fe_model import Model as FEModel
 from fe_model.node import Node
 from fe_model.element import Beam
 
-from sqlalchemy import create_engine
-import sqlalchemy.orm as o
-from datetime import datetime
+from fe_solver.static import solve_linear
+
+import logger as log
 
 class Model():
     def __init__(self):
@@ -109,13 +113,13 @@ class Model():
         if os.path.exists(self.__operate_db):
             os.remove(self.__operate_db)
             
-    def add_material(self,name,gamma,type,**kwargs):
+    def add_material(self,name,gamma,mat_type,**kwargs):
         """
         Add material to model, if the name already exists, an exception will be raised
         param:
             name: name of material.
             gamma: density.
-            type: 'isoelastic','...'
+            mat_type: 'isotropic_elastic','...'
         return:
             boolean, status of success.
         optional:
@@ -128,21 +132,23 @@ class Model():
         mat=Material()
         mat.name=name
         mat.gamma=gamma
-        mat.type=type
-        if type=='isoelastic':
+        mat.type=mat_type
+        if mat_type=='isotropic_elastic':
             iso_elastic=IsotropicElastic()
-            iso_elastic.material=mat.name
+            iso_elastic.material_name=mat.name
             iso_elastic.E=kwargs['E']
             iso_elastic.mu=kwargs['mu']
+            self.session.add(iso_elastic)
         self.session.add(mat)
         self.session.commit()
         return True
     
-    def add_frame_section(self,name,type,size):
+    def add_frame_section(self,name,material,type,size):
         """
         Add frame section to model, if the name already exists, an exception will be raised.
         param:
-            name: str. Name of the section.
+            name: str. name of the section.
+            material: str, name of material.
             type:
                 'O':pipe,
                 'o':circle
@@ -175,6 +181,7 @@ class Model():
             raise Exception('Name already exists!')
         frmsec=FrameSection()
         frmsec.name=name
+        frmsec.material_name=material
         frmsec.type=type
         sec=None
         if type=='o':
@@ -183,9 +190,13 @@ class Model():
         elif type=='O':
             assert len(size)==2
             sec=Pipe(None,size[0],size[1])
+        elif type=='I':
+            assert len(size)==4
+            sec=ISection(None,size[0],size[1],size[2],size[3])
         else:####should be refined!!
             assert len(size)==4
             sec=HollowBox(None,size[0],size[1])
+        
         frmsec.size=size
         frmsec.A=sec.A
         frmsec.J=sec.J
@@ -200,12 +211,12 @@ class Model():
     def add_area_section(self):
         pass
     
-    def add_loadcase(self,name,type,**kwargs):
+    def add_loadcase(self,name,case_type,**kwargs):
         """
         Add material to model, if the name already exists, an exception will be raised
         param:
             name: name of material.
-            type: '1st','2nd','3rd','modal','spectrum','th','buckle'
+            type: 'static-linear','2nd','3rd','modal','spectrum','th','buckle'
         return:
             boolean, status of success.
         optional:
@@ -217,8 +228,8 @@ class Model():
             raise Exception('Name already exists!')
         lc=LoadCase()
         lc.name=name
-        lc.type=type
-        if type=='1st':
+        lc.case_type=case_type
+        if case_type=='1st':
             setting=LoadCaseStaticLinearSetting
             setting.lc=lc.name
         self.session.add(lc)
@@ -260,17 +271,17 @@ class Model():
         frm=Frame()
         if pt1<pt2:
             order='01'
-            frm.point_0=pt1
-            frm.point_1=pt2
+            frm.pt0_name=pt1
+            frm.pt1_name=pt2
             frm.order=order
         elif pt1>pt2:
             order='10'
-            frm.point_0=pt2
-            frm.point_1=pt1
+            frm.pt0_name=pt2
+            frm.pt1_name=pt1
             frm.order=order
         else:
             raise Exception('Two points should not be the same!')
-        frm.section=section
+        frm.section_name=section
         frm.name=name
         self.session.add(frm)
         self.session.commit()
@@ -312,16 +323,16 @@ class Model():
             status of success
         """
         assert len(restraints)==6
-        res=self.session.query(PointRestraint).filter_by(point=point).first()
+        res=self.session.query(PointRestraint).filter_by(point_name=point).first()
         if res is None:
             res=PointRestraint()
-        res.point=point
-        res.res_r1=restraints[0]
-        res.res_r2=restraints[1]
-        res.res_r3=restraints[2]
-        res.res_u1=restraints[3]
-        res.res_u2=restraints[4]
-        res.res_u3=restraints[5]
+        res.point_name=point
+        res.u1=restraints[0]
+        res.u2=restraints[1]
+        res.u3=restraints[2]
+        res.r1=restraints[3]
+        res.r2=restraints[4]
+        res.r3=restraints[5]
         self.session.add(res)
         self.session.commit()
         return True
@@ -336,17 +347,17 @@ class Model():
             status of success.
         """
         assert len(load)==6
-        ld=self.session.query(PointLoad).filter_by(pt_name=point,lc_name=loadcase).first()
+        ld=self.session.query(PointLoad).filter_by(point_name=point,loadcase_name=loadcase).first()
         if ld is None:
             ld=PointLoad()
-        ld.pt_name=point
-        ld.lc_name=loadcase
-        ld.r1=load[0]
-        ld.r2=load[1]
-        ld.r3=load[2]
-        ld.u1=load[3]
-        ld.u2=load[4]
-        ld.u3=load[5]
+        ld.point_name=point
+        ld.loadcase_name=loadcase
+        ld.u1=load[0]
+        ld.u2=load[1]
+        ld.u3=load[2]
+        ld.r1=load[3]
+        ld.r2=load[4]
+        ld.r3=load[5]
         self.session.add(ld)
         self.session.commit()
         return True
@@ -359,16 +370,18 @@ class Model():
         return:
             None.
         """
-        model=self.__femodel
-        model.assemble_KM()
+        self.fe_model.assemble_KM()
+        self.fe_model.assemble_boundary(mode='KM')
         for lc in lcs:
-            if type(self.__load[lc])==StaticLinear:
-                log.info('Solving LoadCase %s'%lc)
-                self.__apply_load(lc)
-                model.assemble_f()
-                model.assemble_boundary()
-                res=solve_linear(model)
-                print(res,6)
+            loadcase=self.session.query(LoadCase).filter_by(name=lc).first()
+            if loadcase.case_type=='static-linear':
+                log.info('Solving static linear case %s...'%lc)
+                self.apply_load(lc)
+                self.fe_model.assemble_f()
+                self.fe_model.assemble_boundary(mode='f')
+                res=solve_linear(self.fe_model)
+                print(res)
+                log.info('Finished case %s.'%lc)
             else:
                 pass
     
@@ -376,27 +389,84 @@ class Model():
         femodel=FEModel()
         points=self.session.query(Point).all()
         frames=self.session.query(Frame).all()
-        pn_map={}
+        areas=self.session.query(Area).all()
+        pn_map={} #item-item map, one point to one node
+        fb_map={} #item-list map, one frame can be meshed to many beams
+        am_map={} #item-list map, one area can be meshed to many membranes
+        ap_map={} #item-list map, one area can be meshed to many plates
+        as_map={} #item-list map, one area can be meshed to many shells
+        
         for pt in points:
             res=femodel.add_node(Node(pt.x,pt.y,pt.z))
             pn_map[pt.name]=res
         for frm in frames:
-            node0=femodel.nodes[pn_map[frm.point_0]]
-            node1=femodel.nodes[pn_map[frm.point_1]]
-            E=frm.frame_section.material.isotropic_elastic.E
-            mu=frm.frame_section.material.mu
-            A=frm.frame_section.A
-            J=frm.frame_section.J
-            I2=frm.frame_section.I2
-            I3=frm.frame_section.I3
-            J=frm.frame_section.J
-            rho=frm.frame_section.material.rho
+            node0=femodel.nodes[pn_map[frm.pt0_name]]
+            node1=femodel.nodes[pn_map[frm.pt1_name]]
+            E=frm.section.material.isotropic_elastic.E
+            mu=frm.section.material.isotropic_elastic.mu
+            A=frm.section.A
+            J=frm.section.J
+            I2=frm.section.I2
+            I3=frm.section.I3
+            J=frm.section.J
+            rho=frm.section.material.gamma ####should be revised
             if frm.order=='01':
                 res=femodel.add_beam(Beam(node0,node1,E, mu, A, I2, I3, J, rho))
             elif frm.order=='10':
                 res=femodel.add_beam(Beam(node1,node0,E, mu, A, I2, I3, J, rho))
-            print(femodel.beams[-1])
+            fb_map[frm.name]=[res]
+        for area in areas:
+            am_map=None
+            ap_map=None
+            as_map=None
+            pass
+        
+        restraints=self.session.query(PointRestraint).all()
+        for res in restraints:
+            disp=[0 if res.u1 else None,
+                  0 if res.u2 else None,
+                  0 if res.u3 else None,
+                  0 if res.r1 else None,
+                  0 if res.r2 else None,
+                  0 if res.r3 else None]
+            femodel.set_node_displacement(pn_map[res.point_name],disp)
+                
+        self.fe_model=femodel
+        self.pn_map=pn_map
+        self.fb_map=fb_map
+        self.am_map=am_map
+        self.ap_map=ap_map
+        self.as_map=as_map
 
+    def apply_load(self,lc):
+        pn_map=self.pn_map
+        fb_map=self.fb_map
+        am_map=self.am_map
+        ap_map=self.ap_map
+        as_map=self.as_map
+
+        point_loads=self.session.query(PointLoad).filter_by(loadcase_name=lc).all()
+        frame_load_distributeds=self.session.query(FrameLoadDistributed).filter_by(loadcase_name=lc).all()
+        frame_load_concentrateds=self.session.query(FrameLoadConcentrated).filter_by(loadcase_name=lc).all()
+        frame_load_strains=self.session.query(FrameLoadStrain).filter_by(loadcase_name=lc).all()
+        frame_load_temperatures=self.session.query(FrameLoadTemperature).filter_by(loadcase_name=lc).all()
+        for load in point_loads:
+            self.fe_model.set_node_force(pn_map[load.point_name],
+                                         [load.u1,load.u2,load.u3,load.r1,load.r2,load.r3])
+        
+        for load in frame_load_distributeds:
+            pass
+        
+        for load in frame_load_concentrateds:
+            pass
+        
+        for load in frame_load_strains:
+            pass
+        
+        for load in frame_load_temperatures:
+            pass
+            
+        
     def import_model():
         pass
     

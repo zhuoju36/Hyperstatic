@@ -9,20 +9,16 @@
 #  
 
 from object_model.model import Model
-#from object_model.quick_material import GB_Q345
-#from object_model.frame_section import Pipe
-#from object_model.object import Point,Frame
-#from object_model.loadcase import StaticLinear
-#from object_model.load import LoadPt
 
 model=Model()
 
-#model.create('C:/Users\Dell/Documents/Python Scripts/StructEngPy/mydev.db')
-model.open('C:/Users\Dell/Documents/Python Scripts/StructEngPy/mydev.db')
+#model.create('C:/Users/Dell/Documents/Python Scripts/StructEngPy/mydev.db')
+model.open('C:/Users/Dell/Documents/Python Scripts/StructEngPy/mydev.db')
 
 model.add_material('Q345B',7849,'isotropic_elastic',
                         E=2e11,mu=0.3)
-model.add_frame_section('Q345','O',[400,20])
+#model.add_frame_section('1-L-O400x20','Q345B','O',[0.4,0.02])
+model.add_frame_section('1-L-H400x200x14x20','Q345B','I',[0.4,0.2,0.014,0.02])
 
 model.add_loadcase('S','static-linear')
 model.add_loadcase('D','static-linear')
@@ -30,11 +26,15 @@ model.add_loadcase('L','static-linear')
 
 model.add_point('pt0',0,0,0)
 model.add_point('pt1',5,5,5)
-f1=model.add_frame('frm0','pt0','pt1','Q345')
+f1=model.add_frame('frm0','pt0','pt1','1-L-H400x200x14x20')
 
 model.set_point_restraint('pt0',[True]*6)
-model.set_point_load('pt1','D',[0,0,-1000,0,0,0])
+model.set_point_load('pt1','D',[0,0,-100000,0,0,0])
+model.set_point_load('pt1','L',[0,0,100000,0,0,100000])
 
 #model.save()
 model.mesh()
-#model.run(['D'])
+model.run(['S','D','L'])
+
+#import test.beam_test as bt
+#bt.cantilever_beam_test()

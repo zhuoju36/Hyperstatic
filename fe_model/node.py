@@ -26,10 +26,6 @@ class Node(object):
         self.__disp=np.array([None,None,None,None,None,None]).reshape((6,1))
         self.__load=np.zeros((6,1))
         
-        #results
-        self.__res_disp=None
-        self.__res_force=None
-        
     @property
     def name(self):
         return self.__name
@@ -72,11 +68,7 @@ class Node(object):
         return self.__load
     @fn.setter
     def fn(self,load):
-        """
-        load: a number vector indicates a nodal load.
-        """
-        if len(load)!=6:
-            raise ValueError('Should be a 6-array')
+        assert(len(load)==6)
         self.__load=np.array(load).reshape((6,1))
 
     @property
@@ -84,32 +76,8 @@ class Node(object):
         return self.__disp
     @dn.setter
     def dn(self,disp):
-        """
-        disp: a boolean vector indicates a nodal displacement.
-        """
+        assert(len(disp)==6)
         self.__disp=disp
-               
-    def clear_result(self):
-        self.__res_disp=None
-        self.__res_force=None
-        
-    @property
-    def res_disp(self):
-        return self.__res_disp
-    
-    @res_disp.setter
-    def res_disp(self,disp):
-        if len(disp)!=6:
-            raise ValueError('Should be a 6-array')    
-        self.__disp=np.array(disp).reshape((6,1))
-        
-    @property
-    def res_force(self):
-        return self.__res_force
-    
-    @res_force.setter
-    def res_force(self,force):
-        self.__res_force=force
         
 
     

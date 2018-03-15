@@ -74,7 +74,7 @@ class Element(object):
 
                 
 class Beam(Element):
-    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None):
+    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None ,tol=1e-6):
         r"""
         node_i,node_j: ends of beam.
         E: elastic modulus
@@ -94,7 +94,7 @@ class Beam(Element):
         o = [ node_i.x, node_i.y, node_i.z ]
         pt1 = [ node_j.x, node_j.y, node_j.z ]
         pt2 = [ node_i.x, node_i.y, node_i.z ]
-        if abs(node_i.x - node_j.x) < config['TOL'] and abs(node_i.y - node_j.y) < config['TOL']:
+        if abs(node_i.x - node_j.x) < tol and abs(node_i.y - node_j.y) < tol:
             pt2[0] += 1
         else:
             pt2[2] += 1

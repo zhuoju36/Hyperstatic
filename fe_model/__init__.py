@@ -126,6 +126,30 @@ class Model:
             res=res[0]
         return res
         
+    def set_node_force(self,node,force):
+        """
+        add node force to model
+        params:
+            node: int, hid of node
+            disp: list of 6 of nodal force
+        return:
+            bool, status of success
+        """
+        assert(len(force)==6)
+        self.__nodes[node].fn=force
+    
+    def set_node_displacement(self,node,disp):
+        """
+        add node displacement to model
+        params:
+            node: int, hid of node
+            disp: list of 6 of nodal displacement
+        return:
+            bool, status of success
+        """
+        assert(len(disp)==6)
+        self.__nodes[node].dn=disp
+        
     def add_beam(self,beam):
         """
         add beam to model
@@ -142,6 +166,9 @@ class Model:
         else:
             res=res[0]
         return res
+        
+    def set_beam_force(self,beam,force):
+        pass
         
     def add_membrane3(self,elm):
         """
@@ -168,11 +195,13 @@ class Model:
     def assemble_KM(self):
         """
         Assemble integrated stiffness matrix and mass matrix.
+        Meanwhile, The force vector will be initialized.
         """
         log.info('Assembling K and M..')
         n_nodes=self.node_count
         self.__K = spr.csr_matrix((n_nodes*6, n_nodes*6))
-        self.__M = spr.csr_matrix((n_nodes*6, n_nodes*6))     
+        self.__M = spr.csr_matrix((n_nodes*6, n_nodes*6))
+        self.__f = np.zeros((n_nodes*6, 1))
         #Beam load and displacement, and reset the index 
         for elm in self.__beams.values():
             i = elm.nodes[0].hid
@@ -289,19 +318,30 @@ class Model:
             self.__f += G.transpose()*np.dot(Vt,beam.re)
         #### other elements
 
-    def assemble_boundary(self):
+    def assemble_boundary(self,mode='KMf'):
+        """
+        assemble boundary conditions
+        params:
+            mode: 'K','M','f' or their combinations
+        """
         log.info('Assembling boundary condition..')
-        self.__K_bar=self.K.copy()
-        self.__M_bar=self.M.copy()
-        self.__f_bar=self.f.copy()
+        if 'K' in mode:
+            self.__K_bar=self.K.copy()
+        if 'M' in mode:
+            self.__M_bar=self.M.copy()
+        if 'f' in mode:
+            self.__f_bar=self.f.copy()
         self.__dof=self.node_count*6
         for node in self.__nodes.values():
             i=node.hid
             for j in range(6):
                 if node.dn[j]!= None:
-                    self.__K_bar[i*6+j,i*6+j]*=1e12
-#                    self.__M_bar[i*6+j,i*6+j]*=1e12
-                    self.__f_bar[i*6+j]=self.__K_bar[i*6+j,i*6+j]*node.dn[j]
+                    if 'K' in mode:
+                        self.__K_bar[i*6+j,i*6+j]*=1e10
+                    if 'M' in mode:
+                        self.__M_bar[i*6+j,i*6+j]*=1e10
+                    if 'f' in mode:
+                        self.__f_bar[i*6+j]=self.__K_bar[i*6+j,i*6+j]*node.dn[j]
                     self.__dof-=1
         
     def find(self,nodes,target,tol=1e-6):

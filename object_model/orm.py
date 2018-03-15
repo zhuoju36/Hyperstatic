@@ -31,15 +31,19 @@ class Material(Base):
     name=Column('name',String(32),default=__obj_id,primary_key=True)
     gamma=Column('gamma',Float())
     type=Column('type',String(32))
-    isotropic_elastic=relationship('IsotropicElastic',backref=backref('material',uselist=False))
-    frame_sections=relationship('FrameSection',backref='section_material')
-    area_sections=relationship('AreaSection',backref='section_material')
+    
     #other types...
     uuid=Column('uuid',String(32),default=__obj_id)
+    #1 to 1
+    isotropic_elastic=relationship('IsotropicElastic',
+                                   backref=backref('material',uselist=False),uselist=False) #1 to 1
+    #1 to many
+    frame_sections=relationship('FrameSection',backref='material')
+    area_sections=relationship('AreaSection',backref='material')
 
 class IsotropicElastic(Base):
     __tablename__='isotropic_elastics'
-    material_name=Column('material',ForeignKey('materials.name'),primary_key=True)
+    material_name=Column('material_name',ForeignKey('materials.name'),primary_key=True)
     E=Column('E',Float())
     mu=Column('mu',Float())
     
@@ -50,7 +54,7 @@ class FrameSection(Base):
     __obj_id=str(uuid.uuid1())
     name=Column('name',String(32),default=__obj_id,primary_key=True)
     shape=Column('shape',String(32))
-    material=('material',ForeignKey('materials.name'))
+    material_name=Column('material_name',String(32),ForeignKey('materials.name'))
     size_0=Column('size_0',Float())
     size_1=Column('size_1',Float())
     size_2=Column('size_2',Float())
@@ -67,39 +71,70 @@ class FrameSection(Base):
     I3=Column('I3',Float())
     uuid=Column('uuid',String(32),default=__obj_id)
     
+    #1 to many
+    frames=relationship('Frame',backref='section')
+    
 class SDSection(Base):
     __tablename__='SD_sections'
     frame_section=Column('frame_section',
-                         ForeignKey('frame_sections.uuid'),
+                         ForeignKey('frame_sections.name'),
                          primary_key=True)
-    material=('material',ForeignKey('materials.uuid'))   
+    material=('material',ForeignKey('materials.name'))   
 
 class AreaSection(Base):
     __tablename__='area_sections'
     __obj_id=str(uuid.uuid1())
     name=Column('name',String(32),default=__obj_id,primary_key=True)
-    material=('material',ForeignKey('materials.uuid'))
+    material_name=Column('material_name',String(32),ForeignKey('materials.name'))
     size_0=Column('size_0',Float())
     size_1=Column('size_1',Float())
     size_2=Column('size_2',Float())
     uuid=Column('uuid',String(32),default=__obj_id)
+    
+    #1 to many
+    areas=relationship('Area',backref='section')
 
 class LoadCase(Base):
     __tablename__='loadcases'
     __obj_id=str(uuid.uuid1())
     name=Column('name',String(32),default=__obj_id,primary_key=True)
     case_type=Column('case_type',String(16))
-    static_linear_setting=relationship('LoadCaseStaticLinearSetting',backref='loadcase')
-    pointload=relationship('PointLoad',backref='loadcase')
     uuid=Column('uuid',String(32),default=__obj_id)
+    
+    #1 to 1
+    static_linear_setting=relationship('LoadCaseStaticLinearSetting',backref=backref('loadcase',uselist=False),uselist=False)
+    loadcase_modal_setting=relationship('LoadCaseModalSetting',backref=backref('loadcase',uselist=False),uselist=False)
+    loadcase_2nd_setting=relationship('LoadCase2ndSetting',backref=backref('loadcase',uselist=False),uselist=False)
+    loadcase_3nd_setting=relationship('LoadCase3ndSetting',backref=backref('loadcase',uselist=False),uselist=False)
+    loadcase_response_spectrum_setting=relationship('LoadCaseResponseSpectrumSetting',backref=backref('loadcase',uselist=False),uselist=False)
+    loadcase_time_history_setting=relationship('LoadCaseTimeHistorySetting',backref=backref('loadcase',uselist=False),uselist=False)
+
+    #1 to many    
+    point_load=relationship('PointLoad',backref='loadcase')
+    point_disp=relationship('PointDisp',backref='loadcase')
+    frame_load_distributed=relationship('FrameLoadDistributed',backref='loadcase')
+    frame_load_concentrated=relationship('FrameLoadConcentrated',backref='loadcase')
+    frame_load_strain=relationship('FrameLoadStrain',backref='loadcase')
+    frame_load_temperature=relationship('FrameLoadTemperature',backref='loadcase')
+    area_load_to_frame=relationship('AreaLoadToFrame',backref='loadcase')
+    area_load_distributed=relationship('AreaLoadDistributed',backref='loadcase')
+    area_load_strain=relationship('AreaLoadStrain',backref='loadcase')
+    area_load_temperature=relationship('AreaLoadTemperature',backref='loadcase')
+    
+    result_point_displacement=relationship('ResultPointDisplacement',backref='loadcase')
+    result_point_reaction=relationship('ResultPointReaction',backref='loadcase')
+    result_frame_force=relationship('ResultFrameForce',backref='loadcase')
+    result_area_stress=relationship('ResultAreaStress',backref='loadcase')
+    
 
 class LoadCaseStaticLinearSetting(Base):
     __tablename__='laodcase_static_linear_settings'
-    lc=Column('loadcase',ForeignKey('loadcases.uuid'),primary_key=True)
+    loadcase_name=Column('loadcase_name',ForeignKey('loadcases.name'),primary_key=True)
+
 
 class LoadCaseModalSetting(Base):
     __tablename__='loadcase_modal_settings'
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
     modal_num=Column('modal_num',Integer())
     tolerance=Column('tolerance',Float)
@@ -107,24 +142,28 @@ class LoadCaseModalSetting(Base):
 
 class LoadCase2ndSetting(Base):
     __tablename__='loadcase_2nd_settings'
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
-    plc=Column('plc',ForeignKey('loadcases.uuid'))
+    
+#    plc_name=Column('plc',String(32),ForeignKey('loadcases.name'))
+#    plc=relationship("LoadCase", foreign_keys=[plc_name])
 
 class LoadCase3ndSetting(Base):
     __tablename__='loadcase_3nd_settings'
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
-    plc=Column('plc',ForeignKey('loadcases.uuid'))
     
+#    plc_name=Column('plc',String(32),ForeignKey('loadcases.name'))
+#    plc=relationship("LoadCase", foreign_keys=[plc_name])
+
 class LoadCaseResponseSpectrumSetting(Base):
     __tablename__='loadcase_response_spectrum_settings'
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
 
 class LoadCaseTimeHistorySetting(Base):
     __tablename__='loadcase_time_history_settings'
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
     
 class Point(Base):
@@ -134,38 +173,42 @@ class Point(Base):
     x=Column('x',Float)
     y=Column('y',Float)
     z=Column('z',Float)
-    load=relationship('PointLoad',backref='point')
     uuid=Column('uuid',String(32),default=__obj_id)
     
+    #1 to 1
+    point_restraint=relationship('PointRestraint',backref=backref('point',uselist=False))
+    point_load=relationship('PointLoad',backref=backref('point',uselist=False))
+    point_disp=relationship('PointDisp',backref=backref('point',uselist=False))
+    point_mass=relationship('PointMass',backref=backref('point',uselist=False))
+
     def __repr__(self):
         return '%s<%r>'%(self.__class__.__name__,self.name)
     
 class PointRestraint(Base):
     __tablename__='point_restraints'
-    point=Column('point',ForeignKey('points.name'),primary_key=True)
-    res_u1=Column('res_u1',Boolean())
-    res_u2=Column('res_u2',Boolean())
-    res_u3=Column('res_u3',Boolean())
-    res_r1=Column('res_r1',Boolean())
-    res_r2=Column('res_r2',Boolean())
-    res_r3=Column('res_r3',Boolean())
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    u1=Column('u1',Boolean())
+    u2=Column('u2',Boolean())
+    u3=Column('u3',Boolean())
+    r1=Column('r1',Boolean())
+    r2=Column('r2',Boolean())
+    r3=Column('r3',Boolean())
 
 class PointLoad(Base):
     __tablename__='pointloads'
-    pt_name=Column('point',ForeignKey('points.name'),primary_key=True)
-    lc_name=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
     u3=Column('u3',Float())
     r1=Column('r1',Float())
     r2=Column('r2',Float())
     r3=Column('r3',Float())
-
-
+    
 class PointDisp(Base):
     __tablename__='point_disps'
-    point=Column('point',ForeignKey('points.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
     u3=Column('u3',Float())
@@ -175,8 +218,7 @@ class PointDisp(Base):
 
 class PointMass( Base):
     __tablename__='point_masses'
-    point=Column('point',ForeignKey('points.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
     u3=Column('u3',Float())
@@ -186,8 +228,7 @@ class PointMass( Base):
 
 class PointSpring(Base):
     __tablename__='point_springs'
-    point=Column('point',ForeignKey('points.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
     u3=Column('u3',Float())
@@ -199,19 +240,30 @@ class Frame(Base):
     __tablename__='frames'
     __obj_id=str(uuid.uuid1())
     name=Column('name',String(32),default=__obj_id,primary_key=True)
-    section=Column('section',ForeignKey('frame_sections.name'))
-    point_0=Column('point_0',ForeignKey('points.name'))
-    point_1=Column('point_1',ForeignKey('points.name'))
+    section_name=Column('section_name',String(32),ForeignKey('frame_sections.name'))
+    
+    pt0_name=Column('pt0_name',String(32),ForeignKey('points.name'),nullable=False)
+    pt1_name=Column('pt1_name',String(32),ForeignKey('points.name'),nullable=False)
+    pt0 = relationship("Point", foreign_keys=[pt0_name])
+    pt1 = relationship("Point", foreign_keys=[pt1_name])
+    
     order=Column('order',String(2),default='01')
     uuid=Column('uuid',String(32),default=__obj_id)
+    
+    #1 to 1
+    frame_release=relationship('FrameRelease',backref=backref('frame',uselist=False))
+    frame_load_distributed=relationship('FrameLoadDistributed',backref=backref('frame',uselist=False))
+    frame_load_concentrated=relationship('FrameLoadConcentrated',backref=backref('frame',uselist=False))
+    frame_load_strain=relationship('FrameLoadStrain',backref=backref('frame',uselist=False))
+    frame_load_temperature=relationship('FrameLoadTemperature',backref=backref('frame',uselist=False))
     
     def __repr__(self):
         return '%s<%r>'%(self.__class__.__name__,self.name)
 
 
-class FrameAttribReleas(Base):
-    __tablename__='frame_attrib_releases'
-    frame=Column('frame',ForeignKey('frames.name'),primary_key=True)
+class FrameRelease(Base):
+    __tablename__='frame_releases'
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
     u01=Column('u01',Float())
     u02=Column('u02',Float())
     u03=Column('u03',Float())
@@ -225,10 +277,10 @@ class FrameAttribReleas(Base):
     r12=Column('r12',Float())
     r13=Column('r13',Float())
 
-class FrameLoadDistrib(Base):
-    __tablename__='frame_load_distribs'
-    frame=Column('frame',ForeignKey('frames.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.uuid'),primary_key=True)
+class FrameLoadDistributed(Base):
+    __tablename__='frame_load_distributeds'
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     p01=Column('p01',Float())
     p02=Column('p02',Float())
     p03=Column('p03',Float())
@@ -244,8 +296,8 @@ class FrameLoadDistrib(Base):
 
 class FrameLoadConcentrated(Base):
     __tablename__='frame_load_concentrated'
-    frame=Column('frame',ForeignKey('frames.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.uuid'),primary_key=True)
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     loc=Column('loc',Float())
     p1=Column('p1',Float())
     p2=Column('p2',Float())
@@ -256,52 +308,76 @@ class FrameLoadConcentrated(Base):
 
 class FrameLoadStrain(Base):
     __tablename__='frame_load_strain'
-    frame=Column('frame',ForeignKey('frames.name'),primary_key=True)
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     T=Column('strain',Float())
     
 class FrameLoadTemperature(Base):
     __tablename__='frame_laod_teamperature'
-    frame=Column('frame',ForeignKey('frames.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.uuid'),primary_key=True)
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     T=Column('T',Float())
 
 class Area(Base):
     __tablename__='areas'
     __obj_id=str(uuid.uuid1())
-    uuid=Column('uuid',String(32),default=__obj_id,primary_key=True)
-    name=Column('name',String(32),default=__obj_id)
-    pass
+    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    section_name=Column('section_name',String(32),ForeignKey('area_sections.name'))
 
-class AreaLoad2Frame(Base):
-    __tablename__='area_load_2_frame'
-    area=Column('area',ForeignKey('areas.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.uuid'),primary_key=True)
+    pt0_name=Column('pt0_name',String(32),ForeignKey('points.name'),nullable=False)
+    pt1_name=Column('pt1_name',String(32),ForeignKey('points.name'),nullable=False)
+    pt2_name=Column('pt2_name',String(32),ForeignKey('points.name'),nullable=False)
+    pt3_name=Column('pt3_name',String(32),ForeignKey('points.name'),nullable=False)
+    pt0 = relationship("Point", foreign_keys=[pt0_name])
+    pt1 = relationship("Point", foreign_keys=[pt1_name])    
+    pt2 = relationship("Point", foreign_keys=[pt2_name])
+    pt3 = relationship("Point", foreign_keys=[pt3_name])  
+    
+    uuid=Column('uuid',String(32),default=__obj_id)   
+    
+    #1 to 1
+    area_load_to_frame=relationship('AreaLoadToFrame',backref=backref('area',uselist=False))
+    area_load_distributed=relationship('AreaLoadDistributed',backref=backref('area',uselist=False))
+    area_load_strain=relationship('AreaLoadStrain',backref=backref('area',uselist=False))
+    area_load_temperature=relationship('AreaLoadTemperature',backref=backref('area',uselist=False))
+    
+
+class AreaLoadToFrame(Base):
+    __tablename__='area_load_to_frame'
+    area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     p1=Column('p1',Float())
     p2=Column('p2',Float())
     p3=Column('p3',Float())
     
-class AreaLoadDistrib(Base):
-    __tablename__='area_load_distribs'
-    area=Column('area',ForeignKey('areas.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+class AreaLoadDistributed(Base):
+    __tablename__='area_load_distributeds'
+    area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
 
     pass
 
 class AreaLoadStrain(Base):
     __tablename__='area_load_strains'
-    area=Column('area',ForeignKey('areas.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     pass
+
+class AreaLoadTemperature(Base):
+    __tablename__='area_laod_teamperature'
+    area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
+    T=Column('T',Float())
 
 class RunLoadCase(Base):
     __tablename__='run_loadcase'
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     run=Column('run',Boolean())
 
 class ResultPointDisplacement(Base):
     __tablename__='result_point_displacement'
-    point=Column('point',ForeignKey('points.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('u1',Boolean())
     u2=Column('u2',Boolean())
     u3=Column('u3',Boolean())
@@ -312,8 +388,8 @@ class ResultPointDisplacement(Base):
 
 class ResultPointReaction(Base):
     __tablename__='result_point_reactions'
-    point=Column('point',ForeignKey('points.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('u1',Boolean())
     u2=Column('u2',Boolean())
     u3=Column('u3',Boolean())
@@ -324,8 +400,8 @@ class ResultPointReaction(Base):
 
 class ResultFrameForce(Base):
     __tablename__='result_frame_forces'
-    frame=Column('frame',ForeignKey('frames.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     p01=Column('p01',Float())
     p02=Column('p02',Float())
     p03=Column('p03',Float())
@@ -339,10 +415,10 @@ class ResultFrameForce(Base):
     m12=Column('m12',Float())
     m13=Column('m13',Float())
 
-class ResultAreaStresse(Base):
+class ResultAreaStress(Base):
     __tablename__='result_area_stresses'
-    area=Column('area',ForeignKey('frames.name'),primary_key=True)
-    loadcase=Column('loadcase',ForeignKey('loadcases.name'),primary_key=True)
+    area_name=Column('area_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     s11=Column('s11',Float())
     s12=Column('s12',Float())
     s21=Column('s21',Float())
