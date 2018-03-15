@@ -137,9 +137,9 @@ class LoadCaseModalSetting(Base):
     __tablename__='loadcase_modal_settings'
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
-    modal_num=Column('modal_num',Integer())
-    tolerance=Column('tolerance',Float)
-    iteration=Column('iteration',Integer())
+    modal_num=Column('modal_num',Integer(),default=12)
+    tolerance=Column('tolerance',Float,default=1e-6)
+    iteration=Column('iteration',Integer(),default=99)
 
 class LoadCase2ndSetting(Base):
     __tablename__='loadcase_2nd_settings'

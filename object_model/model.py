@@ -28,6 +28,7 @@ from fe_model.node import Node
 from fe_model.element import Beam
 
 from fe_solver.static import solve_linear
+from fe_solver.dynamic import solve_modal
 
 import logger as log
 
@@ -314,7 +315,7 @@ class Model():
     def set_loadcase_3rd(self):
         pass
     
-    def set_loadcase_modal(self):
+    def set_loadcase_modal(self,loadcase_name):
         pass
     
     def set_loadcase_response_spectrum(self):
@@ -478,8 +479,17 @@ class Model():
                 self.apply_load(lc)
                 self.fe_model.assemble_f()
                 self.fe_model.assemble_boundary(mode='f')
-                res=solve_linear(self.fe_model)
-                print(res)
+                solve_linear(self.fe_model)
+                print('max displacement:')
+                print(self.fe_model.resolve_node_disp(0))
+                print('max force:')
+                print(self.fe_model.resolve_beam_force(0)[:6])
+                log.info('Finished case %s.'%lc)
+            elif loadcase.case_type=='modal':
+                log.info('Solving modal case %s...'%lc)
+                solve_modal(self.fe_model,k=loadcase.loadcase_modal_setting.modal_num)
+                print('period:')
+                print(self.fe_model.period)
                 log.info('Finished case %s.'%lc)
             else:
                 pass

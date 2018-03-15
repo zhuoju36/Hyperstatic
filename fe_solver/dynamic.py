@@ -12,27 +12,31 @@ from fe_model import Model
 from scipy import linalg
 from scipy import sparse as sp
 import scipy.sparse.linalg as sl
-        
-def eigen_mode(model:Model.fem_model,n):
-    """
-    Solve the eigen mode of the MDOF system\n
-    n: number of modes to extract.
-    Optional:\n
-    sparse: True if system use a sparse K\n
-    return: w, freq, t, mode
-    """
-    w2,mode=sl.eigsh(A=model.K,M=model.M,k=n,which='LM')
-    freq=[]
-    w=[]
-    T=[]
 
-    for i in range(n):
-        w.append(np.sqrt(w2[i]))
-        T.append(2*np.pi/w[-1])
-        freq.append(1/T[-1])
-    return w,freq,T,mode
+import logger as log
+        
+
+def solve_modal(model,k:int):
+    """
+    Solve eigen mode of the MDOF system
     
-def Riz_mode(model:Model.fem_model,n,F):
+    params:
+        model: FEModel.
+        k: number of modes to extract.
+    """
+    log.info('Solving eigen modes...')
+    K_,M_=model.K_,model.M_
+    if k>model.DOF:
+        log.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%model.DOF)
+        k=model.DOF
+    omega2s,modes = sl.eigsh(K_,k,M_,which='SM')
+    delta = modes/np.sum(modes,axis=0)
+    model.is_solved=True
+    log.info('Done!')
+#    model.d_=delta.reshape((k,1))####should be revised
+    model.omega_=np.sqrt(omega2s).reshape((k,1))
+    
+def Riz_mode(model:Model,n,F):
     """
     Solve the Riz mode of the MDOF system\n
     n: number of modes to extract\n
@@ -71,7 +75,7 @@ def spectrum_analysis(model,n,spec):
     #CQC
     return d
     
-def modal_decomposition(model:Model.fem_model,n,T,F,u0,v0,a0,xi):
+def modal_decomposition(model:Model,n,T,F,u0,v0,a0,xi):
     """
     Solve time-history problems with modal decomposition method.\n
     u0,v0,a0: initial state.\n
@@ -137,7 +141,7 @@ def modal_decomposition(model:Model.fem_model,n,T,F,u0,v0,a0,xi):
     for i in range(len(T)):
         y_.append(A*R_)
 
-def response_spectrum(model:Model.fem_model,spec,mdd,n=60,comb='CQC'):
+def response_spectrum(model:Model,spec,mdd,n=60,comb='CQC'):
     """
     spec: a {'T':period,'a':acceleration} dictionary of spectrum\n
     mdd: a list of modal damping ratio\n
@@ -192,7 +196,7 @@ def response_spectrum(model:Model.fem_model,spec,mdd,n=60,comb='CQC'):
         print(srss)
     
     
-def Newmark_beta(model:Model.fem_model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
+def Newmark_beta(model:Model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
     """
     beta,gamma: parameters.\n
     u0,v0,a0: initial state.\n
@@ -223,7 +227,7 @@ def Newmark_beta(model:Model.fem_model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
     df=pd.DataFrame({'t':tt,'u':u,'v':v,'a':a})
     return df
     
-def Wilson_theta(model:Model.fem_model,T,F,u0=0,v0=0,a0=0,beta=0.25,gamma=0.5,theta=1.4):
+def Wilson_theta(model:Model,T,F,u0=0,v0=0,a0=0,beta=0.25,gamma=0.5,theta=1.4):
     """
     beta,gamma,theta: parameters.\n
     u0,v0,a0: initial state.\n

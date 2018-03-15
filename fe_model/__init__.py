@@ -29,11 +29,14 @@ class Model:
         self.__f=None
         self.__d=None
         #with restraint
-        self.__K_bar=None
-        self.__M_bar=None
-        self.__C_bar=None
-        self.__f_bar=None
-        self.__d_bar=None
+        self.__K_=None
+        self.__M_=None
+        self.__C_=None
+        self.__f_=None
+        
+        #results
+        self.__d_=None
+        self.__omega_=None
         
         self.is_solved=False
         
@@ -71,44 +74,48 @@ class Model:
     
     @property
     def K(self):
-        if not self.is_assembled:
-            Exception('The model has to be assembled first.')
         return self.__K
     @property
     def M(self):
-        if not self.is_assembled:
-            Exception('The model has to be assembled first.')
         return self.__M    
     @property
     def f(self):
-        if not self.is_assembled:
-            Exception('The model has to be assembled first.')
         return self.__f
     @property
     def d(self):
-        if not self.is_assembled:
-            Exception('The model has to be assembled first.')
         return self.__d
     @property
     def K_(self):
         if not self.is_assembled:
             raise Exception('The model has to be assembled first.')
-        return self.__K_bar
+        return self.__K_
     @property
     def M_(self):
         if not self.is_assembled:
-            Exception('The model has to be assembled first.')
-        return self.__M_bar
+            raise Exception('The model has to be assembled first.')
+        return self.__M_
     @property
     def f_(self):
         if not self.is_assembled:
-            Exception('The model has to be assembled first.')
-        return self.__f_bar
+            raise Exception('The model has to be assembled first.')
+        return self.__f_
+    
     @property
     def d_(self):
-        if not self.is_assembled:
-            Exception('The model has to be assembled first.')
-        return self.__d_bar
+        return self.__d_
+    @d_.setter
+    def d_(self,d):
+        assert(d.shape==(self.node_count*6,1))
+        self.__d_=d
+    @property
+    def omega_(self):
+        return self.__omega_
+    @omega_.setter
+    def omega_(self,omega):
+        self.__omega_=omega
+    @property
+    def period(self):
+        return 2*np.pi/(self.omega_)
         
     def add_node(self,node,tol=1e-6):
         """
@@ -306,8 +313,8 @@ class Model:
         self.__f = spr.lil_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
         for node in self.__nodes.values():
-            T=node.transform_matrix.transpose()
-            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(T,node.fn)        
+            Tt=node.transform_matrix.transpose()
+            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn)        
             
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
@@ -334,23 +341,67 @@ class Model:
         """
         log.info('Assembling boundary condition..')
         if 'K' in mode:
-            self.__K_bar=self.K.copy()
+            self.__K_=self.K.copy()
         if 'M' in mode:
-            self.__M_bar=self.M.copy()
+            self.__M_=self.M.copy()
         if 'f' in mode:
-            self.__f_bar=self.f.copy()
+            self.__f_=self.f.copy()
         self.__dof=self.node_count*6
         for node in self.__nodes.values():
             i=node.hid
             for j in range(6):
                 if node.dn[j]!= None:
                     if 'K' in mode:
-                        self.__K_bar[i*6+j,i*6+j]*=1e10
+                        self.__K_[i*6+j,i*6+j]*=1e10
                     if 'M' in mode:
-                        self.__M_bar[i*6+j,i*6+j]*=1e10
+                        self.__M_[i*6+j,i*6+j]*=1e10
                     if 'f' in mode:
-                        self.__f_bar[i*6+j]=self.__K_bar[i*6+j,i*6+j]*node.dn[j]
+                        self.__f_[i*6+j]=self.__K_[i*6+j,i*6+j]*node.dn[j]
                     self.__dof-=1
+                    
+    def resolve_node_disp(self,node_id):
+        if not self.is_solved:
+            raise Exception('The model has to be solved first.')
+        if node_id in self.__nodes.keys():
+            node=self.__nodes[node_id]
+            T=node.transform_matrix
+            return np.dot(T,self.d_[node_id*6:node_id*6+6])
+        else:
+            raise Exception("The node doesn't exists.")
+
+    
+    def resolve_node_reaction(self,node_id):
+        if not self.is_solved:
+            raise Exception('The model has to be solved first.')
+        if node_id in self.__nodes.keys():
+            node=self.__nodes[node_id]
+            T=node.transform_matrix
+            return T.dot(self.__f[node.hid*6:node.hid*6+6,0]) 
+        else:
+            raise Exception("The node doesn't exists.")       
+    
+    def resolve_beam_force(self,beam_id):
+        if not self.is_solved:
+            raise Exception('The model has to be solved first.')
+        if beam_id in self.__beams.keys():
+            beam=self.__beams[beam_id]
+            i=beam.nodes[0].hid
+            j=beam.nodes[1].hid
+            ue=np.vstack([
+                        self.d_[i*6:i*6+6],
+                        self.d_[j*6:j*6+6]
+                        ])   
+            return np.dot(beam.Ke_,ue)+beam.re_
+        else:
+            raise Exception("The element doesn't exists.")       
+
+
+    
+    def resolve_membrane3_stress(self,membrane_id):
+        pass
+    
+    def resolve_membrane4_stress(self,membrane_id):
+        pass
         
     def find(self,nodes,target,tol=1e-6):
         """

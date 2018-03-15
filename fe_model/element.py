@@ -297,13 +297,39 @@ class Beam(Element):
 #            Me_=np.insert(Me_,i,0,axis=1)
 #            re_=np.insert(re_,i,0,axis=0)
 #        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
-        def resolve_element_force(self,uij,fij):
-            fe=np.zeros((12,1))
-            Ke=spr.csr_matrix(12,12)
-            re=spr.csr_matrix(12,1)
-            self.static_condensation(Ke,re)
-            fe=Ke*uij+self.nodal_force
-            return fe
+
+
+
+#        def resolve_element_force(self,ue):
+#            """
+#            compute beam forces with 
+#            """
+#            fe=np.zeros((12,1))
+##            
+##            releaseI=self._releases[0]
+##            releaseJ=self._releases[1]
+##            Ke=self._Ke
+##            Me=self._Me
+##            re=self._re
+##            Ke_ = Ke.copy()
+##            Me_ = Me.copy()
+##            re_ = re.copy()
+##            for n in range(0,6):
+##                if releaseI[n] == True:
+##                    for i in range(12):
+##                        for j in range(12):
+##                            Ke_[i, j] = Ke[i, j] - Ke[i, n]* Ke[n, j] / Ke[n, n]
+##                            Me_[i, j] = Me[i, j] - Me[i, n]* Me[n, j] / Me[n, n]
+##                        re_[i] = re[i] - re[n] * Ke[n, i] / Ke[n, n]
+##                if releaseJ[n] == True:
+##                    for i in range(12):
+##                        for j in range(12):
+##                            Ke_[i, j] = Ke[i, j] - Ke[i, n + 6]* Ke[n + 6, j] / Ke[n + 6, n + 6]
+##                            Me_[i, j] = Me[i, j] - Me[i, n + 6]* Me[n + 6, j] / Me[n + 6, n + 6]
+##                        re_[i] = re[i] - re[n + 6] * Ke[n + 6, i] / Ke[n + 6, n + 6]
+#
+#            fe=self._Ke_*ue+self._re_
+#            return fe
                 
                 
 

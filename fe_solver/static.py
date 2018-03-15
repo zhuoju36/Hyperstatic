@@ -18,21 +18,7 @@ def solve_linear(model):
     delta,info=sl.gmres(K_,f_.toarray())
     model.is_solved=True
     log.info('Done!')
-    return delta.reshape((model.node_count*6,1))
-
-def solve_modal(model,k:int):
-    """
-    model: FEModel.
-    k: number of modes to extract.
-    """
-    log.info('Solving eigen modes...')
-    K_,M_=model.K_,model.M_
-    omega2s,modes = sl.eigsh(K_,k,M_,which='SM')
-    periods=2*np.pi/np.sqrt(omega2s)
-    delta = modes/np.sum(modes,axis=0)
-    model.is_solved=True
-    log.info('Done!')
-    return periods.reshape((k,1)),delta
+    model.d_=delta.reshape((model.node_count*6,1))
     
 def solve_2nd(model):
     pass
