@@ -239,9 +239,7 @@ class Beam(Element):
 
     def static_condensation(self):
         """
-        kij_bar: 12x12 matrix
-        rij_bar: 12x1 vector
-        mij_bar: 12x12 matrix
+        Perform static condensation.
         """
         releaseI=self._releases[0]
         releaseJ=self._releases[1]
@@ -299,19 +297,25 @@ class Beam(Element):
 #            Me_=np.insert(Me_,i,0,axis=1)
 #            re_=np.insert(re_,i,0,axis=0)
 #        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
-        def resolve_element_force():
-            pass
+        def resolve_element_force(self,uij,fij):
+            fe=np.zeros((12,1))
+            Ke=spr.csr_matrix(12,12)
+            re=spr.csr_matrix(12,1)
+            self.static_condensation(Ke,re)
+            fe=Ke*uij+self.nodal_force
+            return fe
                 
                 
 
 class Membrane3(Element):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):
-        r"""
-        node_i,node_j,node_k: corners of triangle.
-        t: thickness
-        E: elastic modulus
-        mu: Poisson ratio
-        rho: mass density
+        """
+        params:
+            node_i,node_j,node_k: Node, corners of triangle.
+            t: float, thickness
+            E: float, elastic modulus
+            mu: float, Poisson ratio
+            rho: float, mass density
         """
         super(Membrane3,self).__init__(2,6,name)
         self._nodes=[node_i,node_j,node_k]

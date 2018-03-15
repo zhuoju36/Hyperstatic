@@ -182,6 +182,7 @@ class Model():
     def add_frame_section(self,name,material,type,size):
         """
         Add frame section to model, if the name already exists, an exception will be raised.
+        
         param:
             name: str. name of the section.
             material: str, name of material.
@@ -253,6 +254,7 @@ class Model():
     def add_loadcase(self,name,case_type,weight_factor=0,**kwargs):
         """
         Add material to model, if the name already exists, an exception will be raised
+        
         param:
             name: name of material.
             type: 'static-linear','2nd','3rd','modal','response-spectrum','time-history','buckling'
