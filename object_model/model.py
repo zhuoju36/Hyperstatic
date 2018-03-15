@@ -13,12 +13,13 @@ from sqlalchemy import create_engine
 import sqlalchemy.orm as o
 from datetime import datetime
 
-from .orm import Base,Config,\
-Material,IsotropicElastic,\
-Point,Frame,Area,\
-FrameSection,\
-LoadCase,LoadCaseStaticLinearSetting,\
-PointRestraint,PointLoad,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadStrain,FrameLoadTemperature
+#from .orm import Base,Config,\
+#Material,IsotropicElastic,\
+#Point,Frame,Area,\
+#FrameSection,\
+#LoadCase,LoadCaseStaticLinearSetting,LoadCase\
+#PointRestraint,PointLoad,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadStrain,FrameLoadTemperature
+from .orm import *
 
 from object_model.frame_section import Pipe,Circle,HollowBox,ISection
 
@@ -32,41 +33,7 @@ import logger as log
 
 class Model():
     def __init__(self):
-        pass
-#        #materials
-#        self.__materials={}
-#        
-#        #sections
-#        self.__frame_sections={}
-#        self.__area_sections={}
-#        
-#        #members
-#        self.__points={}
-#        self.__cables={}
-#        self.__frames={}
-#        self.__areas={}
-#        
-#        #group
-#        self.__groups={}
-#        
-#        #loadcase and combinations
-#        self.__loadcases={}
-#        self.__combinations={}
-#        
-#        #member loads
-#        self.__load_pt={}
-#        self.__load_frm_distrib={}
-#        self.__load_frm_pt={}
-#        self.__load_frm_tmpt={}
-#        self.__load_frm_strain={}
-#        self.__load_area_distrb={}
-#        self.__load_area_tmpt={}
-#        self.__load_area_strain={}
-#        
-#        #structure
-#        self.__curves={}
-#        self.__load_spectrum={}
-#        self.__load_time_history={}
+        self.locked=False
 
     def create(self,database):
         """
@@ -104,6 +71,31 @@ class Model():
         self.__operate_db=operate_db
         self.__storage_db=database
         
+        
+    def scale(self):
+        """
+        returns the scale factor of current model.
+        """
+        config=self.session.query(Config).first()
+        scale={}
+        if config.unit=='N_m_C':
+            scale['F']=1
+            scale['L']=1
+            scale['T']=1
+        elif config.unit=='N_mm_C':
+            scale['F']=1
+            scale['L']=1e-3
+            scale['T']=1
+        elif config.unit=='kN_m_C':
+            scale['F']=1e3
+            scale['L']=1
+            scale['T']=1
+        elif config.unit=='kN_mm_C':
+            scale['F']=1e3
+            scale['L']=1e-3
+            scale['T']=1        
+        return scale
+        
     def save(self):
         self.session.commit()
         shutil.copy(self.__operate_db,self.__storage_db)
@@ -113,7 +105,51 @@ class Model():
         if os.path.exists(self.__operate_db):
             os.remove(self.__operate_db)
             
-    def add_material(self,name,gamma,mat_type,**kwargs):
+    def set_project_name(self,name):
+        """
+        params:
+            name: str, project name, no more than 32 chars
+        """
+        assert(type(name)==str and len(name)<32)
+        config=self.session.query(Config).first()
+        config.project_name=name
+        self.session.add(config)
+        self.session.commit()
+    
+    def set_author(self,author):
+        """
+        params:
+            author: str, project name, no more than 32 chars
+        """
+        assert(type(author)==str and len(author)<32)
+        config=self.session.query(Config).first()
+        config.author=author
+        self.session.add(config)
+        self.session.commit()
+    
+    def set_unit(self,unit):
+        """
+        params:
+            unit: str, should be 'N_m_C','N_mm_C','kN_m_C' or 'kN_mm_C'
+        """
+        assert(unit in ['N_m_C','N_mm_C','kN_m_C','kN_mm_C'])
+        config=self.session.query(Config).first()
+        config.unit=unit
+        self.session.add(config)
+        self.session.commit()
+    
+    def set_description(self,text):
+        """
+        params:
+            text: str, description.
+        """
+        assert(type(text)==str)
+        config=self.session.query(Config).first()
+        config.description=description
+        self.session.add(config)
+        self.session.commit()
+            
+    def add_material(self,name,rho,mat_type,**kwargs):
         """
         Add material to model, if the name already exists, an exception will be raised
         param:
@@ -131,7 +167,7 @@ class Model():
             raise Exception('Name already exists!')
         mat=Material()
         mat.name=name
-        mat.gamma=gamma
+        mat.rho=rho
         mat.type=mat_type
         if mat_type=='isotropic_elastic':
             iso_elastic=IsotropicElastic()
@@ -159,9 +195,11 @@ class Model():
                 'C':C-profile
                 'Z':Z-profile
             size:
-            if type is 'p', the following parameters are available:
+            if type is 'O', the following parameters are available:
                 d: float, diameter
                 t: float, wall thickness
+            if type is 'o', the following parameters are available:
+                d: float, diameter
             if type is 'I', the following parameters are available:
                 h,b,tw,tf: float
             if type is 'B', the following parameters are available:
@@ -177,6 +215,7 @@ class Model():
         return:
             boolean, status of success.
         """
+        assert(type in 'OoIBLTCZ' and len(type)==1)
         if self.session.query(FrameSection).filter_by(name=name).first()!=None:
             raise Exception('Name already exists!')
         frmsec=FrameSection()
@@ -193,7 +232,7 @@ class Model():
         elif type=='I':
             assert len(size)==4
             sec=ISection(None,size[0],size[1],size[2],size[3])
-        else:####should be refined!!
+        elif type=='L':####should be refined!!
             assert len(size)==4
             sec=HollowBox(None,size[0],size[1])
         
@@ -211,30 +250,79 @@ class Model():
     def add_area_section(self):
         pass
     
-    def add_loadcase(self,name,case_type,**kwargs):
+    def add_loadcase(self,name,case_type,weight_factor=0,**kwargs):
         """
         Add material to model, if the name already exists, an exception will be raised
         param:
             name: name of material.
-            type: 'static-linear','2nd','3rd','modal','spectrum','th','buckle'
+            type: 'static-linear','2nd','3rd','modal','response-spectrum','time-history','buckling'
         return:
             boolean, status of success.
         optional:
+            [weight_factor]: factor of self weight.
+        **kwargs:
             if type is '1st', the following parameters are available:
-            E: float, elastic modulus
-            mu: float, Poisson ratio
+                E: float, elastic modulus
+                mu: float, Poisson ratio
         """
         if self.session.query(LoadCase).filter_by(name=name).first()!=None:
             raise Exception('Name already exists!')
         lc=LoadCase()
         lc.name=name
         lc.case_type=case_type
-        if case_type=='1st':
-            setting=LoadCaseStaticLinearSetting
-            setting.lc=lc.name
+        lc.weight_factor=weight_factor
+        if case_type=='static-linear':
+            setting=LoadCaseStaticLinearSetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
+        if case_type=='2nd':
+            setting=LoadCase2ndSetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
+        if case_type=='3nd':
+            setting=LoadCase3ndSetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
+        if case_type=='modal':
+            setting=LoadCaseModalSetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
+        if case_type=='response-spectrum':
+            setting=LoadCaseResponseSpectrumSetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
+        if case_type=='time-history':
+            setting=LoadCaseTimeHistorySetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
+        if case_type=='buckling':
+            setting=LoadCaseBucklingSetting()
+            setting.loadcase_name=lc.name
+            self.session.add(setting)
         self.session.add(lc)
         self.session.commit()
         return True
+        
+    def set_loadcase_static_linear(self):
+        pass
+    
+    def set_loadcase_2nd(self):
+        pass
+
+    def set_loadcase_3rd(self):
+        pass
+    
+    def set_loadcase_modal(self):
+        pass
+    
+    def set_loadcase_response_spectrum(self):
+        pass
+    
+    def set_loadcase_time_history(self):
+        pass
+    
+    def set_loadcase_buckling(self):
+        pass
 
     def add_point(self,name,x,y,z):
         """
@@ -256,6 +344,8 @@ class Model():
         self.session.commit()
         return(True)
         
+    def set_point(self,name,x,y,z):
+        pass
         
     def add_frame(self,name,pt1,pt2,section):
         """
@@ -286,7 +376,14 @@ class Model():
         self.session.add(frm)
         self.session.commit()
         return True
-
+        
+    def set_frame_section(self,name,section):
+        pass
+    
+    def set_frame_mesh(self,frame):
+        pass
+    
+    
     def get_point(self,name):
         """
         params:
@@ -294,7 +391,7 @@ class Model():
         returns:
             point object if exist
         """
-        return self.__points[name]
+        pass
     
     def get_frame(self,name):
         """
@@ -303,7 +400,7 @@ class Model():
         returns:
             frame object if exist
         """
-        return self.__frames[name]
+        pass
     
     def get_frame_section(self,name):
         """
@@ -312,7 +409,7 @@ class Model():
         returns:
             frame section object if exist
         """
-        return self.__frame_sections[name]
+        pass
         
     def set_point_restraint(self,point,restraints):
         """
@@ -386,6 +483,8 @@ class Model():
                 pass
     
     def mesh(self):
+        scale=self.scale()
+        
         femodel=FEModel()
         points=self.session.query(Point).all()
         frames=self.session.query(Frame).all()
@@ -397,19 +496,18 @@ class Model():
         as_map={} #item-list map, one area can be meshed to many shells
         
         for pt in points:
-            res=femodel.add_node(Node(pt.x,pt.y,pt.z))
+            res=femodel.add_node(Node(pt.x*scale['L'],pt.y*scale['L'],pt.z*scale['L']))
             pn_map[pt.name]=res
         for frm in frames:
             node0=femodel.nodes[pn_map[frm.pt0_name]]
             node1=femodel.nodes[pn_map[frm.pt1_name]]
-            E=frm.section.material.isotropic_elastic.E
+            E=frm.section.material.isotropic_elastic.E*(scale['F']*scale['L']**-2)
             mu=frm.section.material.isotropic_elastic.mu
-            A=frm.section.A
-            J=frm.section.J
-            I2=frm.section.I2
-            I3=frm.section.I3
-            J=frm.section.J
-            rho=frm.section.material.gamma ####should be revised
+            A=frm.section.A*(scale['L']**2)
+            J=frm.section.J*(scale['L']**4)
+            I2=frm.section.I2*(scale['L']**4)
+            I3=frm.section.I3*(scale['L']**4)
+            rho=frm.section.material.rho*(scale['F']*scale['L']**-4)
             if frm.order=='01':
                 res=femodel.add_beam(Beam(node0,node1,E, mu, A, I2, I3, J, rho))
             elif frm.order=='10':
@@ -439,20 +537,30 @@ class Model():
         self.as_map=as_map
 
     def apply_load(self,lc):
+        scale=self.scale()
+        
         pn_map=self.pn_map
         fb_map=self.fb_map
         am_map=self.am_map
         ap_map=self.ap_map
         as_map=self.as_map
 
+        loadcase=self.session.query(LoadCase).filter_by(name=lc).first()
+        
         point_loads=self.session.query(PointLoad).filter_by(loadcase_name=lc).all()
         frame_load_distributeds=self.session.query(FrameLoadDistributed).filter_by(loadcase_name=lc).all()
         frame_load_concentrateds=self.session.query(FrameLoadConcentrated).filter_by(loadcase_name=lc).all()
         frame_load_strains=self.session.query(FrameLoadStrain).filter_by(loadcase_name=lc).all()
-        frame_load_temperatures=self.session.query(FrameLoadTemperature).filter_by(loadcase_name=lc).all()
+        frame_load_temperatures=self.session.query(FrameLoadTemperature).filter_by(loadcase_name=lc).all()  
+        
         for load in point_loads:
             self.fe_model.set_node_force(pn_map[load.point_name],
-                                         [load.u1,load.u2,load.u3,load.r1,load.r2,load.r3])
+                                         [load.u1*scale['F'],
+                                          load.u2*scale['F'],
+                                          load.u3*scale['F'],
+                                          load.r1*scale['F']*scale['L'],
+                                          load.r2*scale['F']*scale['L'],
+                                          load.r3*scale['F']*scale['L']],append=True)
         
         for load in frame_load_distributeds:
             pass
@@ -465,10 +573,11 @@ class Model():
         
         for load in frame_load_temperatures:
             pass
-            
         
-    def import_model():
-        pass
-    
-    def import_dxf():
-        pass
+        #self weight
+        for beam in self.fe_model.beams.values():
+            f=-beam.mass*9.81*scale['F']/2*loadcase.weight_factor
+            self.fe_model.set_node_force(beam.nodes[0].hid,[0,0,f,0,0,0],append=True)
+            self.fe_model.set_node_force(beam.nodes[1].hid,[0,0,f,0,0,0],append=True)
+            
+

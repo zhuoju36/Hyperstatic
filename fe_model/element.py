@@ -74,16 +74,19 @@ class Element(object):
 
                 
 class Beam(Element):
-    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None ,tol=1e-6):
-        r"""
-        node_i,node_j: ends of beam.
-        E: elastic modulus
-        mu: Possion ratio        
-        A: section area
-        I2: inertia about 2-2
-        I3: inertia about 3-3
-        J: torsianl constant
-        rho: mass density
+    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None, mass='conc', tol=1e-6):
+        """
+        params:
+            node_i,node_j: ends of beam.
+            E: elastic modulus
+            mu: Possion ratio        
+            A: section area
+            I2: inertia about 2-2
+            I3: inertia about 3-3
+            J: torsianl constant
+            rho: mass density
+            mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
+            tol: tolerance
         """
         super(Beam,self).__init__(1,6,name)
         self._nodes=[node_i,node_j]
@@ -101,6 +104,7 @@ class Beam(Element):
         self.local_csys = Cartisian(o, pt1, pt2)
         
         self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
+        self._mass=rho*A*self.length
         
         l=self.length
         G=E/2/(1+mu)
@@ -148,79 +152,61 @@ class Beam(Element):
 
         self._Ke[11, 11]=4 * E*I3 / l
 
-        #form mass matrix    
-#        #Coordinated mass matrix
-#        self._Me[0, 0]=140
-#        self._Me[0, 6]=70
-#
-#        self._Me[1, 1]=156
-#        self._Me[1, 5]=self._Me_[5, 1]=22 * l
-#        self._Me[1, 7]=self._Me_[7, 1]=54
-#        self._Me[1, 11]=self._Me_[11, 1]=-13 * l
-#
-#        self._Me[2, 2]=156
-#        self._Me[2, 4]=self._Me_[4, 2]=-22 * l
-#        self._Me[2, 8]=self._Me_[8, 2]=54
-#        self._Me[2, 10]=self._Me_[10, 2]=13 * l
-#
-#        self._Me[3, 3]=140 * J / A
-#        self._Me[3, 9]=self._Me_[9, 3]=70 * J / A
-#
-#        self._Me[4, 4]=4 * l *l
-#        self._Me[4, 8]=self._Me_[8, 4]=-13 * l
-#        self._Me[4, 10]=self._Me_[10, 4]=-3 * l*l
-#
-#        self._Me[5, 5]=4 * l*l
-#        self._Me[5, 7]=self._Me_[7, 5]=13 * l
-#        self._Me[5, 11]=self._Me_[11, 5]=-3 * l*l
-#
-#        self._Me[6, 6]=140
-#
-#        self._Me[7, 7]=156
-#        self._Me[7, 11]=self._Me_[11, 7]=-22 * l
-#
-#        self._Me[8, 8]=156
-#        self._Me[8, 10]=self._Me_[10, 8]=22 * l
-#
-#        self._Me[9, 9]=140 * J / A
-#
-#        self._Me[10, 10]=4 * l*l
-#
-#        self._Me[11, 11]=4 * l*l
-#
-#        self._Me*= (rho*A*l / 420)
-
-        #Concentrated mass matrix
-        self._Me=np.eye(12)*rho*A*l/2
+        #form mass matrix
+        if mass=='coor':#Coordinated mass matrix
+            self._Me[0, 0]=140
+            self._Me[0, 6]=70
+    
+            self._Me[1, 1]=156
+            self._Me[1, 5]=self._Me_[5, 1]=22 * l
+            self._Me[1, 7]=self._Me_[7, 1]=54
+            self._Me[1, 11]=self._Me_[11, 1]=-13 * l
+    
+            self._Me[2, 2]=156
+            self._Me[2, 4]=self._Me_[4, 2]=-22 * l
+            self._Me[2, 8]=self._Me_[8, 2]=54
+            self._Me[2, 10]=self._Me_[10, 2]=13 * l
+    
+            self._Me[3, 3]=140 * J / A
+            self._Me[3, 9]=self._Me_[9, 3]=70 * J / A
+    
+            self._Me[4, 4]=4 * l *l
+            self._Me[4, 8]=self._Me_[8, 4]=-13 * l
+            self._Me[4, 10]=self._Me_[10, 4]=-3 * l*l
+    
+            self._Me[5, 5]=4 * l*l
+            self._Me[5, 7]=self._Me_[7, 5]=13 * l
+            self._Me[5, 11]=self._Me_[11, 5]=-3 * l*l
+    
+            self._Me[6, 6]=140
+    
+            self._Me[7, 7]=156
+            self._Me[7, 11]=self._Me_[11, 7]=-22 * l
+    
+            self._Me[8, 8]=156
+            self._Me[8, 10]=self._Me_[10, 8]=22 * l
+    
+            self._Me[9, 9]=140 * J / A
+    
+            self._Me[10, 10]=4 * l*l
+    
+            self._Me[11, 11]=4 * l*l
+    
+            self._Me*= (rho*A*l / 420)
         
+        if mass=='conc':#Concentrated mass matrix
+            self._Me=np.eye(12)*rho*A*l/2
+            
         self._Ke_=self._Ke
         self._Me_=self._Me
-        
-#    @property
-#    def nodes(self):
-#        return self.__nodes
     
     @property
     def length(self):
         return self._length
-    
-#    @property
-#    def Ke(self):
-#        return self._Ke
-    
-#    @property
-#    def Me(self):
-#        return self._Me
-#        
-#    @property
-#    def re(self):
-#        return self._re
-#    
-#    @re.setter
-#    def re(self,force):
-#        if len(force)!=12:
-#            raise ValueError('element nodal force must be a 12 array')
-#        self.__re=np.array(force).reshape((12,1))
+        
+    @property
+    def mass(self):
+        return self._mass
     
     @property
     def Ke_(self):
@@ -313,6 +299,8 @@ class Beam(Element):
 #            Me_=np.insert(Me_,i,0,axis=1)
 #            re_=np.insert(re_,i,0,axis=0)
 #        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
+        def resolve_element_force():
+            pass
                 
                 
 

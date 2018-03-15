@@ -126,29 +126,37 @@ class Model:
             res=res[0]
         return res
         
-    def set_node_force(self,node,force):
+    def set_node_force(self,node,force,append=False):
         """
-        add node force to model
+        add node force to model.
         params:
             node: int, hid of node
-            disp: list of 6 of nodal force
+            force: list of 6 of nodal force
+            append: bool, if True, the input force will be additional on current force.
         return:
             bool, status of success
         """
         assert(len(force)==6)
-        self.__nodes[node].fn=force
+        if append:
+            self.__nodes[node].fn+=np.array(force).reshape((6,1))
+        else:
+            self.__nodes[node].fn=np.array(force).reshape((6,1))
     
-    def set_node_displacement(self,node,disp):
+    def set_node_displacement(self,node,disp,append=False):
         """
         add node displacement to model
         params:
             node: int, hid of node
             disp: list of 6 of nodal displacement
+            append: bool, if True, the input displacement will be additional on current displacement.
         return:
             bool, status of success
         """
         assert(len(disp)==6)
-        self.__nodes[node].dn=disp
+        if append:
+            self.__nodes[node].dn+=np.array(disp).reshape((6,1))
+        else:
+            self.__nodes[node].dn=np.array(disp).reshape((6,1))
         
     def add_beam(self,beam):
         """

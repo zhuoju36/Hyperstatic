@@ -29,7 +29,7 @@ class Material(Base):
     __tablename__='materials'
     __obj_id=str(uuid.uuid1())
     name=Column('name',String(32),default=__obj_id,primary_key=True)
-    gamma=Column('gamma',Float())
+    rho=Column('rho',Float())
     type=Column('type',String(32))
     
     #other types...
@@ -99,6 +99,7 @@ class LoadCase(Base):
     __obj_id=str(uuid.uuid1())
     name=Column('name',String(32),default=__obj_id,primary_key=True)
     case_type=Column('case_type',String(16))
+    weight_factor=Column('weight_factor',Float,default=0)
     uuid=Column('uuid',String(32),default=__obj_id)
     
     #1 to 1
@@ -163,6 +164,27 @@ class LoadCaseResponseSpectrumSetting(Base):
 
 class LoadCaseTimeHistorySetting(Base):
     __tablename__='loadcase_time_history_settings'
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
+    method=Column('method',String(8))
+    
+class LoadCaseBucklingSetting(Base):
+    __tablename__='loadcase_buckling_settings'
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
+    method=Column('method',String(8))
+    
+class Combination(Base):
+    __tablename__='combinations'
+    __obj_id=str(uuid.uuid1())
+    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    combination_type=Column('combination_type',String(16))
+    uuid=Column('uuid',String(32),default=__obj_id)
+    
+    #1 to many
+    combination_cases=relationship('CombinationCase',backref='combination')
+    
+class CombinationCase(Base):
+    __tablename__='combination_cases'
+    combination_name=Column('combination_name',String(32),ForeignKey('combinations.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
     
