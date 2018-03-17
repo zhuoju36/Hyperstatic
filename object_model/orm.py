@@ -27,13 +27,12 @@ class Config(Base):
     
 class Material(Base):
     __tablename__='materials'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     rho=Column('rho',Float())
     type=Column('type',String(32))
     
     #other types...
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     #1 to 1
     isotropic_elastic=relationship('IsotropicElastic',
                                    backref=backref('material',uselist=False),uselist=False) #1 to 1
@@ -51,8 +50,7 @@ class IsotropicElastic(Base):
 
 class FrameSection(Base):
     __tablename__='frame_sections'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     shape=Column('shape',String(32))
     material_name=Column('material_name',String(32),ForeignKey('materials.name'))
     size_0=Column('size_0',Float())
@@ -69,7 +67,7 @@ class FrameSection(Base):
     S3=Column('S3',Float())
     I2=Column('I2',Float())
     I3=Column('I3',Float())
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     
     #1 to many
     frames=relationship('Frame',backref='section')
@@ -83,24 +81,22 @@ class SDSection(Base):
 
 class AreaSection(Base):
     __tablename__='area_sections'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     material_name=Column('material_name',String(32),ForeignKey('materials.name'))
     size_0=Column('size_0',Float())
     size_1=Column('size_1',Float())
     size_2=Column('size_2',Float())
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     
     #1 to many
     areas=relationship('Area',backref='section')
 
 class LoadCase(Base):
     __tablename__='loadcases'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     case_type=Column('case_type',String(16))
     weight_factor=Column('weight_factor',Float,default=0)
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     
     #1 to 1
     static_linear_setting=relationship('LoadCaseStaticLinearSetting',backref=backref('loadcase',uselist=False),uselist=False)
@@ -174,10 +170,9 @@ class LoadCaseBucklingSetting(Base):
     
 class Combination(Base):
     __tablename__='combinations'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     combination_type=Column('combination_type',String(16))
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     
     #1 to many
     combination_cases=relationship('CombinationCase',backref='combination')
@@ -190,12 +185,11 @@ class CombinationCase(Base):
     
 class Point(Base):
     __tablename__='points'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     x=Column('x',Float)
     y=Column('y',Float)
     z=Column('z',Float)
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     
     #1 to 1
     point_restraint=relationship('PointRestraint',backref=backref('point',uselist=False))
@@ -260,8 +254,7 @@ class PointSpring(Base):
 
 class Frame(Base):
     __tablename__='frames'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     section_name=Column('section_name',String(32),ForeignKey('frame_sections.name'))
     
     pt0_name=Column('pt0_name',String(32),ForeignKey('points.name'),nullable=False)
@@ -270,7 +263,7 @@ class Frame(Base):
     pt1 = relationship("Point", foreign_keys=[pt1_name])
     
     order=Column('order',String(2),default='01')
-    uuid=Column('uuid',String(32),default=__obj_id)
+    uuid=Column('uuid',String(32),nullable=False)
     
     #1 to 1
     frame_release=relationship('FrameRelease',backref=backref('frame',uselist=False))
@@ -342,8 +335,7 @@ class FrameLoadTemperature(Base):
 
 class Area(Base):
     __tablename__='areas'
-    __obj_id=str(uuid.uuid1())
-    name=Column('name',String(32),default=__obj_id,primary_key=True)
+    name=Column('name',String(32),primary_key=True)
     section_name=Column('section_name',String(32),ForeignKey('area_sections.name'))
 
     pt0_name=Column('pt0_name',String(32),ForeignKey('points.name'),nullable=False)
@@ -355,7 +347,7 @@ class Area(Base):
     pt2 = relationship("Point", foreign_keys=[pt2_name])
     pt3 = relationship("Point", foreign_keys=[pt3_name])  
     
-    uuid=Column('uuid',String(32),default=__obj_id)   
+    uuid=Column('uuid',String(32),nullable=False)   
     
     #1 to 1
     area_load_to_frame=relationship('AreaLoadToFrame',backref=backref('area',uselist=False))
@@ -400,30 +392,31 @@ class ResultPointDisplacement(Base):
     __tablename__='result_point_displacement'
     point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
-    u1=Column('u1',Boolean())
-    u2=Column('u2',Boolean())
-    u3=Column('u3',Boolean())
-    r1=Column('r1',Boolean())
-    r2=Column('r2',Boolean())
-    r3=Column('r3',Boolean())
+    u1=Column('u1',Float())
+    u2=Column('u2',Float())
+    u3=Column('u3',Float())
+    r1=Column('r1',Float())
+    r2=Column('r2',Float())
+    r3=Column('r3',Float())
 
 
 class ResultPointReaction(Base):
     __tablename__='result_point_reactions'
     point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
-    u1=Column('u1',Boolean())
-    u2=Column('u2',Boolean())
-    u3=Column('u3',Boolean())
-    r1=Column('r1',Boolean())
-    r2=Column('r2',Boolean())
-    r3=Column('r3',Boolean())
+    p1=Column('p1',Float())
+    p2=Column('p2',Float())
+    p3=Column('p3',Float())
+    m1=Column('m1',Float())
+    m2=Column('m2',Float())
+    m3=Column('m3',Float())
 
 
 class ResultFrameForce(Base):
     __tablename__='result_frame_forces'
     frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
+    segment=Column('segment',Integer(),primary_key=True)
     p01=Column('p01',Float())
     p02=Column('p02',Float())
     p03=Column('p03',Float())
@@ -447,7 +440,15 @@ class ResultAreaStress(Base):
     s22=Column('s22',Float())
     t12=Column('t12',Float())
     t21=Column('t21',Float())
-
+    
+class ResultModalPeriod(Base):
+    __tablename__='result_modal_period'
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
+    order=Column('order',Integer(),primary_key=True)
+    omega=Column('omega',Float())
+    period=Column('period',Float())
+    frequency=Column('frequency',Float())
+    
 #class DesignSteelSetting(Base):
 #    __tablename__='design_steel_settings'
 #

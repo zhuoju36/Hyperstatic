@@ -8,17 +8,14 @@ Created on Mon Mar 12 19:52:26 2018
 import os
 import shutil
 import time
+import uuid
 
 from sqlalchemy import create_engine
 import sqlalchemy.orm as o
+from sqlalchemy.sql import and_,or_
+
 from datetime import datetime
 
-#from .orm import Base,Config,\
-#Material,IsotropicElastic,\
-#Point,Frame,Area,\
-#FrameSection,\
-#LoadCase,LoadCaseStaticLinearSetting,LoadCase\
-#PointRestraint,PointLoad,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadStrain,FrameLoadTemperature
 from .orm import *
 
 from object_model.frame_section import Pipe,Circle,HollowBox,ISection
@@ -168,6 +165,7 @@ class Model():
             raise Exception('Name already exists!')
         mat=Material()
         mat.name=name
+        mat.uuid=str(uuid.uuid1())
         mat.rho=rho
         mat.type=mat_type
         if mat_type=='isotropic_elastic':
@@ -222,6 +220,7 @@ class Model():
             raise Exception('Name already exists!')
         frmsec=FrameSection()
         frmsec.name=name
+        frmsec.uuid=str(uuid.uuid1())
         frmsec.material_name=material
         frmsec.type=type
         sec=None
@@ -272,6 +271,7 @@ class Model():
             raise Exception('Name already exists!')
         lc=LoadCase()
         lc.name=name
+        lc.uuid=str(uuid.uuid1())
         lc.case_type=case_type
         lc.weight_factor=weight_factor
         if case_type=='static-linear':
@@ -304,7 +304,7 @@ class Model():
             self.session.add(setting)
         self.session.add(lc)
         self.session.commit()
-        return True
+        return lc.name
         
     def set_loadcase_static_linear(self):
         pass
@@ -327,58 +327,90 @@ class Model():
     def set_loadcase_buckling(self):
         pass
 
-    def add_point(self,name,x,y,z):
+    def __add_point(self,x,y,z,name=None):
         """
         Add point object to model, if the name already exists, an exception will be raised.
         if a point in same location exists, the name of the point will be returned.
         param:
             x,y,z: float-like, coordinates.
+            [name]: str, name, optional.
         return:
-            bool, status of success
+            str, the new point's name.
         """
-        if self.session.query(LoadCase).filter_by(name=name).first()!=None:
+        if name and self.session.query(Point).filter_by(name=name).first()!=None:
             raise Exception('Name already exists!')
         pt=Point()
-        pt.name=name
         pt.x=x
         pt.y=y
         pt.z=z
+        pt.uuid=str(uuid.uuid1())
+        if name:
+            pt.name=name
+        else:
+            pt.name=pt.uuid
         self.session.add(pt)
         self.session.commit()
-        return(True)
+        return pt.name
         
     def set_point(self,name,x,y,z):
         pass
         
-    def add_frame(self,name,pt1,pt2,section):
+    def add_frame(self,pt0_coor,pt1_coor,section,name=None):
         """
         Add frame object to model, if the name already exists, an exception will be raised.
         if a frame connecting same points exists, the name of the point will be returned.
         param:
-            pt1,pt2: name of the end points.
+            pt0_coor: tuple, coordinate of the end point 0.
+            pt1_coor: tuple, coordinate of the end point 1.
+            [name]: str, name, optional.
         return:
-            bool, status of success.
+            str, the new frame's name.
         """
-        if self.session.query(Frame).filter_by(name=name).first()!=None:
+        assert(len(pt0_coor)==3 and len(pt1_coor)==3)
+        if name and self.session.query(Frame).filter_by(name=name).first()!=None:
             raise Exception('Name already exist!')
         frm=Frame()
-        if pt1<pt2:
+        tol=self.session.query(Config).first().tolerance
+        pt0=self.session.query(Point).filter(and_(
+                    (Point.x-pt0_coor[0])<tol,(pt0_coor[0]-Point.x)<tol,
+                     (Point.y-pt0_coor[1])<tol,(pt0_coor[1]-Point.y)<tol,
+                      (Point.z-pt0_coor[2])<tol,(pt0_coor[2]-Point.z)<tol)).first()
+        if pt0==None:
+            pt0_name=self.__add_point(pt0_coor[0],pt0_coor[1],pt0_coor[2])
+        else:
+            pt0_name=pt0.name
+            
+        pt1=self.session.query(Point).filter(and_(
+                    (Point.x-pt1_coor[0])<tol,(pt1_coor[0]-Point.x)<tol,
+                     (Point.y-pt1_coor[1])<tol,(pt1_coor[1]-Point.y)<tol,
+                      (Point.z-pt1_coor[2])<tol,(pt1_coor[2]-Point.z)<tol)).first()
+        if pt1==None:
+            pt1_name=self.__add_point(pt1_coor[0],pt1_coor[1],pt1_coor[2])
+        else:
+            pt1_name=pt1.name
+        
+        if pt0_name<pt1_name:
             order='01'
-            frm.pt0_name=pt1
-            frm.pt1_name=pt2
+            frm.pt0_name=pt0_name
+            frm.pt1_name=pt1_name
             frm.order=order
-        elif pt1>pt2:
+        elif pt0_name>pt1_name:
             order='10'
-            frm.pt0_name=pt2
-            frm.pt1_name=pt1
+            frm.pt0_name=pt1_name
+            frm.pt1_name=pt0_name
             frm.order=order
         else:
             raise Exception('Two points should not be the same!')
+            
         frm.section_name=section
-        frm.name=name
+        frm.uuid=str(uuid.uuid1())
+        if name:
+            frm.name=name
+        else:
+            frm.name=frm.uuid
         self.session.add(frm)
         self.session.commit()
-        return True
+        return frm.name
         
     def set_frame_section(self,name,section):
         pass
@@ -387,14 +419,22 @@ class Model():
         pass
     
     
-    def get_point(self,name):
+    def get_point_name(self,x,y,z):
         """
         params:
             name: str
         returns:
             point object if exist
         """
-        pass
+        tol=self.session.query(Config).first().tolerance
+        pt0=self.session.query(Point).filter(and_(
+                    (Point.x-x)<tol,(x-Point.x)<tol,
+                     (Point.y-y)<tol,(y-Point.y)<tol,
+                      (Point.z-z)<tol,(z-Point.z)<tol)).first()
+        if pt0==None:
+            return None
+        else:
+            return pt0.name 
     
     def get_frame(self,name):
         """
@@ -461,39 +501,7 @@ class Model():
         self.session.add(ld)
         self.session.commit()
         return True
-        
-    def run(self,lcs):
-        """
-        Run the model with loadcases
-        params:
-            lcs: list of str, specify load cases to run.
-        return:
-            None.
-        """
-        self.fe_model.assemble_KM()
-        self.fe_model.assemble_boundary(mode='KM')
-        for lc in lcs:
-            loadcase=self.session.query(LoadCase).filter_by(name=lc).first()
-            if loadcase.case_type=='static-linear':
-                log.info('Solving static linear case %s...'%lc)
-                self.apply_load(lc)
-                self.fe_model.assemble_f()
-                self.fe_model.assemble_boundary(mode='f')
-                solve_linear(self.fe_model)
-                print('max displacement:')
-                print(self.fe_model.resolve_node_disp(0))
-                print('max force:')
-                print(self.fe_model.resolve_beam_force(0)[:6])
-                log.info('Finished case %s.'%lc)
-            elif loadcase.case_type=='modal':
-                log.info('Solving modal case %s...'%lc)
-                solve_modal(self.fe_model,k=loadcase.loadcase_modal_setting.modal_num)
-                print('period:')
-                print(self.fe_model.period)
-                log.info('Finished case %s.'%lc)
-            else:
-                pass
-    
+            
     def mesh(self):
         scale=self.scale()
         
@@ -591,5 +599,128 @@ class Model():
             f=-beam.mass*9.81*scale['F']/2*loadcase.weight_factor
             self.fe_model.set_node_force(beam.nodes[0].hid,[0,0,f,0,0,0],append=True)
             self.fe_model.set_node_force(beam.nodes[1].hid,[0,0,f,0,0,0],append=True)
+            
+    def run(self,lcs):
+        """
+        Run the model with loadcases
+        params:
+            lcs: list of str, specify load cases to run.
+        return:
+            None.
+        """
+        self.fe_model.assemble_KM()
+        self.fe_model.assemble_boundary(mode='KM')
+        try:
+            for lc in lcs:
+                loadcase=self.session.query(LoadCase).filter_by(name=lc).first()
+                if loadcase.case_type=='static-linear':
+                    log.info('Solving static linear case %s...'%lc)
+                    self.apply_load(lc)
+                    self.fe_model.assemble_f()
+                    self.fe_model.assemble_boundary(mode='f')
+                    solve_linear(self.fe_model)
+                    #write disp
+                    for pt in self.session.query(Point).all():
+                        hid=self.pn_map[pt.name]
+                        rst=ResultPointDisplacement()
+                        rst.point_name=pt.name
+                        rst.loadcase_name=lc
+                        disp=self.fe_model.resolve_node_disp(hid)
+                        rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3=disp[0],disp[1],disp[2],disp[3],disp[4],disp[5]
+                        self.session.add(rst)
+                    #write reaction
+                    for res in self.session.query(PointRestraint).all():
+                        hid=self.pn_map[res.point_name]
+                        rst=ResultPointReaction()
+                        rst.point_name=res.point_name
+                        rst.loadcase_name=lc
+                        reac=self.fe_model.resolve_node_reaction(hid)
+                        rst.p1,rst.p2,rst.p3,rst.m1,rst.m2,rst.m3=reac[0],reac[1],reac[2],reac[3],reac[4],reac[5]
+                        self.session.add(rst)
+                    #write beam force
+                    for frm in self.session.query(Frame).all():
+                        hids=self.fb_map[frm.name]
+                        for i in range(len(hids)):
+                            hid=hids[i]
+                            rst=ResultFrameForce()
+                            rst.frame_name=frm.name
+                            rst.loadcase_name=lc
+                            rst.segment=i
+                            f=self.fe_model.resolve_beam_force(hid)
+                            rst.p01,rst.p02,rst.p03,rst.m01,rst.m02,rst.m03=f[0],f[1],f[2],f[3],f[4],f[5]
+                            rst.p11,rst.p12,rst.p13,rst.m11,rst.m12,rst.m13=f[6],f[7],f[8],f[9],f[10],f[11]
+                            self.session.add(rst)
+                    self.session.commit()
+                    log.info('Finished case %s.'%lc)
+                elif loadcase.case_type=='modal':
+                    log.info('Solving modal case %s...'%lc)
+                    solve_modal(self.fe_model,k=loadcase.loadcase_modal_setting.modal_num)
+                    #write period
+                    _order=1
+                    for omega in self.fe_model.omega_:
+                        rst=ResultModalPeriod()
+                        rst.order=_order
+                        rst.loadcase_name=lc
+                        rst.omega=omega
+                        rst.period=2*3.1415926535897932384626/omega
+                        rst.frequency=1/(2*3.1415926535897932384626/omega)
+                        self.session.add(rst)
+                        _order+=1
+                    self.session.commit()
+                    log.info('Finished case %s.'%lc)
+                else:
+                    pass
+        except Exception as e:
+            log.info(str(e))
+            self.session.close()
+            
+    def get_result_point_displacement(self,name,loadcase):
+        """
+        Get the result in the database.
+        
+        params:
+            name: str, name of point
+            loadcase: str, name of loadcase
+        return: list of float, displacement u1,u2,u3,r1,r2,r3
+        """
+        res=self.session.query(ResultPointDisplacement).filter_by(point_name=name,loadcase_name=loadcase).first()
+        if res==None:
+            return None
+        else:
+            return [res.u1,res.u2,res.u3,res.r1,res.r2,res.r3]
+            
+    def get_result_point_reaction(self,name,loadcase):
+        """
+        Get the result in the database.
+        
+        params:
+            name: str, name of point
+            loadcase: str, name of loadcase
+        return: list of float, reaction in u1,u2,u3,r1,r2,r3
+        """
+        res=self.session.query(ResultPointReaction).filter_by(point_name=name,loadcase_name=loadcase).first()
+        if res==None:
+            return None
+        else:
+            return [res.p1,res.p2,res.p3,res.m1,res.m2,res.m3]
+            
+    def get_result_frame_force(self,name,loadcase):
+        """
+        Get the result in the database.
+        
+        params:
+            name: str, name of frame
+            loadcase: str, name of loadcase
+        return: list of float, forces in both ends.
+        """
+        reses=self.session.query(ResultFrameForce).filter_by(frame_name=name,loadcase_name=loadcase).all()
+        if len(reses)==0:
+            return None
+        else:
+            forces=[]
+            for res in reses:
+                forces.append([res.p01,res.p02,res.p03,res.m01,res.m02,res.m03,
+                    res.p11,res.p12,res.p13,res.m11,res.m12,res.m13])
+            return forces
             
 

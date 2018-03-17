@@ -15,10 +15,11 @@ import logger as log
 def solve_linear(model):
     log.info('solving problem with %d DOFs...'%model.DOF)
     K_,f_=model.K_,model.f_
-    delta,info=sl.gmres(K_,f_.toarray())
+    delta,info=sl.gmres(K_,f_,tol=1e-8)
     model.is_solved=True
     log.info('Done!')
     model.d_=delta.reshape((model.node_count*6,1))
+    model.r_=model.K*model.d_
     
 def solve_2nd(model):
     pass

@@ -36,6 +36,7 @@ class Model:
         
         #results
         self.__d_=None
+        self.__r_=None
         self.__omega_=None
         
         self.is_solved=False
@@ -107,6 +108,15 @@ class Model:
     def d_(self,d):
         assert(d.shape==(self.node_count*6,1))
         self.__d_=d
+        
+    @property
+    def r_(self):
+        return self.__r_
+    @r_.setter
+    def r_(self,r):
+        assert(r.shape==(self.node_count*6,1))
+        self.__r_=r
+        
     @property
     def omega_(self):
         return self.__omega_
@@ -310,7 +320,7 @@ class Model:
         """
         log.info('Assembling f..')
         n_nodes=self.node_count
-        self.__f = spr.lil_matrix((n_nodes*6,1))
+        self.__f = spr.csr_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
         for node in self.__nodes.values():
             Tt=node.transform_matrix.transpose()
@@ -347,14 +357,15 @@ class Model:
         if 'f' in mode:
             self.__f_=self.f.copy()
         self.__dof=self.node_count*6
+        alpha=1e9
         for node in self.__nodes.values():
             i=node.hid
             for j in range(6):
                 if node.dn[j]!= None:
                     if 'K' in mode:
-                        self.__K_[i*6+j,i*6+j]*=1e10
+                        self.__K_[i*6+j,i*6+j]*=alpha
                     if 'M' in mode:
-                        self.__M_[i*6+j,i*6+j]*=1e10
+                        self.__M_[i*6+j,i*6+j]*=alpha
                     if 'f' in mode:
                         self.__f_[i*6+j]=self.__K_[i*6+j,i*6+j]*node.dn[j]
                     self.__dof-=1
@@ -365,7 +376,7 @@ class Model:
         if node_id in self.__nodes.keys():
             node=self.__nodes[node_id]
             T=node.transform_matrix
-            return np.dot(T,self.d_[node_id*6:node_id*6+6])
+            return np.dot(T,self.d_[node_id*6:node_id*6+6]).reshape(6)
         else:
             raise Exception("The node doesn't exists.")
 
@@ -376,7 +387,7 @@ class Model:
         if node_id in self.__nodes.keys():
             node=self.__nodes[node_id]
             T=node.transform_matrix
-            return T.dot(self.__f[node.hid*6:node.hid*6+6,0]) 
+            return T.dot(np.array(self.r_[node_id*6:node_id*6+6,0])).reshape(6)
         else:
             raise Exception("The node doesn't exists.")       
     
@@ -387,11 +398,12 @@ class Model:
             beam=self.__beams[beam_id]
             i=beam.nodes[0].hid
             j=beam.nodes[1].hid
+            T=beam.transform_matrix
             ue=np.vstack([
                         self.d_[i*6:i*6+6],
                         self.d_[j*6:j*6+6]
                         ])   
-            return np.dot(beam.Ke_,ue)+beam.re_
+            return (np.dot(beam.Ke_,T.dot(ue))+beam.re_).reshape(12)
         else:
             raise Exception("The element doesn't exists.")       
 
