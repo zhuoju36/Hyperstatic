@@ -5,7 +5,7 @@ Created on Mon Apr 10 14:02:33 2017
 @author: Dell
 """
 import numpy as np
-from matplotlib.font_manager import FontProperties
+#from matplotlib.font_manager import FontProperties
 from matplotlib import pyplot as plt
 
 class GB50010(object):
@@ -35,17 +35,17 @@ class GB50010(object):
 if __name__=='__main__':
     Tg=0.90
     xi=0.02
-    cs1=code_spectrum(0.12,Tg,xi)
-    cs2=code_spectrum(0.34,Tg,xi)
-    cs3=code_spectrum(0.72,Tg,xi)
+    cs1=GB50010(0.12,Tg,xi)
+    cs2=GB50010(0.34,Tg,xi)
+    cs3=GB50010(0.72,Tg,xi)
     
-    font = FontProperties(fname=r"C:\\WINDOWS\\Fonts\\simsun.ttc", size=14)#C:\WINDOWS\Fonts
-    plt.xlabel('T(s)',fontproperties=font)
-    plt.ylabel('α',fontproperties=font)
+#    font = FontProperties(fname=r"C:\\WINDOWS\\Fonts\\simsun.ttc", size=14)#C:\WINDOWS\Fonts
+#    plt.xlabel('T(s)',fontproperties=font)
+#    plt.ylabel('α',fontproperties=font)
     plt.plot(cs1.spectrum['T'],cs1.spectrum['alpha'],label=u'小震')
     plt.plot(cs2.spectrum['T'],cs2.spectrum['alpha'],label=u'中震')
     plt.plot(cs3.spectrum['T'],cs3.spectrum['alpha'],label=u'大震')
-    plt.legend(prop=font)
+#    plt.legend(prop=font)
     
     cs=cs1
     for (t,a) in zip(cs.spectrum['T'],cs.spectrum['alpha']):
@@ -73,34 +73,34 @@ def wind_vibration_factor():
     beta_z=1+2*g*I10*Bz*np.sqrt(1+R**2)
     print(beta_z)
 
-
-mass=2.22831e3*0.011*7850+641172+276159.5-12370.6
-print(mass)
-#mass=(2.22831e3*0.021+3.4817e3*0.025+1.05e3*0.14+0.739e3*0.012)*7850+37202
-area=3.481e3
-print(mass/1000)
-print(mass/area)
 #
-def comfortablity():
-    C=2
-    B=95.7
-    L=43.5
-    w_=12+0.3
-    p0=0.3
-    g=9.8
-    beta=0.02
-    w=w_*C*L*L
-    fn=2.47
-    Fp=p0*np.exp(-0.35*fn)
-    a_p=Fp/(beta*w)*g
-#    print(w)
-#    print(Fp)
-#    print(a_p)
-
-weight=(3.482e3*0.020+2.631e3*0.012+649*0.008+1.25e3*0.012)*7.85
-print('weight(t)')
-print(weight)
-
-w1=274*1.2
-w2=(196+1000)*1.2
-print(w1)
+#mass=2.22831e3*0.011*7850+641172+276159.5-12370.6
+#print(mass)
+##mass=(2.22831e3*0.021+3.4817e3*0.025+1.05e3*0.14+0.739e3*0.012)*7850+37202
+#area=3.481e3
+#print(mass/1000)
+#print(mass/area)
+##
+#def comfortablity():
+#    C=2
+#    B=95.7
+#    L=43.5
+#    w_=12+0.3
+#    p0=0.3
+#    g=9.8
+#    beta=0.02
+#    w=w_*C*L*L
+#    fn=2.47
+#    Fp=p0*np.exp(-0.35*fn)
+#    a_p=Fp/(beta*w)*g
+##    print(w)
+##    print(Fp)
+##    print(a_p)
+#
+#weight=(3.482e3*0.020+2.631e3*0.012+649*0.008+1.25e3*0.012)*7.85
+#print('weight(t)')
+#print(weight)
+#
+#w1=274*1.2
+#w2=(196+1000)*1.2
+#print(w1)

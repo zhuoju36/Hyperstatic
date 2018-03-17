@@ -419,22 +419,26 @@ class Model():
         pass
     
     
-    def get_point_name(self,x,y,z):
+    def get_point_name(self,x=None,y=None,z=None):
         """
+        Get the name of points in the database
+        
         params:
             name: str
+            x,y,z: coordinates
         returns:
-            point object if exist
+            point list satisfies the coordiniates
         """
         tol=self.session.query(Config).first().tolerance
-        pt0=self.session.query(Point).filter(and_(
-                    (Point.x-x)<tol,(x-Point.x)<tol,
-                     (Point.y-y)<tol,(y-Point.y)<tol,
-                      (Point.z-z)<tol,(z-Point.z)<tol)).first()
-        if pt0==None:
-            return None
-        else:
-            return pt0.name 
+        pts=self.session.query(Point)
+        if x is not None:
+            pts=pts.filter(and_((Point.x-x)<tol,(x-Point.x)<tol))
+        if y is not None:
+            pts=pts.filter(and_((Point.y-y)<tol,(y-Point.y)<tol))
+        if z is not None:
+            pts=pts.filter(and_((Point.z-z)<tol,(z-Point.z)<tol))
+        names=[pt.name for pt in pts.all()]
+        return names
     
     def get_frame(self,name):
         """
@@ -722,5 +726,21 @@ class Model():
                 forces.append([res.p01,res.p02,res.p03,res.m01,res.m02,res.m03,
                     res.p11,res.p12,res.p13,res.m11,res.m12,res.m13])
             return forces
+        
+    def get_result_period(self,loadcase,order='all'):
+        """
+        Get the result in the database.
+        
+        params:
+            loadcase: str, name of loadcase
+            order: 'all' or int. order to find.  
+        return: list of period
+        """
+        res=self.session.query(ResultModalPeriod).filter_by(loadcase_name=loadcase)
+        if order=='all':
+            return [r.period for r in res.all()]
+        elif type(order)==int:
+            res=res.filter_by(order=order).all()
+            return [r.period for r in res.all()]
             
 
