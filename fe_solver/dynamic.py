@@ -55,9 +55,11 @@ def Riz_mode(model:Model,n,F):
 
 def spectrum_analysis(model,n,spec):
     """
-    sepctrum analysis\n
-    n: number of modes to use\n
-    spec: a list of tuples (period,acceleration response)
+    sepctrum analysis
+    
+    params:
+        n: number of modes to use\n
+        spec: a list of tuples (period,acceleration response)
     """
     freq,mode=eigen_mode(model,n)
     M_=np.dot(mode.T,model.M)
