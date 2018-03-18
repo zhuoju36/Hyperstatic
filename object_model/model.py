@@ -13,6 +13,7 @@ import uuid
 from sqlalchemy import create_engine
 import sqlalchemy.orm as o
 from sqlalchemy.sql import and_,or_
+import ezdxf
 
 from datetime import datetime
 
@@ -39,30 +40,38 @@ class Model():
         params:
             database: str. Database to be created. The path should be included
         """
-        assert(database[-3:]=='.db')
+        assert(database[-4:]=='.mdo')
         #initialize
         engine=create_engine('sqlite:///'+database)
         Base.metadata.create_all(engine)
         Session=o.sessionmaker(bind=engine)
-        session=Session()
+        self.session=Session()
         
         #configurations
         config=Config()
         config.project_name='dev'
         config.author='HZJ'
         config.program_version='0.0.1'
-        config.create_time=datetime.now()
+        config.create_time=datetime.now()                 
+        self.session.add(config)
+        self.session.commit()
         
-        session.add(config)
-        session.commit()
+        #default material and sections
+        self.add_material('Q345B',7849,'isotropic_elastic',E=2e11,mu=0.3)
+        self.add_frame_section('1-L-H400x200x14x20','Q345B','I',[0.4,0.2,0.014,0.02])
+        
+        #default loadcase
+        self.add_loadcase('S','static-linear',1.)
+        self.session.commit()
+        self.session.close()
         
     def open(self,database):
         """
         params:
             database: str. Database to be opered. The path should be included
         """
-        assert(database[-3:]=='.db')
-        operate_db=database[:-3]+'_op.db'
+        assert(database[-4:]=='.mdo')
+        operate_db=database[:-4]+'.op'
         shutil.copy(database,operate_db)
         engine=create_engine('sqlite:///'+operate_db) #should be run in memory in the future
         Session=o.sessionmaker(bind=engine)
@@ -113,7 +122,6 @@ class Model():
         config=self.session.query(Config).first()
         config.project_name=name
         self.session.add(config)
-        self.session.commit()
     
     def set_author(self,author):
         """
@@ -124,7 +132,6 @@ class Model():
         config=self.session.query(Config).first()
         config.author=author
         self.session.add(config)
-        self.session.commit()
     
     def set_unit(self,unit):
         """
@@ -135,7 +142,6 @@ class Model():
         config=self.session.query(Config).first()
         config.unit=unit
         self.session.add(config)
-        self.session.commit()
     
     def set_description(self,text):
         """
@@ -146,7 +152,6 @@ class Model():
         config=self.session.query(Config).first()
         config.description=description
         self.session.add(config)
-        self.session.commit()
             
     def add_material(self,name,rho,mat_type,**kwargs):
         """
@@ -176,7 +181,6 @@ class Model():
             iso_elastic.mu=kwargs['mu']
             self.session.add(iso_elastic)
         self.session.add(mat)
-        self.session.commit()
         return True
     
     def add_frame_section(self,name,material,type,size):
@@ -246,7 +250,6 @@ class Model():
         frmsec.I2=sec.I22
         frmsec.I3=sec.I33
         self.session.add(frmsec)
-        self.session.commit()
         return True  
     
     def add_area_section(self):
@@ -304,7 +307,6 @@ class Model():
             setting.loadcase_name=lc.name
             self.session.add(setting)
         self.session.add(lc)
-        self.session.commit()
         return lc.name
         
     def set_loadcase_static_linear(self):
@@ -328,7 +330,7 @@ class Model():
     def set_loadcase_buckling(self):
         pass
 
-    def __add_point(self,x,y,z,name=None):
+    def __add_point(self,x,y,z):
         """
         Add point object to model, if the name already exists, an exception will be raised.
         if a point in same location exists, the name of the point will be returned.
@@ -338,28 +340,104 @@ class Model():
         return:
             str, the new point's name.
         """
-        if name and self.session.query(Point).filter_by(name=name).first()!=None:
-            raise Exception('Name already exists!')
         pt=Point()
         pt.x=x
         pt.y=y
         pt.z=z
         pt.uuid=str(uuid.uuid1())
-        if name:
-            pt.name=name
-        else:
-            pt.name=pt.uuid
+        pt.name=pt.uuid
         self.session.add(pt)
-        self.session.commit()
         return pt.name
         
     def set_point(self,name,x,y,z):
         pass
+    
+    def merge_point(self,tol=1e-3):
+        pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+#        for _i in range(len(pts)-1,0,-1):
+#            if (ptj.x-pts[_i-1].x)**2+(pts[_i].y-pts[_i-1].y)**2+(pts[_i].z-pts[_i-1].z)**2<tol**2:
+#                pts[_i-1].point_restraint.point_name=pts[_i].name
+#                pts[_i-1].point_load.point_name=pts[_i].name
+#                pts[_i-1].point_disp.point_name=pts[_i].name
+#                pts[_i-1].point_mass.point_name=pts[_i].name
+#                pts[_i-1].point_restraint+=pts[_i].point_restraint
+#                pts[_i-1].point_load+=pts[_i].point_load
+#                pts[_i-1].point_disp+=pts[_i].point_disp
+#                pts[_i-1].point_mass+=pts[_i].point_mass
+#                frm0=self.session.query(Frame).filter_by(pt0_name=pts[_i].name).all()
+#                frm1=self.session.query(Frame).filter_by(pt1_name=pts[_i].name).all()
+#                area0=self.session.query(Area).filter_by(pt0_name=pts[_i].name).all()
+#                area1=self.session.query(Area).filter_by(pt1_name=pts[_i].name).all()
+#                area2=self.session.query(Area).filter_by(pt2_name=pts[_i].name).all()
+#                area3=self.session.query(Area).filter_by(pt3_name=pts[_i].name).all()
+#                for frm in frm0:
+#                    if frm.pt1_name==pts[_i-1].name: #if merged, delete frame 
+#                        self.session.delete(frm)
+#                    else:
+#                        frm.pt0_name=pts[_i-1].name
+#                        self.session.add(frm)
+#                for frm in frm1:
+#                    if frm.pt0_name==pts[_i-1].name: #if merged, delete frame 
+#                        self.session.delete(frm)
+#                    else:
+#                        frm.pt1_name=pts[_i-1].name
+#                        self.session.add(frm)
+#                for area in area0:
+#                    area.pt0_name=pts[_i-1].name
+#                    self.session.add(area)
+#                for area in area1:
+#                    area.pt0_name=pts[_i-1].name
+#                    self.session.add(area)
+#                for area in area2:
+#                    area.pt0_name=pts[_i-1].name
+#                    self.session.add(area)
+#                for area in area3:
+#                    area.pt0_name=pts[_i-1].name
+#                    self.session.add(area)
+#                self.session.delete(pts[_i])
+        pt_map=dict([(pt.name,pt.name) for pt in pts])
+        pts_to_rmv=[]
+        for pti,ptj in zip(pts[:-1],pts[1:]):
+            if (ptj.x-pti.x)**2+(ptj.y-pti.y)**2+(ptj.z-pti.z)**2<tol**2:
+#                pti.point_restraint.point_name=ptj.name
+#                pti.point_load.point_name=ptj.name
+#                pti.point_disp.point_name=ptj.name
+#                pti.point_mass.point_name=ptj.name
+#                pti.point_restraint+=ptj.point_restraint
+#                pti.point_load+=ptj.point_load
+#                pti.point_disp+=ptj.point_disp
+#                pti.point_mass+=ptj.point_mass
+                pt_map[ptj.name]=pt_map[pti.name]
+                pts_to_rmv.append(ptj)
+                
+        frames=self.session.query(Frame).all()
+        areas=self.session.query(Area).all()
+        for frm in frames:
+            frm.pt0_name=pt_map[frm.pt0_name]
+            frm.pt1_name=pt_map[frm.pt1_name]
+            #sort_point??
+            if frm.pt0_name==frm.pt1_name:
+                self.session.delete(frm)
+            else:
+                self.session.add(frm)
+        for area in areas:
+            area.pt0_name=pt_map[area.pt0_name]
+            area.pt1_name=pt_map[area.pt1_name]
+            area.pt2_name=pt_map[area.pt2_name]
+            area.pt3_name=pt_map[area.pt3_name]
+            self.session.add(frm)       
+
+        for pt in pts_to_rmv:
+            self.session.delete(pt) 
+                
+        self.session.flush()
+        pts=self.session.query(Point).all()
+        log.info('merge elements %d'%len(pts))
+            
         
     def add_frame(self,pt0_coor,pt1_coor,section,name=None):
         """
         Add frame object to model, if the name already exists, an exception will be raised.
-        if a frame connecting same points exists, the name of the point will be returned.
         param:
             pt0_coor: tuple, coordinate of the end point 0.
             pt1_coor: tuple, coordinate of the end point 1.
@@ -410,8 +488,44 @@ class Model():
         else:
             frm.name=frm.uuid
         self.session.add(frm)
-        self.session.commit()
         return frm.name
+        
+    def add_frame_batch(self,pt0_coors,pt1_coors,section):
+        """
+        Add batch of frame objects to model..
+        param:
+            pt0_coor: list of tuple, coordinate of the end point 0.
+            pt1_coor: list of tuple, coordinate of the end point 1.
+        return:
+            list of str, the new frame's names.
+        """
+        assert(len(pt0_coors)==len(pt1_coors))
+        names=[]
+        for pt0,pt1 in zip(pt0_coors,pt1_coors):
+            pt0_name=self.__add_point(pt0[0],pt0[1],pt0[2])
+            pt1_name=self.__add_point(pt1[0],pt1[1],pt1[2])
+            frm=Frame()
+            if pt0_name<pt1_name:
+                order='01'
+                frm.pt0_name=pt0_name
+                frm.pt1_name=pt1_name
+                frm.order=order
+            elif pt0_name>pt1_name:
+                order='10'
+                frm.pt0_name=pt1_name
+                frm.pt1_name=pt0_name
+                frm.order=order
+            else:
+                raise Exception('Two points should not be the same!')
+            frm.section_name=section
+            frm.uuid=str(uuid.uuid1())
+            frm.name=frm.uuid
+            names.append(frm.name)
+            self.session.add(frm)
+        self.session.flush()
+        tol=self.session.query(Config).first().tolerance
+        self.merge_point(tol)
+        return names
         
     def set_frame_section(self,name,section):
         pass
@@ -458,7 +572,59 @@ class Model():
             frame section object if exist
         """
         pass
+    
+    def add_point_restraint(self,point,restraints):
+        """
+        params:
+            point: str, name of point
+            restraints: bool, list of 6 to set restraints
+        return:
+            status of success
+        """
+        assert len(restraints)==6
+        try:
+            res=PointRestraint()
+            res.point_name=point
+            res.u1=restraints[0]
+            res.u2=restraints[1]
+            res.u3=restraints[2]
+            res.r1=restraints[3]
+            res.r2=restraints[4]
+            res.r3=restraints[5]
+            self.session.add(res)
+            return True
+        except Exception as e:
+            log.info(e)
+            return False
+            
+    def add_point_restraint_batch(self,points,restraints):
+        """
+        params:
+            point: list of str, name of point
+            restraints: bool, list of 6 to set restraints
+        return:
+            status of success
+        """
+        assert len(restraints)==6
+        try:
+            reses=[]
+            for point in points:
+                res=PointRestraint()
+                res.point_name=point
+                res.u1=restraints[0]
+                res.u2=restraints[1]
+                res.u3=restraints[2]
+                res.r1=restraints[3]
+                res.r2=restraints[4]
+                res.r3=restraints[5]
+                reses.append(res)
+            self.session.add_all(reses)
+            return True
+        except Exception as e:
+            log.info(e)
+            return False        
         
+          
     def set_point_restraint(self,point,restraints):
         """
         params:
@@ -471,15 +637,25 @@ class Model():
         res=self.session.query(PointRestraint).filter_by(point_name=point).first()
         if res is None:
             res=PointRestraint()
-        res.point_name=point
-        res.u1=restraints[0]
-        res.u2=restraints[1]
-        res.u3=restraints[2]
-        res.r1=restraints[3]
-        res.r2=restraints[4]
-        res.r3=restraints[5]
-        self.session.add(res)
-        self.session.commit()
+            res.point_name=point
+            res.u1=restraints[0]
+            res.u2=restraints[1]
+            res.u3=restraints[2]
+            res.r1=restraints[3]
+            res.r2=restraints[4]
+            res.r3=restraints[5]
+            self.session.add(res)
+        elif not (restraints[0] or restraints[1] or restraints[2] or\
+                    restraints[3] or restraints[4] or restraints[5]):
+            self.session.delete(res)
+        else:
+            res.u1=restraints[0]
+            res.u2=restraints[1]
+            res.u3=restraints[2]
+            res.r1=restraints[3]
+            res.r2=restraints[4]
+            res.r3=restraints[5]
+            self.session.add(res)
         return True
                 
     def set_point_load(self,point,loadcase,load):
@@ -504,7 +680,6 @@ class Model():
         ld.r2=load[4]
         ld.r3=load[5]
         self.session.add(ld)
-        self.session.commit()
         return True
             
     def mesh(self):
@@ -614,7 +789,6 @@ class Model():
         if not self.fe_model.is_assembled:
             log.info('Mesh model...')
             self.mesh()
-            log.info('Done!')
             self.fe_model.assemble_KM()
             self.fe_model.assemble_boundary(mode='KM')
         try:
@@ -745,5 +919,51 @@ class Model():
         elif type(order)==int:
             res=res.filter_by(order=order).all()
             return [r.period for r in res.all()]
-            
-
+        
+    def import_dxf(self,dxf_file):
+        """
+        import geometry model from dxf file.
+        
+        params:
+            dxf_file: str, file name with path to import.
+        return:
+            list of name of imported members.
+        """
+        assert(dxf_file[-4:]=='.dxf')
+        dwg = ezdxf.readfile(dxf_file)
+        pt0=[]
+        pt1=[]
+        frm_sec=self.session.query(FrameSection).first()
+        modelspace = dwg.modelspace()
+        for e in modelspace:
+            if e.dxftype() == 'LINE':
+                pt0.append(e.dxf.start)
+                pt1.append(e.dxf.end)
+        frames=self.add_frame_batch(pt0,pt1,frm_sec.name)
+        log.info("Imported %d frames from file %s"%(len(frames),dxf_file))
+        return frames
+        
+    def export_dxf(self,path,filename,overwrite=False):
+        """
+        export geometry model from dxf file.
+        
+        params:
+            path: str, path to export.
+            filename: str, filename to save.
+            [overwrite]: optional, bool, if True, will overwrite the exist file.
+        return:
+            list of name of imported members.
+        """
+        assert(os.path.exists(path) and filename[-4:]=='.dxf')
+        dxf_file=os.path.join(path,filename)
+        if os.path.exists(dxf_file) and overwrite==False:
+            raise Exception('File already exists, please use another name or set overwrite to True.')
+        dwg = ezdxf.new('R2010')
+        modelspace = dwg.modelspace()
+        frames=self.session.query(Frame).all()
+        for frm in frames:
+            pt0=frm.pt0
+            pt1=frm.pt1
+            modelspace.add_line((pt0.x,pt0.y,pt0.z), (pt1.x,pt1.y,pt1.z))  # add a LINE entity
+        dwg.saveas(os.path.join(path,dxf_file))
+        

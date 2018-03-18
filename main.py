@@ -12,8 +12,8 @@ from object_model.model import Model
 
 model=Model()
 
-#model.create('mydev.db'5)
-model.open('mydev.db')
+model.create('mydev.mdo')
+model.open('mydev.mdo')
 model.set_unit('N_m_C')
 
 model.add_material('Q345B',7849,'isotropic_elastic',
@@ -30,9 +30,11 @@ f1=model.add_frame((0,0,0),(5,5,5),'1-L-H400x200x14x20')
 f2=model.add_frame((5,5,0),(5,5,5),'1-L-H400x200x14x20')
 f3=model.add_frame((5,5,5),(10,0,5),'1-L-H400x200x14x20')
 
+model.merge_point(6)
+
 model.get_point_name(z=0)
 pt0=model.get_point_name(0,0,0)[0]
-pt1=model.get_point_name(5,5,5)[0]
+pt1=model.get_point_name(10,0,5)[0]
 
 model.set_point_restraint(pt0,[True]*6)
 model.set_point_load(pt1,'D',[0,0,-100000,0,0,0])

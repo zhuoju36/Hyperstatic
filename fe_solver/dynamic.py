@@ -29,7 +29,7 @@ def solve_modal(model,k:int):
     if k>model.DOF:
         log.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%model.DOF)
         k=model.DOF
-    omega2s,modes = sl.eigsh(K_,k,M_,which='SM')
+    omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
     delta = modes/np.sum(modes,axis=0)
     model.is_solved=True
     log.info('Done!')

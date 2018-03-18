@@ -127,14 +127,16 @@ class Model:
     def period(self):
         return 2*np.pi/(self.omega_)
         
-    def add_node(self,node,tol=1e-6):
+    def add_node(self,node,check_dup=False,tol=1e-6):
         """
         add node to model
         if node already exits, node will not be added.
         return: node hidden id
         """
-#        res=self.find(list(self.__nodes.values()),node)
-        res=[a.hid for a in self.__nodes.values() if abs(a.x-node.x)+abs(a.y-node.y)+abs(a.z-node.z)<1e-6]
+        if check_dup:
+            res=[a.hid for a in self.__nodes.values() if abs(a.x-node.x)+abs(a.y-node.y)+abs(a.z-node.z)<1e-6]
+        else:
+            res=[]
         if res==[]:
             res=len(self.__nodes)
             node.hid=res
@@ -175,15 +177,18 @@ class Model:
         else:
             self.__nodes[node].dn=np.array(disp).reshape((6,1))
         
-    def add_beam(self,beam):
+    def add_beam(self,beam,check_dup=False):
         """
         add beam to model
         if beam already exits, it will not be added.
         return: beam hidden id
         """
-        res=[a.hid for a in self.__beams.values() 
-            if (a.nodes[0]==beam.nodes[0] and a.nodes[1]==beam.nodes[1]) 
-            or (a.nodes[0]==beam.nodes[1] and a.nodes[1]==beam.nodes[0])]
+        if check_dup:
+            res=[a.hid for a in self.__beams.values() 
+                if (a.nodes[0]==beam.nodes[0] and a.nodes[1]==beam.nodes[1]) 
+                or (a.nodes[0]==beam.nodes[1] and a.nodes[1]==beam.nodes[0])]
+        else:
+            res=[]
         if res==[]:
             res=len(self.__beams)
             beam.hid=res

@@ -7,47 +7,37 @@ Created on Sat Mar 17 22:57:37 2018
 """
 
 from object_model.model import Model
-import ezdxf
+import logger as log
 
-dwg = ezdxf.readfile("test.dxf")
+
 
 model=Model()
 
-model.create('mydev.db')
-model.open('mydev.db')
+model.create('005_dev.mdo')
+model.open('005_dev.mdo')
 model.set_unit('N_m_C')
 
-model.add_material('Q345B',7849,'isotropic_elastic',
-                        E=2e11,mu=0.3)
-#model.add_frame_section('1-L-O400x20','Q345B','O',[0.4,0.02])
-model.add_frame_section('1-L-H400x200x14x20','Q345B','I',[0.4,0.2,0.014,0.02])
+model.import_dxf('test.dxf')
 
-model.add_loadcase('S','static-linear',1.)
 model.add_loadcase('D','static-linear',0)
 model.add_loadcase('L','static-linear',0)
 model.add_loadcase('Modal','modal',0)
 
-frames=[]
-
-modelspace = dwg.modelspace()
-for e in modelspace:
-    if e.dxftype() == 'LINE':
-        frames.append(model.add_frame(e.dxf.start,e.dxf.end,'1-L-H400x200x14x20'))
-
 pts_to_restraint=model.get_point_name(z=0)
+pts_to_restraint+=model.get_point_name(z=11.4)
 
-for pt in pts_to_restraint:
-    model.set_point_restraint(pt,[True]*6)
+model.add_point_restraint_batch(pts_to_restraint,[True]*6)
 #model.set_point_load(pt1,'D',[0,0,-100000,0,0,0])
 #model.set_point_load(pt1,'L',[0,0,0,0,0,0])
 
 #model.save()
-model.mesh()
-model.run(['S','D','L','Modal'])
+model.run(['Modal'])
 
-print(model.get_result_point_reaction(pt0,'D'))
+#print(model.get_result_point_reaction(pt0,'D'))
 #print(model.get_result_frame_force(f1,'D')[0][:6])
 print(model.get_result_period('Modal'))
+
+model.export_dxf('./','exported_model.dxf')
 
 #model.save()
 
