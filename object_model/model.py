@@ -32,6 +32,7 @@ import logger as log
 class Model():
     def __init__(self):
         self.locked=False
+        self.fe_model=FEModel()
 
     def create(self,database):
         """
@@ -508,8 +509,7 @@ class Model():
             
     def mesh(self):
         scale=self.scale()
-        
-        femodel=FEModel()
+        femodel=self.fe_model
         points=self.session.query(Point).all()
         frames=self.session.query(Frame).all()
         areas=self.session.query(Area).all()
@@ -553,7 +553,6 @@ class Model():
                   0 if res.r3 else None]
             femodel.set_node_displacement(pn_map[res.point_name],disp)
                 
-        self.fe_model=femodel
         self.pn_map=pn_map
         self.fb_map=fb_map
         self.am_map=am_map
@@ -612,8 +611,12 @@ class Model():
         return:
             None.
         """
-        self.fe_model.assemble_KM()
-        self.fe_model.assemble_boundary(mode='KM')
+        if not self.fe_model.is_assembled:
+            log.info('Mesh model...')
+            self.mesh()
+            log.info('Done!')
+            self.fe_model.assemble_KM()
+            self.fe_model.assemble_boundary(mode='KM')
         try:
             for lc in lcs:
                 loadcase=self.session.query(LoadCase).filter_by(name=lc).first()

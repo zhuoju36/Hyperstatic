@@ -45,7 +45,7 @@ for pt in pts_to_restraint:
 model.mesh()
 model.run(['S','D','L','Modal'])
 
-#print(model.get_result_point_reaction(pt0,'D'))
+print(model.get_result_point_reaction(pt0,'D'))
 #print(model.get_result_frame_force(f1,'D')[0][:6])
 print(model.get_result_period('Modal'))
 

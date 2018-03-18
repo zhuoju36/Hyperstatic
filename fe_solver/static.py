@@ -15,7 +15,9 @@ import logger as log
 def solve_linear(model):
     log.info('solving problem with %d DOFs...'%model.DOF)
     K_,f_=model.K_,model.f_
-    delta,info=sl.gmres(K_,f_,tol=1e-8)
+#    M_x = lambda x: sl.spsolve(P, x)
+#    M = sl.LinearOperator((n, n), M_x)
+    delta,info=sl.lgmres(K_,f_)
     model.is_solved=True
     log.info('Done!')
     model.d_=delta.reshape((model.node_count*6,1))
