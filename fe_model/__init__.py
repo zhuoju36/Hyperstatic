@@ -12,6 +12,8 @@ import numpy as np
 import scipy.sparse as spr
 from scipy.sparse import linalg as sl
 import logger as log
+from .node import Node
+from .element import *
 
 class Model:
     def __init__(self):
@@ -127,12 +129,16 @@ class Model:
     def period(self):
         return 2*np.pi/(self.omega_)
         
-    def add_node(self,node,check_dup=False,tol=1e-6):
+    def add_node(self,x,y,z,check_dup=False,tol=1e-6):
         """
         add node to model
+        
+        params:
+            x,y,z: float, coordinate of node.
         if node already exits, node will not be added.
         return: node hidden id
         """
+        node=Node(x,y,z)
         if check_dup:
             res=[a.hid for a in self.__nodes.values() if abs(a.x-node.x)+abs(a.y-node.y)+abs(a.z-node.z)<1e-6]
         else:
@@ -164,6 +170,7 @@ class Model:
     def set_node_displacement(self,node,disp,append=False):
         """
         add node displacement to model
+        
         params:
             node: int, hid of node
             disp: list of 6 of nodal displacement
@@ -177,13 +184,20 @@ class Model:
         else:
             self.__nodes[node].dn=np.array(disp).reshape((6,1))
         
-    def add_beam(self,beam,check_dup=False):
+    def add_beam(self,node0,node1,E, mu, A, I2, I3, J, rho,check_dup=False):
         """
         add beam to model
-        if beam already exits, it will not be added.
-        return: beam hidden id
+        
+        params: 
+            node0,node1: hid of nodes.
+            check_dup: boolean, if True and beam already exits, it will not be added.
+        return: 
+            beam hidden id
         """
-        if check_dup:
+        node0=self.nodes[node0]
+        node1=self.nodes[node1]
+        beam=Beam(node0,node1,E, mu, A, I2, I3, J, rho)
+        if check_dup: #should use a matrix to check, to be revised.
             res=[a.hid for a in self.__beams.values() 
                 if (a.nodes[0]==beam.nodes[0] and a.nodes[1]==beam.nodes[1]) 
                 or (a.nodes[0]==beam.nodes[1] and a.nodes[1]==beam.nodes[0])]
@@ -197,7 +211,33 @@ class Model:
             res=res[0]
         return res
         
-    def set_beam_force(self,beam,force):
+    def set_beam_force_by_frame_distributed(self,beam,q_i,q_j):
+        """
+        set beam force to model
+        
+        params:
+            beam: int, hid of node
+            q_i: list-like, 6 floats of frame's i-end distributed
+            q_j: list-like, 6 floats of frame's j-end distributed
+        return:
+            bool, status of success
+        """
+        pass
+    
+    def set_beam_force_by_frame_concentrated(self,beam,force,loc):
+        """
+        set beam force to model
+        
+        params:
+            beam: int, hid of node
+            force: list-like, 6 floats of frame's concentrated
+            loc: location of load
+        return:
+            bool, status of success
+        """
+        pass
+    
+    def set_beam_force_by_area_to_frame(self,area,pressure):
         pass
         
     def add_membrane3(self,elm):

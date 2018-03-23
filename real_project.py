@@ -14,17 +14,17 @@ import logger as log
 model=Model()
 
 #model.create('005_dev.mdo')
-model.open('000_dev.mdo')
-model.set_unit('N_m_C')
-
-model.import_dxf('test.dxf')
+model.open('003_dev.mdo')
+model.set_unit('N_mm_C')
+model.set_tolerance(100.)
+model.import_dxf(r'D:\结构设计\1803-复旦脑中心\1-DESIGN\sep\sep-test.dxf')
 
 model.add_loadcase('D','static-linear',0)
 model.add_loadcase('L','static-linear',0)
 model.add_loadcase('Modal','modal',0)
 
 pts_to_restraint=model.get_point_name(z=0)
-pts_to_restraint+=model.get_point_name(z=11.4)
+pts_to_restraint+=model.get_point_name(z=-6500)
 
 model.add_point_restraint_batch(pts_to_restraint,[True]*6)
 #model.set_point_load(pt1,'D',[0,0,-100000,0,0,0])

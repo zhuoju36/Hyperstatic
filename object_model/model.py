@@ -22,8 +22,6 @@ from .orm import *
 from object_model.frame_section import Pipe,Circle,HollowBox,ISection
 
 from fe_model import Model as FEModel
-from fe_model.node import Node
-from fe_model.element import Beam
 
 from fe_solver.static import solve_linear
 from fe_solver.dynamic import solve_modal
@@ -153,6 +151,16 @@ class Model():
         assert(type(text)==str)
         config=self.session.query(Config).first()
         config.description=description
+        self.session.add(config)
+        
+    def set_tolerance(self,tol):
+        """
+        params:
+            tol: float, tolerance.
+        """
+        assert(type(tol)==float)
+        config=self.session.query(Config).first()
+        config.tolerance=tol
         self.session.add(config)
             
     def add_material(self,name,rho,mat_type,**kwargs):
@@ -354,49 +362,8 @@ class Model():
     def set_point(self,name,x,y,z):
         pass
     
-    def merge_point(self,tol=1e-3):
+    def merge_points(self,tol=1e-3):
         pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
-#        for _i in range(len(pts)-1,0,-1):
-#            if (ptj.x-pts[_i-1].x)**2+(pts[_i].y-pts[_i-1].y)**2+(pts[_i].z-pts[_i-1].z)**2<tol**2:
-#                pts[_i-1].point_restraint.point_name=pts[_i].name
-#                pts[_i-1].point_load.point_name=pts[_i].name
-#                pts[_i-1].point_disp.point_name=pts[_i].name
-#                pts[_i-1].point_mass.point_name=pts[_i].name
-#                pts[_i-1].point_restraint+=pts[_i].point_restraint
-#                pts[_i-1].point_load+=pts[_i].point_load
-#                pts[_i-1].point_disp+=pts[_i].point_disp
-#                pts[_i-1].point_mass+=pts[_i].point_mass
-#                frm0=self.session.query(Frame).filter_by(pt0_name=pts[_i].name).all()
-#                frm1=self.session.query(Frame).filter_by(pt1_name=pts[_i].name).all()
-#                area0=self.session.query(Area).filter_by(pt0_name=pts[_i].name).all()
-#                area1=self.session.query(Area).filter_by(pt1_name=pts[_i].name).all()
-#                area2=self.session.query(Area).filter_by(pt2_name=pts[_i].name).all()
-#                area3=self.session.query(Area).filter_by(pt3_name=pts[_i].name).all()
-#                for frm in frm0:
-#                    if frm.pt1_name==pts[_i-1].name: #if merged, delete frame 
-#                        self.session.delete(frm)
-#                    else:
-#                        frm.pt0_name=pts[_i-1].name
-#                        self.session.add(frm)
-#                for frm in frm1:
-#                    if frm.pt0_name==pts[_i-1].name: #if merged, delete frame 
-#                        self.session.delete(frm)
-#                    else:
-#                        frm.pt1_name=pts[_i-1].name
-#                        self.session.add(frm)
-#                for area in area0:
-#                    area.pt0_name=pts[_i-1].name
-#                    self.session.add(area)
-#                for area in area1:
-#                    area.pt0_name=pts[_i-1].name
-#                    self.session.add(area)
-#                for area in area2:
-#                    area.pt0_name=pts[_i-1].name
-#                    self.session.add(area)
-#                for area in area3:
-#                    area.pt0_name=pts[_i-1].name
-#                    self.session.add(area)
-#                self.session.delete(pts[_i])
         pt_map=dict([(pt.name,pt.name) for pt in pts])
         pts_to_rmv=[]
         for pti,ptj in zip(pts[:-1],pts[1:]):
@@ -415,19 +382,25 @@ class Model():
         frames=self.session.query(Frame).all()
         areas=self.session.query(Area).all()
         for frm in frames:
-            frm.pt0_name=pt_map[frm.pt0_name]
-            frm.pt1_name=pt_map[frm.pt1_name]
-            #sort_point??
-            if frm.pt0_name==frm.pt1_name:
-                self.session.delete(frm)
-            else:
+            if pt_map[frm.pt0_name]<pt_map[frm.pt1_name]:
+                frm.pt0_name=pt_map[frm.pt0_name]
+                frm.pt1_name=pt_map[frm.pt1_name]
+                frm.order='01'
                 self.session.add(frm)
+            elif pt_map[frm.pt0_name]>pt_map[frm.pt1_name]:
+                frm.pt0_name=pt_map[frm.pt1_name]
+                frm.pt1_name=pt_map[frm.pt0_name]
+                frm.order='10'  
+                self.session.add(frm)
+            else:
+                self.session.delete(frm)
+                
         for area in areas:
             area.pt0_name=pt_map[area.pt0_name]
             area.pt1_name=pt_map[area.pt1_name]
             area.pt2_name=pt_map[area.pt2_name]
             area.pt3_name=pt_map[area.pt3_name]
-            self.session.add(frm)       
+            self.session.add(area)       
 
         for pt in pts_to_rmv:
             self.session.delete(pt) 
@@ -526,7 +499,7 @@ class Model():
             self.session.add(frm)
         self.session.flush()
         tol=self.session.query(Config).first().tolerance
-        self.merge_point(tol)
+        self.merge_points(tol)
         return names
         
     def set_frame_section(self,name,section):
@@ -697,11 +670,12 @@ class Model():
         as_map={} #item-list map, one area can be meshed to many shells
         
         for pt in points:
-            res=femodel.add_node(Node(pt.x*scale['L'],pt.y*scale['L'],pt.z*scale['L']))
+            res=femodel.add_node(pt.x*scale['L'],pt.y*scale['L'],pt.z*scale['L'])
             pn_map[pt.name]=res
         for frm in frames:
-            node0=femodel.nodes[pn_map[frm.pt0_name]]
-            node1=femodel.nodes[pn_map[frm.pt1_name]]
+            
+            node0=pn_map[frm.pt0_name]
+            node1=pn_map[frm.pt1_name]
             E=frm.section.material.isotropic_elastic.E*(scale['F']*scale['L']**-2)
             mu=frm.section.material.isotropic_elastic.mu
             A=frm.section.A*(scale['L']**2)
@@ -709,10 +683,11 @@ class Model():
             I2=frm.section.I2*(scale['L']**4)
             I3=frm.section.I3*(scale['L']**4)
             rho=frm.section.material.rho*(scale['F']*scale['L']**-4)
+            
             if frm.order=='01':
-                res=femodel.add_beam(Beam(node0,node1,E, mu, A, I2, I3, J, rho))
+                res=femodel.add_beam(node0,node1,E, mu, A, I2, I3, J, rho)
             elif frm.order=='10':
-                res=femodel.add_beam(Beam(node1,node0,E, mu, A, I2, I3, J, rho))
+                res=femodel.add_beam(node1,node0,E, mu, A, I2, I3, J, rho)
             fb_map[frm.name]=[res]
         for area in areas:
             am_map=None
@@ -752,6 +727,7 @@ class Model():
         frame_load_concentrateds=self.session.query(FrameLoadConcentrated).filter_by(loadcase_name=lc).all()
         frame_load_strains=self.session.query(FrameLoadStrain).filter_by(loadcase_name=lc).all()
         frame_load_temperatures=self.session.query(FrameLoadTemperature).filter_by(loadcase_name=lc).all()  
+        area_load_to_frames=self.session.query(AreaLoadToFrame).filter_by(loadcase_name=lc).all()
         
         for load in point_loads:
             self.fe_model.set_node_force(pn_map[load.point_name],
@@ -772,6 +748,9 @@ class Model():
             pass
         
         for load in frame_load_temperatures:
+            pass
+        
+        for load in area_load_to_frames:
             pass
         
         #self weight
@@ -922,12 +901,13 @@ class Model():
             res=res.filter_by(order=order).all()
             return [r.period for r in res.all()]
         
-    def import_dxf(self,dxf_file):
+    def import_dxf(self,dxf_file,layers=[]):
         """
-        import geometry model from dxf file.
+        Import geometry model from dxf file.
         
         params:
             dxf_file: str, file name with path to import.
+            layers: list-like, str, layers to import. not available now.
         return:
             list of name of imported members.
         """
@@ -947,7 +927,7 @@ class Model():
         
     def export_dxf(self,path,filename,overwrite=False):
         """
-        export geometry model from dxf file.
+        Export geometry model from dxf file.
         
         params:
             path: str, path to export.
