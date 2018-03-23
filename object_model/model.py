@@ -71,6 +71,8 @@ class Model():
             database: str. Database to be opered. The path should be included
         """
         assert(database[-4:]=='.mdo')
+        if not os.path.exists(database):
+            self.create(database)
         operate_db=database[:-4]+'.op'
         shutil.copy(database,operate_db)
         engine=create_engine('sqlite:///'+operate_db) #should be run in memory in the future

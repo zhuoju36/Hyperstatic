@@ -13,8 +13,8 @@ import logger as log
 
 model=Model()
 
-model.create('005_dev.mdo')
-model.open('005_dev.mdo')
+#model.create('005_dev.mdo')
+model.open('000_dev.mdo')
 model.set_unit('N_m_C')
 
 model.import_dxf('test.dxf')
@@ -37,7 +37,7 @@ model.run(['Modal'])
 #print(model.get_result_frame_force(f1,'D')[0][:6])
 print(model.get_result_period('Modal'))
 
-model.export_dxf('./','exported_model.dxf')
+model.export_dxf('./','exported_model.dxf',True)
 
 #model.save()
 
