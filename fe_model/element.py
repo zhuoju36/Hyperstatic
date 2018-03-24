@@ -103,6 +103,11 @@ class Beam(Element):
             pt2[2] += 1
         self.local_csys = Cartisian(o, pt1, pt2)
         
+        T=np.zeros((12,12))
+        V=self.local_csys.transform_matrix
+        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
+        self._T=spr.csr_matrix(T)
+        
         self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
         self._mass=rho*A*self.length
         
@@ -110,47 +115,67 @@ class Beam(Element):
         G=E/2/(1+mu)
 
         #Initialize local stiffness matrix
-        self._Ke = np.zeros((12, 12))
-        self._Me = np.zeros((12, 12))
+#        self._Ke = np.zeros((12, 12))
+#        self._Me = np.zeros((12, 12))
         self._re =np.zeros((12,1))
         #form the stiffness matrix:
-        self._Ke[0, 0]=E*A / l
-        self._Ke[0, 6]=self._Ke[6, 0]=-E*A / l
+        K_data=(
+        (E*A / l,(0, 0)),
+        (-E*A / l,(0, 6)),
+        (-E*A / l,(6, 0)),
+        
+        (12 * E*I3 / l / l / l,(1, 1)),
+        (6 * E*I3 / l / l,(1, 5)),
+        (6 * E*I3 / l / l,(5, 1)),
+        (-12 * E*I3 / l / l / l,(1, 7)),
+        (-12 * E*I3 / l / l / l,(7, 1)),
+        (6 * E*I3 / l / l,(1, 11)),
+        (6 * E*I3 / l / l,(11, 1)),
 
-        self._Ke[1, 1]=12 * E*I3 / l / l / l
-        self._Ke[1, 5]=self._Ke[5, 1]=6 * E*I3 / l / l
-        self._Ke[1, 7]=self._Ke[7, 1]=-12 * E*I3 / l / l / l
-        self._Ke[1, 11]=self._Ke[11, 1]=6 * E*I3 / l / l
+        (12 * E*I2 / l / l / l,(2, 2)),
+        (-6 * E*I2 / l / l,(2, 4)),
+        (-6 * E*I2 / l / l,(4, 2)),
+        (-12 * E*I2 / l / l / l,(2, 8)),
+        (-12 * E*I2 / l / l / l,(8, 2)),
+        (-6 * E*I2 / l / l,(2, 10)),
+        (-6 * E*I2 / l / l,(10, 2)),
 
-        self._Ke[2, 2]=12 * E*I2 / l / l / l
-        self._Ke[2, 4]=self._Ke[4, 2]=-6 * E*I2 / l / l
-        self._Ke[2, 8]=self._Ke[8, 2]=-12 * E*I2 / l / l / l
-        self._Ke[2, 10]=self._Ke[10, 2]=-6 * E*I2 / l / l
+        (G*J / l,(3, 3)),
+        (-G*J / l,(3, 9)),
+        (-G*J / l,(9, 3)),
 
-        self._Ke[3, 3]=G*J / l
-        self._Ke[3, 9]=self._Ke[9, 3]=-G*J / l
+        (4 * E*I2 / l,(4, 4)),
+        (6 * E*I2 / l / l,(4, 8)),
+        (6 * E*I2 / l / l,(8, 4)),
+        (2 * E*I2 / l,(4, 10)),
+        (2 * E*I2 / l,(10, 4)),
 
-        self._Ke[4, 4]=4 * E*I2 / l
-        self._Ke[4, 8]=self._Ke[8, 4]=6 * E*I2 / l / l
-        self._Ke[4, 10]=self._Ke[10, 4]=2 * E*I2 / l
+        (4 * E*I3 / l,(5, 5)),
+        (-6 * E*I3 / l / l,(5, 7)),
+        (-6 * E*I3 / l / l,(7, 5)),
+        (2 * E*I3 / l,(5, 11)),
+        (2 * E*I3 / l,(11, 5)),
 
-        self._Ke[5, 5]=4 * E*I3 / l
-        self._Ke[5, 7]=self._Ke[7, 5]=-6 * E*I3 / l / l
-        self._Ke[5, 11]=self._Ke[11, 5]=2 * E*I3 / l
+        (E*A / l,(6, 6)),
 
-        self._Ke[6, 6]=E*A / l
+        (12 * E*I3 / l / l / l,(7, 7)),
+        (-6 * E*I3 / l / l,(7, 11)),
+        (-6 * E*I3 / l / l,(11, 7)),
 
-        self._Ke[7, 7]=12 * E*I3 / l / l / l
-        self._Ke[7, 11]=self._Ke[11, 7]=-6 * E*I3 / l / l
+        (12 * E*I2 / l / l / l,(8, 8)),
+        (6 * E*I2 / l / l,(8, 10)),
+        (6 * E*I2 / l / l,(10, 8)),
 
-        self._Ke[8, 8]=12 * E*I2 / l / l / l
-        self._Ke[8, 10]=self._Ke[10, 8]=6 * E*I2 / l / l
+        (G*J / l,(9, 9)),
 
-        self._Ke[9, 9]=G*J / l
+        (4 * E*I2 / l,(10, 10)),
 
-        self._Ke[10, 10]=4 * E*I2 / l
-
-        self._Ke[11, 11]=4 * E*I3 / l
+        (4 * E*I3 / l,(11, 11)),
+        )
+        data=[k[0] for k in K_data]
+        row=[k[1][0] for k in K_data]
+        col=[k[1][1] for k in K_data]
+        self._Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
 
         #form mass matrix
         if mass=='coor':#Coordinated mass matrix
@@ -195,8 +220,8 @@ class Beam(Element):
             self._Me*= (rho*A*l / 420)
         
         if mass=='conc':#Concentrated mass matrix
-            self._Me=np.eye(12)*rho*A*l/2
-            
+            self._Me=spr.eye(12)*rho*A*l/2
+        
         self._Ke_=self._Ke
         self._Me_=self._Me
     
@@ -232,10 +257,7 @@ class Beam(Element):
         
     @property
     def transform_matrix(self):
-        T=np.zeros((12,12))
-        V=self.local_csys.transform_matrix
-        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
-        return T
+        return self._T
 
     def static_condensation(self):
         """

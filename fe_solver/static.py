@@ -17,7 +17,7 @@ def solve_linear(model):
     K_,f_=model.K_,model.f_
 #    M_x = lambda x: sl.spsolve(P, x)
 #    M = sl.LinearOperator((n, n), M_x)
-    delta,info=sl.lgmres(K_,f_)
+    delta,info=sl.lgmres(K_,f_.toarray())
     model.is_solved=True
     log.info('Done!')
     model.d_=delta.reshape((model.node_count*6,1))

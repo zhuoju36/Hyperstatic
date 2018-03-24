@@ -273,6 +273,12 @@ class Model:
         self.__M = spr.csr_matrix((n_nodes*6, n_nodes*6))
         self.__f = np.zeros((n_nodes*6, 1))
         #Beam load and displacement, and reset the index 
+        row_k=[]
+        col_k=[]
+        data_k=[]
+        row_m=[]
+        col_m=[]
+        data_m=[]
         for elm in self.__beams.values():
             i = elm.nodes[0].hid
             j = elm.nodes[1].hid
@@ -284,15 +290,29 @@ class Model:
             Ke=elm.Ke_
             Me=elm.Me_
 
-            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
-            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
-            data=[1]*(2*6)
-            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+            Ke_ = (Tt*Ke*T).tocoo()
+            Me_ = (Tt*Me*T).tocoo()
             
-            Ke_ = spr.csr_matrix(np.dot(np.dot(Tt,Ke),T))
-            Me_ = spr.csr_matrix(np.dot(np.dot(Tt,Me),T))
-            self.__K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
-            self.__M+=G.transpose()*Me_*G #sparse matrix use * as dot.
+            data_k.extend(Ke_.data)
+            row_k.extend([i*6+r if r<6 else j*6+r-6 for r in Ke_.row])
+            col_k.extend([i*6+c if c<6 else j*6+c-6 for c in Ke_.col])
+            
+            data_m.extend(Me_.data)
+            row_m.extend([i*6+r if r<6 else j*6+r-6 for r in Me_.row])
+            col_m.extend([i*6+c if c<6 else j*6+c-6 for c in Me_.col])
+#                        
+#            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
+#            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
+#            data=[1]*(2*6)
+#            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+#            
+#            Ke_ = Tt*Ke*T
+#            Me_ = Tt*Me*T
+#            self.__K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
+#            self.__M+=G.transpose()*Me_*G #sparse matrix use * as dot.
+            
+        self.__K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
+        self.__M=spr.coo_matrix((data_m,(row_m,col_m)),shape=(n_nodes*6, n_nodes*6)).tocsr()
         
         for elm in self.__membrane3s.values():
             i = elm.nodes[0].hid
@@ -365,11 +385,21 @@ class Model:
         """
         log.info('Assembling f..')
         n_nodes=self.node_count
-        self.__f = spr.csr_matrix((n_nodes*6,1))
+#        self.__f = spr.coo_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
+        data_f=[]
+        row_f=[]
+        col_f=[]
         for node in self.__nodes.values():
             Tt=node.transform_matrix.transpose()
-            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn)        
+#            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
+            fn_=np.dot(Tt,node.fn)
+            k=0
+            for f in fn_.reshape(6):
+                if f!=0:
+                    data_f.append(f)
+                    row_f.append(node.hid+k)
+                    col_f.append(0)
             
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
@@ -380,13 +410,23 @@ class Model:
             V[:3,:3] =V[3:6,3:6]=V[6:9,6:9]=V[9:,9:]=Vl
             Vt = V.transpose()
             
-            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
-            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
-            data=[1]*(2*6)
-            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
-            #Assemble nodal force vector
-            self.__f += G.transpose()*np.dot(Vt,beam.re)
+            re_=np.dot(Vt,beam.re)
+            k=0
+            for r in re_.reshape(12):
+                if r!=0:
+                    data_f.append(r)
+                    row_f.append(i*6+k if k<6 else j*6+k-6)
+                    col_f.append(0)
+                k+=1    
+#            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
+#            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
+#            data=[1]*(2*6)
+#            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+#            #Assemble nodal force vector
+#            self.__f += G.transpose()*np.dot(Vt,beam.re)
         #### other elements
+        self.__f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
+
 
     def assemble_boundary(self,mode='KMf'):
         """
@@ -409,11 +449,11 @@ class Model:
                 if node.dn[j]!= None:
                     if 'K' in mode:
                         self.__K_[i*6+j,i*6+j]*=alpha
+                        self.__dof-=1 #only when changing K affects the DOFs
                     if 'M' in mode:
                         self.__M_[i*6+j,i*6+j]*=alpha
                     if 'f' in mode:
                         self.__f_[i*6+j]=self.__K_[i*6+j,i*6+j]*node.dn[j]
-                    self.__dof-=1
                     
     def resolve_node_disp(self,node_id):
         if not self.is_solved:
@@ -421,7 +461,7 @@ class Model:
         if node_id in self.__nodes.keys():
             node=self.__nodes[node_id]
             T=node.transform_matrix
-            return np.dot(T,self.d_[node_id*6:node_id*6+6]).reshape(6)
+            return T.dot(self.d_[node_id*6:node_id*6+6]).reshape(6)
         else:
             raise Exception("The node doesn't exists.")
 
@@ -432,7 +472,7 @@ class Model:
         if node_id in self.__nodes.keys():
             node=self.__nodes[node_id]
             T=node.transform_matrix
-            return T.dot(np.array(self.r_[node_id*6:node_id*6+6,0])).reshape(6)
+            return T.dot(self.r_[node_id*6:node_id*6+6,0]).reshape(6)
         else:
             raise Exception("The node doesn't exists.")       
     
@@ -448,7 +488,7 @@ class Model:
                         self.d_[i*6:i*6+6],
                         self.d_[j*6:j*6+6]
                         ])   
-            return (np.dot(beam.Ke_,T.dot(ue))+beam.re_).reshape(12)
+            return (beam.Ke_.dot(T.dot(ue))+beam.re_).reshape(12)
         else:
             raise Exception("The element doesn't exists.")       
 
