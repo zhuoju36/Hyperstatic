@@ -381,19 +381,21 @@ class Model():
                 
         frames=self.session.query(Frame).all()
         areas=self.session.query(Area).all()
+        log.info(len(pts_to_rmv))
         for frm in frames:
-            if pt_map[frm.pt0_name]<pt_map[frm.pt1_name]:
-                frm.pt0_name=pt_map[frm.pt0_name]
-                frm.pt1_name=pt_map[frm.pt1_name]
-                frm.order='01'
-                self.session.add(frm)
-            elif pt_map[frm.pt0_name]>pt_map[frm.pt1_name]:
-                frm.pt0_name=pt_map[frm.pt1_name]
-                frm.pt1_name=pt_map[frm.pt0_name]
-                frm.order='10'  
-                self.session.add(frm)
-            else:
-                self.session.delete(frm)
+            if (frm.pt0_name in pts_to_rmv) or (frm.pt1_name in pts_to_rmv):
+                if pt_map[frm.pt0_name]<pt_map[frm.pt1_name]:
+                    frm.pt0_name=pt_map[frm.pt0_name]
+                    frm.pt1_name=pt_map[frm.pt1_name]
+                    frm.order='01'
+                    self.session.add(frm)
+                elif pt_map[frm.pt0_name]>pt_map[frm.pt1_name]:
+                    frm.pt0_name=pt_map[frm.pt1_name]
+                    frm.pt1_name=pt_map[frm.pt0_name]
+                    frm.order='10'  
+                    self.session.add(frm)
+                else:
+                    self.session.delete(frm)
                 
         for area in areas:
             area.pt0_name=pt_map[area.pt0_name]
@@ -476,30 +478,40 @@ class Model():
         """
         assert(len(pt0_coors)==len(pt1_coors))
         names=[]
+        frm_ends=[]
         for pt0,pt1 in zip(pt0_coors,pt1_coors):
             pt0_name=self.__add_point(pt0[0],pt0[1],pt0[2])
             pt1_name=self.__add_point(pt1[0],pt1[1],pt1[2])
+            frm_ends.append((pt0_name,pt1_name))
+        tol=self.session.query(Config).first().tolerance
+        pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+        pt_map=dict([(pt.name,pt.name) for pt in pts])
+        pts_to_rmv=[]
+        for pti,ptj in zip(pts[:-1],pts[1:]):
+            if (ptj.x-pti.x)**2+(ptj.y-pti.y)**2+(ptj.z-pti.z)**2<tol**2:
+                pt_map[ptj.name]=pt_map[pti.name]
+                pts_to_rmv.append(ptj)
+        log.info('rmv %d pts'%len(pts_to_rmv))
+        for (pt0_name,pt1_name) in frm_ends:
             frm=Frame()
-            if pt0_name<pt1_name:
-                order='01'
-                frm.pt0_name=pt0_name
-                frm.pt1_name=pt1_name
-                frm.order=order
-            elif pt0_name>pt1_name:
-                order='10'
-                frm.pt0_name=pt1_name
-                frm.pt1_name=pt0_name
-                frm.order=order
+            if pt_map[pt0_name]<pt_map[pt1_name]:
+                frm.pt0_name=pt_map[pt0_name]
+                frm.pt1_name=pt_map[pt1_name]
+                frm.order='01'
+            elif pt_map[pt0_name]>pt_map[pt1_name]:
+                frm.pt0_name=pt_map[pt1_name]
+                frm.pt1_name=pt_map[pt0_name]
+                frm.order='10'
             else:
-                raise Exception('Two points should not be the same!')
+                continue
             frm.section_name=section
             frm.uuid=str(uuid.uuid1())
             frm.name=frm.uuid
             names.append(frm.name)
             self.session.add(frm)
+        for pt in pts_to_rmv:
+            self.session.delete(pt)
         self.session.flush()
-        tol=self.session.query(Config).first().tolerance
-        self.merge_points(tol)
         return names
         
     def set_frame_section(self,name,section):
@@ -788,7 +800,7 @@ class Model():
                         rst.point_name=pt.name
                         rst.loadcase_name=lc
                         disp=self.fe_model.resolve_node_disp(hid)
-                        rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3=disp[0],disp[1],disp[2],disp[3],disp[4],disp[5]
+                        (rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3)=tuple(disp)
                         self.session.add(rst)
                     #write reaction
                     for res in self.session.query(PointRestraint).all():
@@ -797,7 +809,7 @@ class Model():
                         rst.point_name=res.point_name
                         rst.loadcase_name=lc
                         reac=self.fe_model.resolve_node_reaction(hid)
-                        rst.p1,rst.p2,rst.p3,rst.m1,rst.m2,rst.m3=reac[0],reac[1],reac[2],reac[3],reac[4],reac[5]
+                        (rst.p1,rst.p2,rst.p3,rst.m1,rst.m2,rst.m3)=tuple(reac)
                         self.session.add(rst)
                     #write beam force
                     for frm in self.session.query(Frame).all():
@@ -809,8 +821,8 @@ class Model():
                             rst.loadcase_name=lc
                             rst.segment=i
                             f=self.fe_model.resolve_beam_force(hid)
-                            rst.p01,rst.p02,rst.p03,rst.m01,rst.m02,rst.m03=f[0],f[1],f[2],f[3],f[4],f[5]
-                            rst.p11,rst.p12,rst.p13,rst.m11,rst.m12,rst.m13=f[6],f[7],f[8],f[9],f[10],f[11]
+                            (rst.p01,rst.p02,rst.p03,rst.m01,rst.m02,rst.m03)=tuple(f[:6])
+                            (rst.p11,rst.p12,rst.p13,rst.m11,rst.m12,rst.m13)=tuple(f[6:])
                             self.session.add(rst)
                     self.session.commit()
                     log.info('Finished case %s.'%lc)
