@@ -40,6 +40,7 @@ class Model:
         self.__d_=None
         self.__r_=None
         self.__omega_=None
+        self.__mode_=None
         
         self.is_solved=False
         
@@ -125,6 +126,15 @@ class Model:
     @omega_.setter
     def omega_(self,omega):
         self.__omega_=omega
+    
+    @property    
+    def mode_(self):
+        return self.__mode_
+    @mode_.setter
+    def mode_(self,mode):
+        assert(mode.shape[0]==self.DOF)
+        self.__mode_=mode
+    
     @property
     def period(self):
         return 2*np.pi/(self.omega_)
@@ -464,7 +474,6 @@ class Model:
             return T.dot(self.d_[node_id*6:node_id*6+6]).reshape(6)
         else:
             raise Exception("The node doesn't exists.")
-
     
     def resolve_node_reaction(self,node_id):
         if not self.is_solved:
@@ -492,7 +501,24 @@ class Model:
         else:
             raise Exception("The element doesn't exists.")       
 
-
+    def resolve_modal_displacement(self,node_id,k): 
+        """
+        resolve modal node displacement.
+        
+        params:
+            node_id: int.
+            k: order of vibration mode.
+        return:
+            6-array of local nodal displacement.
+        """
+        if not self.is_solved:
+            raise Exception('The model has to be solved first.')
+        if node_id in self.__nodes.keys():
+            node=self.__nodes[node_id]
+            T=node.transform_matrix
+            return T.dot(self.mode_[node_id*6:node_id*6+6,k-1]).reshape(6)
+        else:
+            raise Exception("The node doesn't exists.")
     
     def resolve_membrane3_stress(self,membrane_id):
         pass

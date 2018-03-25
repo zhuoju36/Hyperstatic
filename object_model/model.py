@@ -840,6 +840,19 @@ class Model():
                         rst.frequency=1/(2*3.1415926535897932384626/omega)
                         self.session.add(rst)
                         _order+=1
+
+                    #write disp
+                    for pt in self.session.query(Point).all():
+                        for o in range(1,_order):
+                            hid=self.pn_map[pt.name]
+                            rst=ResultModalDisplacement()
+                            rst.point_name=pt.name
+                            rst.loadcase_name=lc
+                            rst.order=o
+                            disp=self.fe_model.resolve_modal_displacement(hid,o)
+                            (rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3)=tuple(disp)
+                            self.session.add(rst)
+                        
                     self.session.commit()
                     log.info('Finished case %s.'%lc)
                 else:

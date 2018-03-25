@@ -122,6 +122,7 @@ class LoadCase(Base):
     result_point_reaction=relationship('ResultPointReaction',backref='loadcase')
     result_frame_force=relationship('ResultFrameForce',backref='loadcase')
     result_area_stress=relationship('ResultAreaStress',backref='loadcase')
+    result_modal_displacement=relationship('ResultModalDisplacement',backref='loadcase')
     
 
 class LoadCaseStaticLinearSetting(Base):
@@ -448,6 +449,18 @@ class ResultModalPeriod(Base):
     omega=Column('omega',Float())
     period=Column('period',Float())
     frequency=Column('frequency',Float())
+
+class ResultModalDisplacement(Base):
+    __tablename__='result_modal_displacement'
+    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
+    order=Column('order',Integer(),primary_key=True)
+    u1=Column('u1',Float())
+    u2=Column('u2',Float())
+    u3=Column('u3',Float())
+    r1=Column('r1',Float())
+    r2=Column('r2',Float())
+    r3=Column('r3',Float())
     
 #class DesignSteelSetting(Base):
 #    __tablename__='design_steel_settings'

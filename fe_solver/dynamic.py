@@ -24,7 +24,6 @@ def solve_modal(model,k:int):
         model: FEModel.
         k: number of modes to extract.
     """
-    log.info('Solving eigen modes...')
     K_,M_=model.K_,model.M_
     if k>model.DOF:
         log.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%model.DOF)
@@ -32,8 +31,7 @@ def solve_modal(model,k:int):
     omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
     delta = modes/np.sum(modes,axis=0)
     model.is_solved=True
-    log.info('Done!')
-#    model.d_=delta.reshape((k,1))####should be revised
+    model.mode_=delta
     model.omega_=np.sqrt(omega2s).reshape((k,1))
     
 def Riz_mode(model:Model,n,F):
