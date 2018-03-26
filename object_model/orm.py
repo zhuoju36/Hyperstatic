@@ -83,9 +83,8 @@ class AreaSection(Base):
     __tablename__='area_sections'
     name=Column('name',String(32),primary_key=True)
     material_name=Column('material_name',String(32),ForeignKey('materials.name'))
-    size_0=Column('size_0',Float())
-    size_1=Column('size_1',Float())
-    size_2=Column('size_2',Float())
+    type=Column('type',String(8))
+    t=Column('t',Float())
     uuid=Column('uuid',String(32),nullable=False)
     
     #1 to many
@@ -215,12 +214,12 @@ class PointLoad(Base):
     __tablename__='pointloads'
     point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
-    u1=Column('u1',Float())
-    u2=Column('u2',Float())
-    u3=Column('u3',Float())
-    r1=Column('r1',Float())
-    r2=Column('r2',Float())
-    r3=Column('r3',Float())
+    u1=Column('p1',Float())
+    u2=Column('p2',Float())
+    u3=Column('p3',Float())
+    r1=Column('m1',Float())
+    r2=Column('m2',Float())
+    r3=Column('m3',Float())
     
 class PointDisp(Base):
     __tablename__='point_disps'
@@ -326,7 +325,7 @@ class FrameLoadStrain(Base):
     __tablename__='frame_load_strain'
     frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
-    T=Column('strain',Float())
+    strain=Column('strain',Float())
     
 class FrameLoadTemperature(Base):
     __tablename__='frame_laod_teamperature'
