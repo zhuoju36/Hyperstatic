@@ -13,7 +13,6 @@ import uuid
 from sqlalchemy import create_engine
 import sqlalchemy.orm as o
 from sqlalchemy.sql import and_,or_
-import ezdxf
 
 from datetime import datetime
 
@@ -25,6 +24,7 @@ from fe_model import Model as FEModel
 
 from fe_solver.static import solve_linear
 from fe_solver.dynamic import solve_modal
+from model_io import dxf
 
 import logger as log
 
@@ -57,7 +57,9 @@ class Model():
         
         #default material and sections
         self.add_material('Q345',7849,'isotropic_elastic',E=2e11,mu=0.3)
-        self.add_frame_section('1-L-H400x200x14x20','Q345B','I',[0.4,0.2,0.014,0.02])
+        self.add_material('C35',2500,'isotropic_elastic',E=2e10,mu=0.2)
+        self.add_frame_section('1-L-H400x200x14x20','Q345','I',[0.4,0.2,0.014,0.02])
+        self.add_area_section('A-M120','C35','m',0.12)
         
         #default loadcase
         self.add_loadcase('S','static-linear',1.)
@@ -74,6 +76,7 @@ class Model():
             self.create(database)
         operate_db=database[:-4]+'.op'
         shutil.copy(database,operate_db)
+#        engine=create_engine('sqlite:///:memory:')
         engine=create_engine('sqlite:///'+operate_db) #should be run in memory in the future
         Session=o.sessionmaker(bind=engine)
         self.session=Session()
@@ -128,7 +131,8 @@ class Model():
             self.session.add(config)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False 
             
     def set_author(self,author):
@@ -145,7 +149,8 @@ class Model():
             self.session.add(config)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False 
     
     def set_unit(self,unit):
@@ -162,7 +167,8 @@ class Model():
             self.session.add(config)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False 
     
     def set_description(self,text):
@@ -179,7 +185,8 @@ class Model():
             self.session.add(config)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False  
         
     def set_tolerance(self,tol):
@@ -199,7 +206,8 @@ class Model():
             self.session.add(config)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False  
         
             
@@ -236,7 +244,8 @@ class Model():
             self.session.add(mat)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False
     
     def add_material_quick(self,code):
@@ -291,6 +300,8 @@ class Model():
             frmsec=FrameSection()
             frmsec.name=name
             frmsec.uuid=str(uuid.uuid1())
+            if self.session.query(Material).filter_by(name=material).first() is None:
+                raise Exception('Material not exist!')
             frmsec.material_name=material
             frmsec.type=type
             sec=None
@@ -327,6 +338,7 @@ class Model():
             return True  
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def add_frame_section_SD(self):
@@ -334,6 +346,22 @@ class Model():
     
     def add_frame_section_variate(self):
         pass
+    
+    def get_frame_section_names(self):
+        """
+        Get all the name of frame sections in the database
+        
+        returns:
+            point list satisfies the coordiniates
+        """
+        try:
+            sections=self.session.query(FrameSection)
+            names=[i.name for i in sections.all()]
+            return names
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return False
     
     def add_area_section(self,name,material,type,t):
         """
@@ -354,7 +382,7 @@ class Model():
         try:
             assert(type in 'mpsn' and len(type)==1)
             scale=self.scale()
-            if self.session.query(AeraSection).filter_by(name=name).first()!=None:
+            if self.session.query(AreaSection).filter_by(name=name).first()!=None:
                 raise Exception('Name already exists!')
             areasec=AreaSection()
             areasec.name=name
@@ -362,9 +390,11 @@ class Model():
             areasec.material_name=material
             areasec.type=type
             areasec.t=t*scale['L']
+            self.session.add(areasec)
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def add_area_section_layered(self,name):
@@ -426,6 +456,7 @@ class Model():
             return lc.name
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
         
     def set_loadcase_static_linear(self):
@@ -448,6 +479,22 @@ class Model():
     
     def set_loadcase_buckling(self):
         pass
+    
+    def get_loadcase_names(self):
+        """
+        Get all the name of loadcases in the database
+        
+        returns:
+            boolean, status of success, and list of loadcase names if successful.
+        """
+        try:
+            lcs=self.session.query(LoadCase)
+            names=[lc.name for lc in lcs.all()]
+            return names
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return False
 
     def __add_point(self,x,y,z):
         """
@@ -470,7 +517,8 @@ class Model():
             self.session.add(pt)
             return pt.name
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False
             
     def set_point_restraint_batch(self,points,restraints):
@@ -497,7 +545,8 @@ class Model():
             self.session.add_all(reses)
             return True
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
             return False     
               
     def set_point_restraint(self,point,restraints):
@@ -538,6 +587,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
                 
     def set_point_load(self,point,loadcase,load):
@@ -570,6 +620,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
         
     def set_point_coordinate(self,name,x,y,z):
@@ -595,6 +646,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def set_point_mass(self,name,u1,u2,u3,r1,r2,r3):
@@ -607,6 +659,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def set_mass_sources(self,source):
@@ -614,6 +667,7 @@ class Model():
             pass
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def get_point_names(self):
@@ -621,7 +675,7 @@ class Model():
         Get all the name of points in the database
         
         returns:
-            point list satisfies the coordiniates
+            point list satisfies the coordiniates if successful or None if failed.
         """
         try:
             pts=self.session.query(Point)
@@ -629,7 +683,7 @@ class Model():
             return names
         except Exception as e:
             log.info(str(e))
-            return False
+            return None
         
     def get_point_name_by_coor(self,x=None,y=None,z=None):
         """
@@ -637,9 +691,9 @@ class Model():
         
         params:
             name: str
-            x,y,z: coordinates
+            x,y,z: coordinates in current_unit
         returns:
-            point list satisfies the coordiniates
+            point list satisfies the coordiniates if successful or None if failed.
         """
         try:
             tol=self.session.query(Config).first().tolerance
@@ -655,7 +709,31 @@ class Model():
             return names
         except Exception as e:
             log.info(str(e))
-            return False
+            self.session.rollback()
+            return None
+            
+    def get_point_coordinate(self,name):
+        """
+        Get point coordinate.
+                
+        param:
+            name: str, name, optional.
+        return:
+            status of success, and tuple of point's coordinate if or None if failed.
+        """
+        try:
+            pt=self.session.query(Point).filter_by(name=name).first()
+            if pt is None:
+                raise Exception("Point doesn't exists.")
+            scale=self.scale()
+            x=pt.x/scale['L']
+            y=pt.y/scale['L']
+            z=pt.z/scale['L']
+            return x,y,z
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return None
     
     def merge_points(self,tol=1e-3):
         """
@@ -717,6 +795,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
         
@@ -734,6 +813,8 @@ class Model():
         assert(len(pt0_coor)==3 and len(pt1_coor)==3)
         if name and self.session.query(Frame).filter_by(name=name).first()!=None:
             raise Exception('Name already exist!')
+        if self.session.query(FrameSection).filter_by(name=section).first() is None:
+                raise Exception("Frame section doesn't exits!")
         frm=Frame()
         scale=self.scale()
         tol=self.session.query(Config).first().tolerance
@@ -777,54 +858,59 @@ class Model():
         self.session.add(frm)
         return frm.name
         
-    def add_frame_batch(self,pt0_coors,pt1_coors,section):
+    def add_frame_batch(self,pt_coors,section):
         """
         Add batch of frame objects to model..
         param:
-            pt0_coor: list of tuple, coordinate of the end point 0.
-            pt1_coor: list of tuple, coordinate of the end point 1.
+            pt_coors: list of float tuples as ((pt0.x,pt0.y,pt0.z),(pt1.x,pt1.y,pt1.z))
         return:
-            list of str, the new frame's names.
+            status of success, and list of str, the new frame's names if successful.
         """
-        assert(len(pt0_coors)==len(pt1_coors))
-        names=[]
-        frm_ends=[]
-        scale=self.scale()
-        for pt0,pt1 in zip(pt0_coors,pt1_coors):
-            pt0_name=self.__add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
-            pt1_name=self.__add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
-            frm_ends.append((pt0_name,pt1_name))
-        tol=self.session.query(Config).first().tolerance
-        pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
-        pt_map=dict([(pt.name,pt.name) for pt in pts])
-        pts_to_rmv=[]
-        for pti,ptj in zip(pts[:-1],pts[1:]):
-            if (ptj.x-pti.x)**2+(ptj.y-pti.y)**2+(ptj.z-pti.z)**2<tol**2:
-                pt_map[ptj.name]=pt_map[pti.name]
-                pts_to_rmv.append(ptj)
-        log.info('rmv %d pts'%len(pts_to_rmv))
-        for (pt0_name,pt1_name) in frm_ends:
-            frm=Frame()
-            if pt_map[pt0_name]<pt_map[pt1_name]:
-                frm.pt0_name=pt_map[pt0_name]
-                frm.pt1_name=pt_map[pt1_name]
-                frm.order='01'
-            elif pt_map[pt0_name]>pt_map[pt1_name]:
-                frm.pt0_name=pt_map[pt1_name]
-                frm.pt1_name=pt_map[pt0_name]
-                frm.order='10'
-            else:
-                continue
-            frm.section_name=section
-            frm.uuid=str(uuid.uuid1())
-            frm.name=frm.uuid
-            names.append(frm.name)
-            self.session.add(frm)
-        for pt in pts_to_rmv:
-            self.session.delete(pt)
-        self.session.flush()
-        return names
-        
+        try:
+            assert(len(pt_coors[0][0])==len(pt_coors[0][1]))
+            if self.session.query(FrameSection).filter_by(name=section).first() is None:
+                raise Exception("Frame section doesn't exits!")
+            names=[]
+            frm_ends=[]
+            scale=self.scale()
+            for pt0,pt1 in pt_coors:
+                pt0_name=self.__add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
+                pt1_name=self.__add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
+                frm_ends.append((pt0_name,pt1_name))
+            tol=self.session.query(Config).first().tolerance
+            pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+            pt_map=dict([(pt.name,pt.name) for pt in pts])
+            pts_to_rmv=[]
+            for pti,ptj in zip(pts[:-1],pts[1:]):
+                if (ptj.x-pti.x)**2+(ptj.y-pti.y)**2+(ptj.z-pti.z)**2<tol**2:
+                    pt_map[ptj.name]=pt_map[pti.name]
+                    pts_to_rmv.append(ptj)
+            for (pt0_name,pt1_name) in frm_ends:
+                frm=Frame()
+                if pt_map[pt0_name]<pt_map[pt1_name]:
+                    frm.pt0_name=pt_map[pt0_name]
+                    frm.pt1_name=pt_map[pt1_name]
+                    frm.order='01'
+                elif pt_map[pt0_name]>pt_map[pt1_name]:
+                    frm.pt0_name=pt_map[pt1_name]
+                    frm.pt1_name=pt_map[pt0_name]
+                    frm.order='10'
+                else:
+                    continue
+                frm.section_name=section
+                frm.uuid=str(uuid.uuid1())
+                frm.name=frm.uuid
+                names.append(frm.name)
+                self.session.add(frm)
+            for pt in pts_to_rmv:
+                self.session.delete(pt)
+            self.session.commit()
+            return True,names
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return False
+
     def set_frame_section(self,frame,section):
         """
         Assign a frame section to a frame.
@@ -842,6 +928,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
     
     def set_frame_mesh(self,frame):
@@ -883,6 +970,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def set_frame_load_concentrated(self,frame,loadcase,load,loc):
@@ -916,6 +1004,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def set_frame_load_strain(self,frame,loadcase,strain):
@@ -943,12 +1032,13 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
             
     def set_frame_load_temperature(self,frame,loadcase,temperature):
         """
         params:
-            point: str, name of point.
+            frame: str, name of frame.
             loadcase: str, name of loadcase. 
             temperature: float, temperature in 1-1 axis.
         return:
@@ -970,6 +1060,7 @@ class Model():
             return True
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             return False
     
     def get_frame_names_by_points(self,pt1,pt2):
@@ -986,16 +1077,55 @@ class Model():
         Get all the name of points in the database
         
         returns:
-            frame name list.
+            frame name list if successful or None if failed.
         """
         try:
             frms=self.session.query(Frame).all()
             return [frm.name for frm in frms]
         except Exception as e:
             log.info(str(e))
-            return False
+            self.session.rollback()
+            return None
+
+    def get_frame_end_names(self,frame):
+        """
+        params:
+            frame: str, name of frame.
+        return:
+            two point names as frames start and end if successful or None if failed
+        """
+        try:
+            assert (len(load)==6 and (strain<=1 and strain>=0))          
+            frm=self.session.query(Frame).filter_by(name=frame).first()
+            if frm is None:
+                raise Exception("Frame doesn't exists.")
+            return frm.pt0.name,frm.pt1.name
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return None 
+            
+    def get_frame_end_coors(self,frame):
+        """
+        params:
+            frame: str, name of frame.
+        return:
+            6-list of floats end_coors in current unit if successful or None if failed
+        """
+        try:
+            scale=self.scale()            
+            frm=self.session.query(Frame).filter_by(name=frame).first()
+            if frm is None:
+                raise Exception("Frame doesn't exists.")
+            pt0=frm.pt0
+            pt1=frm.pt1
+            return [pt0.x/scale['L'],pt0.y/scale['L'],pt0.z/scale['L'],pt1.x/scale['L'],pt1.y/scale['L'],pt1.z/scale['L']]
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return None      
     
-    def get_frame_section(self,name):
+    def get_frame_section_attribute(self,name):
         """
         params:
             name: str
@@ -1020,6 +1150,8 @@ class Model():
             assert(len(pt0_coor)==3 and len(pt1_coor)==3 and len(pt2_coor)==3)
             if name and self.session.query(Area).filter_by(name=name).first()!=None:
                 raise Exception('Name already exist!')
+            if self.session.query(AreaSection).filter_by(name=section).first() is None:
+                raise Exception("Area section doesn't exits!")
             area=Area()
             scale=self.scale()
             tol=self.session.query(Config).first().tolerance
@@ -1087,11 +1219,105 @@ class Model():
             if name:
                 area.name=name
             else:
-                area.name=frm.uuid
+                area.name=area.uuid
             self.session.add(area)
             return area.name
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
+            self.session.rollback()
+            return False
+            
+    def add_area_batch(self,pt_coors,section):
+        """
+        Add batch of frame objects to model..
+        param:
+            pt_coors: list of float tuples as ((pt0.x,pt0.y,pt0.z),(pt1.x,pt1.y,pt1.z),(pt2.x,pt2.y,pt2.z),(pt3.x,pt3.y,pt3.z) or None)
+        return:
+            list of str, the new frame's names.
+        """
+        try:
+            assert(len(pt_coors[0][0])==len(pt_coors[0][1]))
+            if self.session.query(AreaSection).filter_by(name=section).first() is None:
+                raise Exception("Area section doesn't exits!")
+            names=[]
+            area_ends=[]
+            scale=self.scale()
+            for pt0,pt1,pt2,pt3 in pt_coors:
+                pt0_name=self.__add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
+                pt1_name=self.__add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
+                pt2_name=self.__add_point(pt2[0]*scale['L'],pt2[1]*scale['L'],pt2[2]*scale['L'])
+                if pt3 is not None:
+                    pt3_name=self.__add_point(pt2[0]*scale['L'],pt2[1]*scale['L'],pt2[2]*scale['L'])
+                    area_ends.append((pt0_name,pt1_name,pt2_name,pt3_name))
+                else:
+                    area_ends.append((pt0_name,pt1_name,pt2_name,None))
+            tol=self.session.query(Config).first().tolerance
+            pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+            pt_map=dict([(pt.name,pt.name) for pt in pts])
+            pts_to_rmv=[]
+            for pti,ptj in zip(pts[:-1],pts[1:]):
+                if (ptj.x-pti.x)**2+(ptj.y-pti.y)**2+(ptj.z-pti.z)**2<tol**2:
+                    pt_map[ptj.name]=pt_map[pti.name]
+                    pts_to_rmv.append(ptj)
+            for (pt0_name,pt1_name,pt2_name,pt3_name) in area_ends:
+                area=Area()
+                if pt3_name is not None:
+                    name_dict={pt0_name:'0',pt1_name:'1',pt2_name:'2',pt3_name:'3'}
+                    sorted_key=sorted(list(name_dict))
+                    area.pt0_name=name_dict[sorted_key[0]]
+                    area.pt1_name=name_dict[sorted_key[1]]
+                    area.pt2_name=name_dict[sorted_key[2]]
+                    area.pt3_name=name_dict[sorted_key[3]]
+                    area.order=sorted_key[0]+sorted_key[1]+sorted_key[2]+sorted_key[3]
+                else:
+                    name_dict={pt0_name:'0',pt1_name:'1',pt2_name:'2'}
+                    sorted_key=sorted(list(name_dict))
+                    area.pt0_name=name_dict[sorted_key[0]]
+                    area.pt1_name=name_dict[sorted_key[1]]
+                    area.pt2_name=name_dict[sorted_key[2]]
+                    area.order=sorted_key[0]+sorted_key[1]+sorted_key[2]
+                area.section_name=section
+                area.uuid=str(uuid.uuid1())
+                area.name=area.uuid
+                names.append(area.name)
+            for pt in pts_to_rmv:
+                self.session.delete(pt)
+            self.session.commit()
+            return True, names
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return False
+            
+    def get_area_names(self):
+        """
+        Get all the name of points in the database
+        
+        returns:
+            frame name list.
+        """
+        try:
+            areas=self.session.query(Area).all()
+            return [area.name for area in areas]
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return False
+            
+    def get_area_section_names(self):
+        """
+        Get all the name of area sections in the database
+        
+        returns:
+            str list of area names
+        """
+        try:
+            sections=self.session.query(AreaSection)
+            names=[i.name for i in sections.all()]
+            return names
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
             return False
 
     def mesh(self):
@@ -1281,6 +1507,7 @@ class Model():
                     pass
         except Exception as e:
             log.info(str(e))
+            self.session.rollback()
             self.session.close()
             
     def get_result_point_displacement(self,name,loadcase):
@@ -1354,7 +1581,7 @@ class Model():
             res=res.filter_by(order=order).all()
             return [r.period for r in res.all()]
         
-    def import_dxf(self,dxf_file,layers=[]):
+    def import_dxf(self,dxf_file,layers=[],types='fa',frm_sec=None,area_sec=None):
         """
         Import geometry model from dxf file.
         
@@ -1364,23 +1591,7 @@ class Model():
         return:
             list of name of imported members.
         """
-        try:
-            assert(dxf_file[-4:]=='.dxf')
-            dwg = ezdxf.readfile(dxf_file)
-            pt0=[]
-            pt1=[]
-            frm_sec=self.session.query(FrameSection).first()
-            modelspace = dwg.modelspace()
-            for e in modelspace:
-                if e.dxftype() == 'LINE':
-                    pt0.append(e.dxf.start)
-                    pt1.append(e.dxf.end)
-            frames=self.add_frame_batch(pt0,pt1,frm_sec.name)
-            log.info("Imported %d frames from file %s"%(len(frames),dxf_file))
-            return frames
-        except Exception as e:
-            log.info(str(e))
-            return False
+        return dxf.import_dxf(self,dxf_file,layers,types,frm_sec,area_sec)
         
     def export_dxf(self,path,filename,overwrite=False):
         """
@@ -1394,16 +1605,34 @@ class Model():
             list of name of imported members.
         """
         assert(os.path.exists(path) and filename[-4:]=='.dxf')
-        dxf_file=os.path.join(path,filename)
-        if os.path.exists(dxf_file) and overwrite==False:
-            raise Exception('File already exists, please use another name or set overwrite to True.')
-        dwg = ezdxf.new('R2010')
-        modelspace = dwg.modelspace()
-        frames=self.session.query(Frame).all()
-        scale=self.scale()
-        for frm in frames:
-            pt0=frm.pt0
-            pt1=frm.pt1
-            modelspace.add_line((pt0.x/scale['L'],pt0.y/scale['L'],pt0.z/scale['L']), (pt1.x,pt1.y,pt1.z))  # add a LINE entity
-        dwg.saveas(os.path.join(path,dxf_file))
+        return dxf.export_dxf(self,path,filename,overwrite)
+ 
+    def import_s2k(self,s2k_file):
+        """
+        Import geometry model from dxf file.
+        
+        params:
+            s2k_file: str, file name with path to import.
+        return:
+            boolean, status of success
+        """
+        try:
+            assert(s2k_file[-4:]=='.s2k')
+            
+            return True
+        except Exception as e:
+            log.info(str(e))
+            self.session.rollback()
+            return False 
+            
+    def export_s2k(self,s2k_file):
+        pass
+    
+    def import_3dm(self,rh_file):
+        pass
+    
+    def export_3dm(self,rh_file):
+        pass
+        
+    
         

@@ -438,11 +438,11 @@ class Model:
         self.__f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
 
 
-    def assemble_boundary(self,mode='KMf'):
+    def assemble_boundary(self,mode='KMCf'):
         """
         assemble boundary conditions
         params:
-            mode: 'K','M','f' or their combinations
+            mode: 'K','M','C','f' or their combinations
         """
         log.info('Assembling boundary condition..')
         if 'K' in mode:
@@ -459,11 +459,13 @@ class Model:
                 if node.dn[j]!= None:
                     if 'K' in mode:
                         self.__K_[i*6+j,i*6+j]*=alpha
-                        self.__dof-=1 #only when changing K affects the DOFs
                     if 'M' in mode:
                         self.__M_[i*6+j,i*6+j]*=alpha
+                    if 'C' in mode:
+                        self.__C_[i*6+j,i*6+j]*=alpha
                     if 'f' in mode:
                         self.__f_[i*6+j]=self.__K_[i*6+j,i*6+j]*node.dn[j]
+                    self.__dof-=1
                     
     def resolve_node_disp(self,node_id):
         if not self.is_solved:
