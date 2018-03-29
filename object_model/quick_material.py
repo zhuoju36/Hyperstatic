@@ -8,7 +8,6 @@ Created on Sun Mar 11 13:14:15 2018
 
 from .material import Metal,Concrete
 
-
 def quick_material(name):
     """
     Get params of common materials.

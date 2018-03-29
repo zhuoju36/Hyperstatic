@@ -5,7 +5,6 @@ Created on Tue Mar  6 14:07:55 2018
 @author: Dell
 """
 import uuid 
-import sqlalchemy
 
 from fe_model import Model as FEModel
 import logger as log
@@ -52,7 +51,7 @@ class Material(object):
     def gamma(self):
         return self._gamma
     
-class FrameSection(StructuralObject):
+class FrameCrossSection(StructuralObject):
     def __init__(self,mat,A,J,I33,I22,W33,W22,name=None):
         """
         mat: material
@@ -61,7 +60,7 @@ class FrameSection(StructuralObject):
         I33,I22: Iteria momentum
         W33,W22: Bending modulus
         """        
-        super(FrameSection,self).__init__(name)
+        super(FrameCrossSection,self).__init__(name)
         self._mat=mat
         self._A=A
         self._J=J

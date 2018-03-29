@@ -13,7 +13,7 @@ import scipy.sparse as spr
 from scipy.sparse import linalg as sl
 import logger as log
 from .node import Node
-from .element import *
+from .element import Beam,Membrane3,Membrane4
 
 class Model:
     def __init__(self):
@@ -250,23 +250,32 @@ class Model:
     def set_beam_force_by_area_to_frame(self,area,pressure):
         pass
         
-    def add_membrane3(self,elm):
+    def add_membrane3(self,node0, node1, node2, t, E, mu, rho, name=None):
         """
         add membrane to model
         if membrane already exits, it will not be added.
         return: membrane hidden id
         """
+        node0=self.nodes[node0]
+        node1=self.nodes[node1]
+        node2=self.nodes[node2]
+        elm=Membrane3(node0, node1, node2, t, E, mu, rho, name)
         res=len(self.__membrane3s)
         elm.hid=res
         self.__membrane3s[res]=elm
         return res
     
-    def add_membrane4(self,elm):
+    def add_membrane4(self,node0, node1, node2, node3, t, E, mu, rho, name=None):
         """
         add membrane to model
         if membrane already exits, it will not be added.
         return: membrane hidden id
         """
+        node0=self.nodes[node0]
+        node1=self.nodes[node1]
+        node2=self.nodes[node2]
+        node3=self.nodes[node3]
+        elm=Membrane4(node0, node1, node2, node3, t, E, mu, rho, name)
         res=len(self.__membrane4s)
         elm.hid=res
         self.__membrane4s[res]=elm

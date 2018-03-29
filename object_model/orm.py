@@ -266,6 +266,7 @@ class Frame(Base):
     uuid=Column('uuid',String(32),nullable=False)
     
     #1 to 1
+    frame_axis=relationship('FrameAxis',backref=backref('frame',uselist=False))
     frame_release=relationship('FrameRelease',backref=backref('frame',uselist=False))
     frame_load_distributed=relationship('FrameLoadDistributed',backref=backref('frame',uselist=False))
     frame_load_concentrated=relationship('FrameLoadConcentrated',backref=backref('frame',uselist=False))
@@ -275,7 +276,13 @@ class Frame(Base):
     def __repr__(self):
         return '%s<%r>'%(self.__class__.__name__,self.name)
 
-
+class FrameAxis(Base):
+    __tablename__='frame_axis'
+    frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
+    x=Column('x',Float())
+    y=Column('y',Float())
+    z=Column('z',Float())
+    
 class FrameRelease(Base):
     __tablename__='frame_releases'
     frame_name=Column('frame_name',String(32),ForeignKey('frames.name'),primary_key=True)
@@ -350,12 +357,22 @@ class Area(Base):
     uuid=Column('uuid',String(32),nullable=False)   
     
     #1 to 1
+    area_axis=relationship('AreaAxis',backref=backref('area',uselist=False))
     area_load_to_frame=relationship('AreaLoadToFrame',backref=backref('area',uselist=False))
     area_load_distributed=relationship('AreaLoadDistributed',backref=backref('area',uselist=False))
     area_load_strain=relationship('AreaLoadStrain',backref=backref('area',uselist=False))
     area_load_temperature=relationship('AreaLoadTemperature',backref=backref('area',uselist=False))
     
-
+class AreaAxis(Base):
+    __tablename__='area_axis'
+    area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
+    x0=Column('x0',Float())
+    y0=Column('y0',Float())
+    z0=Column('z0',Float())
+    x1=Column('x1',Float())
+    y1=Column('y1',Float())
+    z1=Column('z1',Float())
+    
 class AreaLoadToFrame(Base):
     __tablename__='area_load_to_frame'
     area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
@@ -368,7 +385,6 @@ class AreaLoadDistributed(Base):
     __tablename__='area_load_distributeds'
     area_name=Column('area_name',String(32),ForeignKey('areas.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
-
     pass
 
 class AreaLoadStrain(Base):

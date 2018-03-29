@@ -12,11 +12,11 @@ import ezdxf
 
 model=Model()
 
-model.open('szds0.mdo')
+model.open('szds2.mdo')
 model.set_unit('N_mm_C')
 model.set_tolerance(10.)
 
-dwg = ezdxf.readfile('test.dxf')
+dwg = ezdxf.readfile(r'D:\结构设计\1713-德州会展中心\test.dxf')
 for layer in dwg.layers:
     print(layer.dxf.name)
     if layer.dxf.name != '0' and layer.dxf.name != 'defpoints' and layer.dxf.name[0] != 'A':

@@ -6,9 +6,12 @@ Created on Thu Jun 23 21:32:16 2016
 """
 import uuid
 import numpy as np
-from . import FrameSection
+
+from . import FrameCrossSection
+from .orm import Material,FrameSection
+import logger as log
         
-class Rectangle(FrameSection):
+class Rectangle(FrameCrossSection):
     def __init__(self,mat,h,b,name=None):
         """
         h - height\n
@@ -27,7 +30,7 @@ class Rectangle(FrameSection):
 #        self.gamma22=1.05
 
 
-class Circle(FrameSection):
+class Circle(FrameCrossSection):
     def __init__(self,mat,d,name=None):
         """
         d - diameter
@@ -43,7 +46,7 @@ class Circle(FrameSection):
 #        self.gamma33=1.15
 #        self.gamma22=1.15
         
-class Pipe(FrameSection):
+class Pipe(FrameCrossSection):
     def __init__(self,mat,d,t,name=None):
         """
         d - diameter\n
@@ -73,7 +76,7 @@ class Pipe(FrameSection):
 #        else:
 #            raise ValueError('wrong fabrication!')
 
-class HollowBox(FrameSection):
+class HollowBox(FrameCrossSection):
     def __init__(self,mat,h,b,tw,tf,name=None):
         """
         h - height\n
@@ -99,7 +102,7 @@ class HollowBox(FrameSection):
 #        self.cls22='c'
         
 
-class ISection(FrameSection):
+class ISection(FrameCrossSection):
     def __init__(self,mat,h,b,tw,tf,name=None):
         """
         h - height\n
@@ -127,7 +130,7 @@ class ISection(FrameSection):
 #        self.cls33='c'
 #        self.cls22='c'
         
-class ISection2(FrameSection):
+class ISection2(FrameCrossSection):
     def __init__(self,mat,h,b1,tf1,tw,b2,tf2,name=None):
         """
         h - height\n
@@ -165,19 +168,124 @@ class ISection2(FrameSection):
 #        self.cls33='c'
 #        self.cls22='c'
         
-class TSection(FrameSection):
+class TSection(FrameCrossSection):
     def __init__(self,mat,h,b,tw,tf,name=None):
         #your codes here
         pass
     
-class CSection(FrameSection):
+class CSection(FrameCrossSection):
     pass
 
-class LSection(FrameSection):
+class LSection(FrameCrossSection):
     pass
 
-class ZSection(FrameSection):
+class ZSection(FrameCrossSection):
     pass
    
-if __name__=='__main__':
+def add_frame_section(self,name,material,type,size):
+    """
+    Add frame section to model, if the name already exists, an exception will be raised.
+    
+    param:
+        name: str. name of the section.
+        material: str, name of material.
+        type:
+            'O':pipe,
+            'o':circle
+            'I':I-profile
+            'B':hollow-box
+            'L':angle
+            'T':T-profile
+            'C':C-profile
+            'Z':Z-profile
+        size:
+        if type is 'O', the following parameters are available:
+            d: float, diameter in current unit
+            t: float, wall thickness in current unit
+        if type is 'o', the following parameters are available:
+            d: float, diameter in current unit
+        if type is 'I', the following parameters are available:
+            h,b,tw,tf: float in current unit
+        if type is 'B', the following parameters are available:
+            h,b,tw,tf: float in current unit
+        if type is 'L', the following parameters are available:
+            h,b,tw,tf: float in current unit
+        if type is 'T', the following parameters are available:
+            h,b,tw,tf: float in current unit
+        if type is 'C', the following parameters are available:
+            h,b,tw,tf: float in current unit
+        if type is 'Z', the following parameters are available:
+            h,b,tw,tf: float in current unit
+    return:
+        boolean, status of success.
+    """
+    try:
+        assert(type in 'OoIBLTCZ' and len(type)==1)
+        scale=self.scale()
+        if self.session.query(FrameSection).filter_by(name=name).first()!=None:
+            raise Exception('Name already exists!')
+        frmsec=FrameSection()
+        frmsec.name=name
+        frmsec.uuid=str(uuid.uuid1())
+        if self.session.query(Material).filter_by(name=material).first() is None:
+            raise Exception('Material not exist!')
+        frmsec.material_name=material
+        frmsec.type=type
+        sec=None
+        if type=='o':
+            assert len(size)==1
+            frmsec.size_0=size[0]*scale['L']
+            sec=Circle(None,frmsec.size_0)
+        elif type=='O':
+            assert len(size)==2
+            frmsec.size_0=size[0]*scale['L']
+            frmsec.size_1=size[1]*scale['L']
+            sec=Pipe(None,frmsec.size_0,frmsec.size_1)
+        elif type=='I':
+            assert len(size)==4
+            frmsec.size_0=size[0]*scale['L']
+            frmsec.size_1=size[1]*scale['L']
+            frmsec.size_2=size[0]*scale['L']
+            frmsec.size_3=size[1]*scale['L']
+            sec=ISection(None,frmsec.size_0,frmsec.size_1,frmsec.size_2,frmsec.size_3)
+        elif type=='L':####should be refined!!
+            assert len(size)==4
+            frmsec.size_0=size[0]*scale['L']
+            frmsec.size_1=size[1]*scale['L']
+            frmsec.size_2=size[0]*scale['L']
+            frmsec.size_3=size[1]*scale['L']
+            sec=HollowBox(None,frmsec.size_0,frmsec.size_1,frmsec.size_2,frmsec.size_3)
+        frmsec.A=sec.A
+        frmsec.J=sec.J
+#        frmsec.S2=sec.S2
+#        frmsec.S3=sec.S3
+        frmsec.I2=sec.I22
+        frmsec.I3=sec.I33
+        self.session.add(frmsec)
+        return True  
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
+        
+def add_frame_section_SD(self):
     pass
+
+def add_frame_section_variate(self):
+    pass
+
+def get_frame_section_names(self):
+    """
+    Get all the name of frame sections in the database
+    
+    returns:
+        point list satisfies the coordiniates
+    """
+    try:
+        sections=self.session.query(FrameSection)
+        names=[i.name for i in sections.all()]
+        return names
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
