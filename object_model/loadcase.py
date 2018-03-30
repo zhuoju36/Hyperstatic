@@ -105,3 +105,14 @@ def get_loadcase_names(self):
         log.info(str(e))
         self.session.rollback()
         return False
+
+def delete_loadcase(self,name):
+    try:
+        lc=self.session.query(LoadCase).filter_by(name=name)
+        if lc is None:
+            raise Exception("Loadcase section doen't exist!")
+        self.session.delete(lc)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False

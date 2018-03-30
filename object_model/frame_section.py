@@ -289,3 +289,14 @@ def get_frame_section_names(self):
         log.info(str(e))
         self.session.rollback()
         return False
+    
+def delete_frame_section(self,name):
+    try:
+        sec=self.session.query(FrameSection).filter_by(name=name)
+        if sec is None:
+            raise Exception("Frame section doen't exist!")
+        self.session.delete(sec)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False

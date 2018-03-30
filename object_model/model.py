@@ -60,25 +60,25 @@ class Model():
         #material
         self.add_material=MethodType(material.add_material,self)
         self.add_material_quick=MethodType(material.add_material_quick,self)
-        self.get_material_names=None
+        self.get_material_names=MethodType(material.get_material_names,self)
         self.get_material_isotropic_elastic=None
-        self.set_material_name=None
+        self.set_material_name=MethodType(material.set_material_name,self)
         self.set_material_isotropic_elastic=MethodType(material.set_material_isotropic_elastic,self)
-        self.delete_material=None
+        self.delete_material=MethodType(material.delete_material,self)
         
         #point
         self._add_point=MethodType(point._add_point,self)
         self.get_point_coordinate=MethodType(point.get_point_coordinate,self)
         self.get_point_name_by_coor=MethodType(point.get_point_name_by_coor,self)
         self.get_point_names=MethodType(point.get_point_names,self)
-        self.set_point_name=None
-        self.set_point_coordinate=None
+        self.set_point_name=MethodType(point.set_point_name,self)
+        self.set_point_coordinate=MethodType(point.set_point_coordinate,self)
         self.set_mass_sources=MethodType(point.set_mass_sources,self)
         self.set_point_load=MethodType(point.set_point_load,self)
         self.set_point_mass=MethodType(point.set_point_mass,self)
         self.set_point_restraint=MethodType(point.set_point_restraint,self)
         self.set_point_restraint_batch=MethodType(point.set_point_restraint_batch,self)
-        self._delete_point=None
+        self._delete_point=MethodType(point.delete_point,self)
         
         #frame section
         self.add_frame_section=MethodType(frame_section.add_frame_section,self)
@@ -90,7 +90,7 @@ class Model():
         self.set_frame_section_name=None
         self.set_frame_section_SD=None
         self.set_frame_section_variate=None
-        self.delete_frame_section=None
+        self.delete_frame_section=MethodType(frame_section.delete_frame_section,self)
         
         #area section
         self.add_area_section=MethodType(area_section.add_area_section,self)
@@ -99,7 +99,7 @@ class Model():
         self.get_area_section_layered=None
         self.set_area_section_name=None
         self.set_area_section_layered=None
-        self.delete_area_section=None
+        self.delete_area_section=MethodType(area_section.delete_area_section,self)
         
         #curve for loadcase
         self.add_curve=None
@@ -126,10 +126,13 @@ class Model():
         self.set_loadcase_response_spectrum=MethodType(loadcase.set_loadcase_response_spectrum,self)
         self.set_loadcase_static_linear=MethodType(loadcase.set_loadcase_static_linear,self)
         self.set_loadcase_time_history=MethodType(loadcase.set_loadcase_time_history,self)
-        self.delete_loadcase=None
+        self.delete_loadcase=MethodType(loadcase.delete_loadcase,self)
         
         #combination
-        
+        self.add_combination=None
+        self.set_combination=None
+        self.get_combination=None
+        self.delete_combinataion=None
         
         #frame
         self.add_frame=MethodType(frame.add_frame,self)
@@ -148,12 +151,12 @@ class Model():
         self.set_frame_dir_by_vector=None
         self.set_frame_dir_by_point=None
         self.set_frame_mesh=None
-        self.delete_frame=None
+        self.delete_frame=MethodType(frame.delete_frame,self)
         
         #area
         self.add_area=MethodType(area.add_area,self)
         self.add_area_batch=MethodType(area.add_area_batch,self)
-        self.delete_area=None
+        self.delete_area=MethodType(area.delete_area,self)
         
         #result
         self._add_result_point_displacement=None
@@ -165,7 +168,11 @@ class Model():
         self.get_result_point_displacement=MethodType(result.get_result_point_displacement,self)
         self.get_result_point_reaction=MethodType(result.get_result_point_reaction,self)
         self.get_result_frame_force=MethodType(result.get_result_frame_force,self)
+        self.get_result_area_stress=None
         self.get_result_period=MethodType(result.get_result_period,self)
+        self.combine_result_point_displacement=None
+        self.combine_result_frame_force=None
+        self.combine_result_area_stress=None
         self._clear_all_result=None
         
         #design/checking
@@ -222,6 +229,7 @@ class Model():
         for pt in points:
             res=femodel.add_node(pt.x,pt.y,pt.z)
             pn_map[pt.name]=res
+            
         for frm in frames:
             node0=pn_map[frm.pt0_name]
             node1=pn_map[frm.pt1_name]

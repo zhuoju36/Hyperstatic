@@ -313,3 +313,26 @@ def merge_points(self,tol=1e-3):
         log.info(str(e))
         self.session.rollback()
         return False
+    
+def set_point_name(self,name):
+    try:
+        pt=self.session.query(Point).filter_by(name=name)
+        if pt is None:
+            raise Exception("Point doen't exist!")
+        pt.name=name
+        self.session.add(pt)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
+    
+def delete_point(self,name):
+    try:
+        pt=self.session.query(Point).filter_by(name=name)
+        if pt is None:
+            raise Exception("Point doen't exist!")
+        self.session.delete(pt)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
