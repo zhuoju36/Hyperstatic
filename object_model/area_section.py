@@ -62,7 +62,7 @@ def get_area_section_names(self):
         self.session.rollback()
         return False
     
-def area_frame_section(self,name):
+def delete_area_section(self,name):
     try:
         sec=self.session.query(AreaSection).filter_by(name=name)
         if sec is None:

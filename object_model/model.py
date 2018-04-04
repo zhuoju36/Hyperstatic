@@ -37,6 +37,7 @@ import logger as log
 class Model():
     def __init__(self):
         self.locked=False
+        self.session=None
         self.fe_model=FEModel()
         
         #database
@@ -248,10 +249,10 @@ class Model():
             fb_map[frm.name]=[res]
         for _area in areas:
             nodes={
-            0:pn_map[area.pt0_name],
-            1:pn_map[area.pt1_name],
-            2:pn_map[area.pt2_name],
-            3:pn_map[area.pt3_name],
+            0:pn_map[_area.pt0_name],
+            1:pn_map[_area.pt1_name],
+            2:pn_map[_area.pt2_name],
+            3:pn_map[_area.pt3_name],
             }
             t=_area.section.t
             rho=_area.section.material.rho
@@ -406,7 +407,7 @@ class Model():
                             rst.point_name=pt.name
                             rst.loadcase_name=lc
                             rst.order=od
-                            disp=self.fe_model.resolve_modal_displacement(hid,o)
+                            disp=self.fe_model.resolve_modal_displacement(hid,od)
                             (rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3)=tuple(disp)
                             self.session.add(rst)
                         

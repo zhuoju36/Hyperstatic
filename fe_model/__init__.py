@@ -5,7 +5,7 @@ Created on Fri Dec 30 10:36:12 2016
 @author: HZJ
 """
 
-__all__=['CoordinateSystem','Element','Load','Loadcase','LoadCombination','Material','Node']
+__all__=[]
 
 import numpy as np
 
@@ -61,8 +61,12 @@ class Model:
         return self.__beams
     
     @property
-    def quad_count(self):
-        return len(self.__quads.items())
+    def membrane3s(self):
+        return self.__membrane3s
+
+    @property
+    def membrane4s(self):
+        return self.__membrane4s
 
     @property
     def is_assembled(self):
@@ -81,7 +85,10 @@ class Model:
         return self.__K
     @property
     def M(self):
-        return self.__M    
+        return self.__M 
+    @property
+    def C(self):
+        return self.__C   
     @property
     def f(self):
         return self.__f
@@ -98,6 +105,11 @@ class Model:
         if not self.is_assembled:
             raise Exception('The model has to be assembled first.')
         return self.__M_
+    @property
+    def C_(self):
+        if not self.is_assembled:
+            raise Exception('The model has to be assembled first.')
+        return self.__C_
     @property
     def f_(self):
         if not self.is_assembled:
@@ -220,6 +232,16 @@ class Model:
         else:
             res=res[0]
         return res
+    
+    def set_beam_axis(self,beam,x,y,z):
+        """
+        set beams axis.
+        
+        params:
+            beam: hid of beam
+            x,y,z coordinate of reference vector.
+        """
+        pass
         
     def set_beam_force_by_frame_distributed(self,beam,q_i,q_j):
         """
@@ -290,6 +312,7 @@ class Model:
         n_nodes=self.node_count
         self.__K = spr.csr_matrix((n_nodes*6, n_nodes*6))
         self.__M = spr.csr_matrix((n_nodes*6, n_nodes*6))
+        self.__C = spr.eye(n_nodes*6).tocsr()*0.05
         self.__f = np.zeros((n_nodes*6, 1))
         #Beam load and displacement, and reset the index 
         row_k=[]
@@ -458,6 +481,8 @@ class Model:
             self.__K_=self.K.copy()
         if 'M' in mode:
             self.__M_=self.M.copy()
+        if 'C' in mode:
+            self.__C_=self.C.copy()
         if 'f' in mode:
             self.__f_=self.f.copy()
         self.__dof=self.node_count*6

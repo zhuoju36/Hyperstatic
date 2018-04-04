@@ -13,7 +13,7 @@ import sqlalchemy.orm as o
 from .orm import Base,Config
 import logger as log
 
-def create(self,database):
+def _create(self,database):
     """
     params:
         database: str. Database to be created. The path should be included
