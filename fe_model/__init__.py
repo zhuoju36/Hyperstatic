@@ -11,7 +11,7 @@ import numpy as np
 
 import scipy.sparse as spr
 from scipy.sparse import linalg as sl
-import logger as log
+from .. import logger
 from .node import Node
 from .element import Beam,Membrane3,Membrane4
 
@@ -286,7 +286,7 @@ class Model:
         Assemble integrated stiffness matrix and mass matrix.
         Meanwhile, The force vector will be initialized.
         """
-        log.info('Assembling K and M..')
+        logger.info('Assembling K and M..')
         n_nodes=self.node_count
         self.__K = spr.csr_matrix((n_nodes*6, n_nodes*6))
         self.__M = spr.csr_matrix((n_nodes*6, n_nodes*6))
@@ -402,7 +402,7 @@ class Model:
         """
         Assemble load vector and displacement vector.
         """
-        log.info('Assembling f..')
+        logger.info('Assembling f..')
         n_nodes=self.node_count
 #        self.__f = spr.coo_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
@@ -453,7 +453,7 @@ class Model:
         params:
             mode: 'K','M','C','f' or their combinations
         """
-        log.info('Assembling boundary condition..')
+        logger.info('Assembling boundary condition..')
         if 'K' in mode:
             self.__K_=self.K.copy()
         if 'M' in mode:

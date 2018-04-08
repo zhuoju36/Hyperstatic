@@ -14,11 +14,11 @@ FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain,
 AreaLoadToFrame,\
 ResultModalPeriod,ResultPointDisplacement,ResultPointReaction,ResultFrameForce,ResultModalDisplacement
 
-from fe_model import Model as FEModel
+from ..fe_model import Model as FEModel
 
-from fe_solver.static import solve_linear
-from fe_solver.dynamic import solve_modal
-import model_io.dxf
+from ..fe_solver.static import solve_linear
+from ..fe_solver.dynamic import solve_modal
+from ..model_io import dxf
 from . import db
 from . import project
 from . import material
@@ -32,7 +32,7 @@ from . import area
 from . import curve
 from . import result
 
-import logger as log
+from .. import logger
 
 class Model():
     def __init__(self):
@@ -179,8 +179,8 @@ class Model():
         self.set_frame_rebar_settings=None
         
         #io
-        self.import_dxf=MethodType(model_io.dxf.import_dxf,self)
-        self.export_dxf=MethodType(model_io.dxf.export_dxf,self)
+        self.import_dxf=MethodType(dxf.import_dxf,self)
+        self.export_dxf=MethodType(dxf.export_dxf,self)
         self.import_s2k=None
         self.export_s2k=None
 
@@ -327,7 +327,7 @@ class Model():
             None.
         """
         if not self.fe_model.is_assembled:
-            log.info('Mesh model...')
+            logger.info('Mesh model...')
             self.mesh()
             self.fe_model.assemble_KM()
             self.fe_model.assemble_boundary(mode='KM')
@@ -337,7 +337,7 @@ class Model():
                 if loadcase is None:
                     raise Exception("Loadcase doen't exist!")
                 if loadcase.case_type=='static-linear':
-                    log.info('Solving static linear case %s...'%lc)
+                    logger.info('Solving static linear case %s...'%lc)
                     self.apply_load(lc)
                     self.fe_model.assemble_f()
                     self.fe_model.assemble_boundary(mode='f')
@@ -374,9 +374,9 @@ class Model():
                             (rst.p11,rst.p12,rst.p13,rst.m11,rst.m12,rst.m13)=tuple(f[6:])
                             self.session.add(rst)
                     self.session.commit()
-                    log.info('Finished case %s.'%lc)
+                    logger.info('Finished case %s.'%lc)
                 elif loadcase.case_type=='modal':
-                    log.info('Solving modal case %s...'%lc)
+                    logger.info('Solving modal case %s...'%lc)
                     solve_modal(self.fe_model,k=loadcase.loadcase_modal_setting.modal_num)
                     #write period
                     _order=1
@@ -398,16 +398,16 @@ class Model():
                             rst.point_name=pt.name
                             rst.loadcase_name=lc
                             rst.order=od
-                            disp=self.fe_model.resolve_modal_displacement(hid,o)
+                            disp=self.fe_model.resolve_modal_displacement(hid,od)
                             (rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3)=tuple(disp)
                             self.session.add(rst)
                         
                     self.session.commit()
-                    log.info('Finished case %s.'%lc)
+                    logger.info('Finished case %s.'%lc)
                 else:
                     pass
         except Exception as e:
-            log.info(str(e))
+            logger.info(str(e))
             self.session.rollback()
             self.session.close()
 

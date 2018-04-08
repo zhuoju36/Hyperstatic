@@ -11,9 +11,9 @@ from sqlalchemy import create_engine
 import sqlalchemy.orm as o
 
 from .orm import Base,Config
-import logger as log
+from .. import logger
 
-def create(self,database):
+def _create(self,database):
     """
     params:
         database: str. Database to be created. The path should be included
@@ -53,7 +53,7 @@ def open(self,database):
     """
     assert(database[-4:]=='.mdo')
     if not os.path.exists(database):
-        self.create(database)
+        self._create(database)
     operate_db=database[:-4]+'.op'
     shutil.copy(database,operate_db)
 #        engine=create_engine('sqlite:///:memory:')

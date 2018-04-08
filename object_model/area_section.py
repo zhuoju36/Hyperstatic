@@ -7,7 +7,7 @@ Created on Thu Jun 23 21:32:16 2016
 import uuid
 
 from .orm import AreaSection
-import logger as log
+from .. import logger
 
 def add_area_section(self,name,material,type,t):
     """
@@ -39,7 +39,7 @@ def add_area_section(self,name,material,type,t):
         self.session.add(areasec)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -58,6 +58,6 @@ def get_area_section_names(self):
         names=[i.name for i in sections.all()]
         return names
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False

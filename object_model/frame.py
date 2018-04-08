@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config,Point,Frame,FrameSection,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain
-import logger as log
+from .. import logger
 
 def add_frame(self,pt0_coor,pt1_coor,section,name=None):
     """
@@ -120,7 +120,7 @@ def add_frame_batch(self,pt_coors,section):
         self.session.commit()
         return True,names
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
@@ -140,7 +140,7 @@ def set_frame_section(self,frame,section):
         self.session.add(frm)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
@@ -182,7 +182,7 @@ def set_frame_load_distributed(self,frame,loadcase,load):
         self.session.add(ld)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -216,7 +216,7 @@ def set_frame_load_concentrated(self,frame,loadcase,load,loc):
         self.session.add(ld)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -243,7 +243,7 @@ def set_frame_load_strain(self,frame,loadcase,strain):
         self.session.add(ld)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -269,7 +269,7 @@ def set_frame_load_temperature(self,frame,loadcase,temperature):
         self.session.add(ld)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
@@ -293,7 +293,7 @@ def get_frame_names(self):
         frms=self.session.query(Frame).all()
         return [frm.name for frm in frms]
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return None
 
@@ -310,7 +310,7 @@ def get_frame_end_names(self,frame):
             raise Exception("Frame doesn't exists.")
         return frm.pt0.name,frm.pt1.name
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return None 
         
@@ -330,7 +330,7 @@ def get_frame_end_coors(self,frame):
         pt1=frm.pt1
         return [pt0.x/scale['L'],pt0.y/scale['L'],pt0.z/scale['L'],pt1.x/scale['L'],pt1.y/scale['L'],pt1.z/scale['L']]
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return None      
 

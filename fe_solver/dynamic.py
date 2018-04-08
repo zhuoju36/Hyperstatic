@@ -8,13 +8,12 @@ import sys
 sys.path.append('..')
 
 import numpy as np
-from fe_model import Model
 from scipy import linalg
 from scipy import sparse as sp
 import scipy.sparse.linalg as sl
 
-import logger as log
-        
+from ..fe_model import Model
+from .. import logger      
 
 def solve_modal(model,k:int):
     """
@@ -26,7 +25,7 @@ def solve_modal(model,k:int):
     """
     K_,M_=model.K_,model.M_
     if k>model.DOF:
-        log.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%model.DOF)
+        logger.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%model.DOF)
         k=model.DOF
     omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
     delta = modes/np.sum(modes,axis=0)

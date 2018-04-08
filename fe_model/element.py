@@ -11,7 +11,7 @@ import scipy as sp
 import scipy.sparse as spr
 import quadpy
 
-from csys import Cartisian
+from ..csys import Cartisian
 
 class Element(object):
     def __init__(self,dim,dof,name=None):

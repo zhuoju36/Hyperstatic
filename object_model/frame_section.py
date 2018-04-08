@@ -9,7 +9,7 @@ import numpy as np
 
 from . import FrameCrossSection
 from .orm import Material,FrameSection
-import logger as log
+from .. import logger
         
 class Rectangle(FrameCrossSection):
     def __init__(self,mat,h,b,name=None):
@@ -264,7 +264,7 @@ def add_frame_section(self,name,material,type,size):
         self.session.add(frmsec)
         return True  
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -286,6 +286,6 @@ def get_frame_section_names(self):
         names=[i.name for i in sections.all()]
         return names
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False

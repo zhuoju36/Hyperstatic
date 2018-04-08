@@ -9,7 +9,7 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config,Point,Frame,Area,PointLoad,PointRestraint
-import logger as log
+from .. import logger
 
 def _add_point(self,x,y,z):
     """
@@ -32,7 +32,7 @@ def _add_point(self,x,y,z):
         self.session.add(pt)
         return pt.name
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -60,7 +60,7 @@ def set_point_restraint_batch(self,points,restraints):
         self.session.add_all(reses)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False     
           
@@ -101,7 +101,7 @@ def set_point_restraint(self,point,restraints):
             self.session.add(res)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
             
@@ -134,7 +134,7 @@ def set_point_load(self,point,loadcase,load):
         self.session.add(ld)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
     
@@ -160,7 +160,7 @@ def set_point_coordinate(self,name,x,y,z):
         self.session.add(pt)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -173,7 +173,7 @@ def set_point_mass(self,name,u1,u2,u3,r1,r2,r3):
         pass
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -181,7 +181,7 @@ def set_mass_sources(self,source):
     try:
         pass
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -197,7 +197,7 @@ def get_point_names(self):
         names=[pt.name for pt in pts.all()]
         return names
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         return None
     
 def get_point_name_by_coor(self,x=None,y=None,z=None):
@@ -223,7 +223,7 @@ def get_point_name_by_coor(self,x=None,y=None,z=None):
         names=[pt.name for pt in pts.all()]
         return names
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return None
         
@@ -246,7 +246,7 @@ def get_point_coordinate(self,name):
         z=pt.z/scale['L']
         return x,y,z
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return None
 
@@ -279,7 +279,7 @@ def merge_points(self,tol=1e-3):
                 
         frames=self.session.query(Frame).all()
         areas=self.session.query(Area).all()
-        log.info(len(pts_to_rmv))
+        logger.info(len(pts_to_rmv))
         for frm in frames:
             if (frm.pt0_name in pts_to_rmv) or (frm.pt1_name in pts_to_rmv):
                 if pt_map[frm.pt0_name]<pt_map[frm.pt1_name]:
@@ -307,9 +307,9 @@ def merge_points(self,tol=1e-3):
                 
         self.session.flush()
         pts=self.session.query(Point).all()
-        log.info('merge elements %d'%len(pts))
+        logger.info('merge elements %d'%len(pts))
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False

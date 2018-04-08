@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config, AreaSection, Point, Area
-import logger as log
+from .. import logger
 
 def add_area(self,pt0_coor,pt1_coor,pt2_coor,pt3_coor,section,name=None):
     """
@@ -101,7 +101,7 @@ def add_area(self,pt0_coor,pt1_coor,pt2_coor,pt3_coor,section,name=None):
         self.session.add(area)
         return area.name
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -163,7 +163,7 @@ def add_area_batch(self,pt_coors,section):
         self.session.commit()
         return True, names
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         
@@ -178,6 +178,6 @@ def get_area_names(self):
         areas=self.session.query(Area).all()
         return [area.name for area in areas]
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False

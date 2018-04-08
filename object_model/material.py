@@ -7,7 +7,7 @@ Created on Thu Jun 23 21:30:59 2016
 import uuid
 
 from .orm import Material,IsotropicElastic
-import logger as log
+from .. import logger
 
 def add_material(self,name,rho,mat_type,**kwargs):
     """
@@ -42,7 +42,7 @@ def add_material(self,name,rho,mat_type,**kwargs):
         self.session.add(mat)
         return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
