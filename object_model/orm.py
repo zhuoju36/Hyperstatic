@@ -251,6 +251,29 @@ class PointSpring(Base):
     r1=Column('r1',Float())
     r2=Column('r2',Float())
     r3=Column('r3',Float())
+    
+class Curve(Base):
+    __tablename__='curves'
+    curve_name=Column('curve_name',String(32),primary_key=True)
+    t=Column('t',Float())
+    value=Column('value',Float())
+    
+class Spectrum(Base):
+    __tablename__='spectrums'
+    spectrum_name=Column('spectrum_name',String(32),primary_key=True)
+    code=Column('code',String(32))
+    param0=Column('param0',Float())
+    param1=Column('param1',Float())
+    param2=Column('param2',Float())
+    param3=Column('param3',Float())
+    param4=Column('param4',Float())
+    param5=Column('param5',Float())
+    param6=Column('param6',Float())
+    param7=Column('param7',Float())
+    param8=Column('param8',Float())
+    param9=Column('param9',Float())
+    param10=Column('param10',Float())
+    param11=Column('param11',Float())
 
 class Frame(Base):
     __tablename__='frames'

@@ -342,3 +342,14 @@ def get_frame_section_attribute(self,name):
         frame section object if exist
     """
     pass
+
+def delete_frame(self,name):
+    try:
+        frm=self.session.query(Frame).filter_by(name=name)
+        if frm is None:
+            raise Exception("Frame doen't exist!")
+        self.session.delete(frm)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False

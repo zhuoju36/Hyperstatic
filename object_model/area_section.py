@@ -61,3 +61,14 @@ def get_area_section_names(self):
         logger.info(str(e))
         self.session.rollback()
         return False
+    
+def delete_area_section(self,name):
+    try:
+        sec=self.session.query(AreaSection).filter_by(name=name)
+        if sec is None:
+            raise Exception("Area section doen't exist!")
+        self.session.delete(sec)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False

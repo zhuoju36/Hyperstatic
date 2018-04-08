@@ -47,9 +47,51 @@ def add_material(self,name,rho,mat_type,**kwargs):
         return False
 
 def add_material_quick(self,code):
-    pass
+    try:
+        pass
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
 
 def set_material_isotropic_elastic(self,name,E,mu):
-    pass
+    try:
+        pass
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
+
+def get_material_names(self):
+    try:
+        materials=self.session.query(Material).all()
+        return [m.name for m in materials]
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
+
+def set_material_name(self,name):
+    try:
+        material=self.session.query(Material).filter_by(name=name).first()
+        if material is None:
+            raise Exception("Material name doen't exist!")
+        material.name=name
+        self.session.add(material)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
+
+def delete_material(self,name):
+    try:
+        material=self.session.query(Material).filter_by(name=name).first()
+        if material is None:
+            raise Exception("Material name doen't exist!")
+        self.session.delete(material)
+    except Exception as e:
+        log.info(str(e))
+        self.session.rollback()
+        return False
         
     
