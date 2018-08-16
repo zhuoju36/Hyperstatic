@@ -9,6 +9,7 @@ import uuid
 import numpy as np
 import scipy as sp
 import scipy.sparse as spr
+import scipy.interpolate as interp
 import quadpy
 
 from ..csys import Cartisian
@@ -20,6 +21,13 @@ class Element(object):
         
         self._dim=dim
         self._dof=dof
+
+        self._nodes=[]
+        self._Ke=[]
+        self._Me=[]
+        self._re=[]
+
+        self._local_csys=None
                
     @property
     def name(self):
@@ -67,13 +75,163 @@ class Element(object):
     @property
     def transform_matrix(self):
         T=np.zeros((self.node_count*6,self.node_count*6))
-        V=self.local_csys.transform_matrix
+        V=self._local_csys.transform_matrix
         for i in range(self._dof):
             T[i*3:i*3+3,i*3:i*3+3]=V
         return T
 
+    def _N(self,x):
+        """
+        interpolate function of displacement.
+        """
+        pass
+
+class IsoParametric(Element):
+    def __init__(self,dim,dof,name=None):
+        super(IsoParametric,self).__init__(dim,dof,name)
+        
+    #interpolate function
+    def _N(self,s):
+        pass
+    
+    def _J(self,s):
+        pass
+    
+    #strain matrix
+    def _B(self,s):
+        pass
+    
+    #stress matrix
+    def _S(self,s):
+        return np.dot(self.D,self.B(s))
+    
+    #csys transformation
+    def _x(self,s):
+        """
+        s: DIMx1 vector
+        """
+        n=self.dim*len(self.nodes)
+        x0=np.array([(node.x,node.y,node.z) for node in self.nodes]).reshape((n,1))
+        N=np.hstack([(np.eye(self.dim)*Ni) for Ni in self.N(s)]) #DIMx3*DIM matrix
+        return np.dot(N,x0)
+        
+    def _d(self,s,u):
+        """
+        compute strain with local coordinate s and displacement u.
+        s: 
+        """
+        return np.dot(self.__B(s),self.u)
+
+class Element1D(Element):
+    def __init__(self,node_i,node_j,A,rho,dof,name=None,mass='conc',tol=1e-6):
+        super(Element1D,self).__init__(1,dof,name)
+        self._nodes=[node_i,node_j]
+        #Initialize local CSys
+        o = [ node_i.x, node_i.y, node_i.z ]
+        pt1 = [ node_j.x, node_j.y, node_j.z ]
+        pt2 = [ node_i.x, node_i.y, node_i.z ]
+        if abs(node_i.x - node_j.x) < tol and abs(node_i.y - node_j.y) < tol:
+            pt2[0] += 1
+        else:
+            pt2[2] += 1
+        self._local_csys = Cartisian(o, pt1, pt2)
+
+        T=np.zeros((12,12))
+        V=self._local_csys.transform_matrix
+        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
+        self._T=spr.csr_matrix(T)
+
+        self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
+        self._mass=rho*A*self.length
+
+    @property
+    def length(self):
+        return self._length
+
+    @property
+    def mass(self):
+        return self._mass
+
+    @property
+    def transform_matrix(self):
+        return self._T
+
+class Quad2D(Element):
+    def __init__(self,node_i,node_j,node_k,node_l,t,rho,dof,name=None,mass='conc',tol=1e-6):
+        super(Quad2D,self).__init__(2,dof,name)
+        self._nodes=[node_i,node_j,node_j]
+        #Initialize local CSys
+        o = [ node_i.x, node_i.y, node_i.z ]
+        pt1 = [ node_j.x, node_j.y, node_j.z ]
+        pt2 = [ node_i.x, node_i.y, node_i.z ]
+        if abs(node_i.x - node_j.x) < tol and abs(node_i.y - node_j.y) < tol:
+            pt2[0] += 1
+        else:
+            pt2[2] += 1
+        self._local_csys = Cartisian(o, pt1, pt2)
+
+        T=np.zeros((12,12))
+        V=self._local_csys.transform_matrix
+        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
+        self._T=spr.csr_matrix(T)
+
+        self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
+        self._mass=rho*A*self.length
+
+    @property
+    def length(self):
+        return self._length
+
+    @property
+    def mass(self):
+        return self._mass
+
+    @property
+    def transform_matrix(self):
+        return self._T
+
+class Link(Element1D):
+    def __init__(self,node_i, node_j, E, A, rho, name=None, mass='conc', tol=1e-6):
+        """
+        params:
+            node_i,node_j: ends of link.
+            E: elastic modulus
+            A: section area
+            rho: mass density
+            mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
+            tol: tolerance
+        """
+        super(Link,self).__init__(node_i,node_j,A,rho,6,name,mass)
+        l=self._length
+        K_data=(
+            (E*A/l,(0,0))
+        )
+        data=[k[0] for k in K_data]
+        row=[k[1][0] for k in K_data]
+        col=[k[1][1] for k in K_data]
+        self._Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
+        if mass=='conc':#Concentrated mass matrix
+            self._Me=spr.eye(12)*rho*A*l/2
+        #force vector
+        self._re =np.zeros((12,1))
+
+    def _N(self,s):
+        """
+        params:
+            Lagrange's interpolate function
+            s:natural position of evalue point.
+        returns:
+            3x(3x2) shape function matrix.
+        """
+        N1=(1-s)/2
+        N2=(1+s)/2
+        N=np.array([[N1,0,0,N2,0,0],
+                    [0,N1,0,0,N2,0],
+                    [0,0,N1,0,0,N2]])
+        return N
+
                 
-class Beam(Element):
+class Beam(Element1D):
     def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None, mass='conc', tol=1e-6):
         """
         params:
@@ -88,36 +246,14 @@ class Beam(Element):
             mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
             tol: tolerance
         """
-        super(Beam,self).__init__(1,6,name)
-        self._nodes=[node_i,node_j]
+        super(Beam,self).__init__(node_i,node_j,A,rho,12,name,mass)
         self._releases=[[False,False,False,False,False,False],
                          [False,False,False,False,False,False]]
-        
-        #Initialize local CSys
-        o = [ node_i.x, node_i.y, node_i.z ]
-        pt1 = [ node_j.x, node_j.y, node_j.z ]
-        pt2 = [ node_i.x, node_i.y, node_i.z ]
-        if abs(node_i.x - node_j.x) < tol and abs(node_i.y - node_j.y) < tol:
-            pt2[0] += 1
-        else:
-            pt2[2] += 1
-        self.local_csys = Cartisian(o, pt1, pt2)
-        
-        T=np.zeros((12,12))
-        V=self.local_csys.transform_matrix
-        T[:3,:3] =T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
-        self._T=spr.csr_matrix(T)
-        
-        self._length=((node_i.x - node_j.x)**2 + (node_i.y - node_j.y)**2 + (node_i.z - node_j.z)**2)**0.5
-        self._mass=rho*A*self.length
         
         l=self.length
         G=E/2/(1+mu)
 
-        #Initialize local stiffness matrix
-#        self._Ke = np.zeros((12, 12))
-#        self._Me = np.zeros((12, 12))
-        self._re =np.zeros((12,1))
+        #Initialize local matrices
         #form the stiffness matrix:
         K_data=(
         (E*A / l,(0, 0)),
@@ -179,60 +315,59 @@ class Beam(Element):
 
         #form mass matrix
         if mass=='coor':#Coordinated mass matrix
-            self._Me[0, 0]=140
-            self._Me[0, 6]=70
+            _Me=np.zeros((12,12))
+            _Me[0, 0]=140
+            _Me[0, 6]=70
     
-            self._Me[1, 1]=156
-            self._Me[1, 5]=self._Me_[5, 1]=22 * l
-            self._Me[1, 7]=self._Me_[7, 1]=54
-            self._Me[1, 11]=self._Me_[11, 1]=-13 * l
+            _Me[1, 1]=156
+            _Me[1, 5]=_Me[5, 1]=22 * l
+            _Me[1, 7]=_Me[7, 1]=54
+            _Me[1, 11]=_Me[11, 1]=-13 * l
     
-            self._Me[2, 2]=156
-            self._Me[2, 4]=self._Me_[4, 2]=-22 * l
-            self._Me[2, 8]=self._Me_[8, 2]=54
-            self._Me[2, 10]=self._Me_[10, 2]=13 * l
+            _Me[2, 2]=156
+            _Me[2, 4]=_Me[4, 2]=-22 * l
+            _Me[2, 8]=_Me[8, 2]=54
+            _Me[2, 10]=_Me[10, 2]=13 * l
     
-            self._Me[3, 3]=140 * J / A
-            self._Me[3, 9]=self._Me_[9, 3]=70 * J / A
+            _Me[3, 3]=140 * J / A
+            _Me[3, 9]=_Me[9, 3]=70 * J / A
     
-            self._Me[4, 4]=4 * l *l
-            self._Me[4, 8]=self._Me_[8, 4]=-13 * l
-            self._Me[4, 10]=self._Me_[10, 4]=-3 * l*l
+            _Me[4, 4]=4 * l *l
+            _Me[4, 8]=_Me[8, 4]=-13 * l
+            _Me[4, 10]=_Me[10, 4]=-3 * l*l
     
-            self._Me[5, 5]=4 * l*l
-            self._Me[5, 7]=self._Me_[7, 5]=13 * l
-            self._Me[5, 11]=self._Me_[11, 5]=-3 * l*l
+            _Me[5, 5]=4 * l*l
+            _Me[5, 7]=_Me[7, 5]=13 * l
+            _Me[5, 11]=_Me[11, 5]=-3 * l*l
     
-            self._Me[6, 6]=140
+            _Me[6, 6]=140
     
-            self._Me[7, 7]=156
-            self._Me[7, 11]=self._Me_[11, 7]=-22 * l
+            _Me[7, 7]=156
+            _Me[7, 11]=_Me[11, 7]=-22 * l
     
-            self._Me[8, 8]=156
-            self._Me[8, 10]=self._Me_[10, 8]=22 * l
+            _Me[8, 8]=156
+            _Me[8, 10]=_Me[10, 8]=22 * l
     
-            self._Me[9, 9]=140 * J / A
+            _Me[9, 9]=140 * J / A
     
-            self._Me[10, 10]=4 * l*l
+            _Me[10, 10]=4 * l*l
     
-            self._Me[11, 11]=4 * l*l
+            _Me[11, 11]=4 * l*l
     
-            self._Me*= (rho*A*l / 420)
+            _Me*= (rho*A*l / 420)
+            self._Me=spr.csc_matrix(_Me)
         
-        if mass=='conc':#Concentrated mass matrix
+        elif mass=='conc':#Concentrated mass matrix
             self._Me=spr.eye(12)*rho*A*l/2
+
+        #force vector
+        self._re =np.zeros((12,1))
         
-        self._Ke_=self._Ke
-        self._Me_=self._Me
-    
-    @property
-    def length(self):
-        return self._length
-        
-    @property
-    def mass(self):
-        return self._mass
-    
+        #condensated matrices and vector
+        self._Ke_=self._Ke.copy()
+        self._Me_=self._Me.copy()
+        self._re_=self._re.copy()
+                
     @property
     def Ke_(self):
         return self._Ke_
@@ -255,10 +390,21 @@ class Beam(Element):
             raise ValueError('rls must be a 12 boolean array')
         self._releases=np.array(rls).reshape((2,6))
         
-    @property
-    def transform_matrix(self):
-        return self._T
-
+    def _N(self,s):
+        """
+        params:
+            Hermite's interpolate function
+            s:natural position of evalue point.
+        returns:
+            3x(3x4) shape function matrix.
+        """
+        N1=1-3*s**2+2*s**3
+        N2=  3*s**2-2*s**3
+        N3=s-2*s**2+s**3
+        N4=   -s**2+s**3
+        N=np.hstack([np.eye(3)*N1,np.eye(3)*N2,np.eye(3)*N3,np.eye(3)*N4])
+        return N
+        
     def static_condensation(self):
         """
         Perform static condensation.
@@ -268,9 +414,9 @@ class Beam(Element):
         kij=self._Ke
         mij=self._Me
         rij=self._re
-        kij_bar = kij.copy()
-        mij_bar = mij.copy()
-        rij_bar = rij.copy()
+        kij_bar = self._Ke
+        mij_bar = self._Me
+        rij_bar = self._re
         for n in range(0,6):
             if releaseI[n] == True:
                 for i in range(12):
@@ -320,38 +466,37 @@ class Beam(Element):
 #            re_=np.insert(re_,i,0,axis=0)
 #        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
 
+#code here should be revised
+        def resolve_element_force(self,ue):
+           """
+           compute beam forces with 
+           """
+           fe=np.zeros((12,1))
+           
+           releaseI=self._releases[0]
+           releaseJ=self._releases[1]
+           Ke=self._Ke
+           Me=self._Me
+           re=self._re
+           Ke_ = Ke.copy()
+           Me_ = Me.copy()
+           re_ = re.copy()
+           for n in range(0,6):
+               if releaseI[n] == True:
+                   for i in range(12):
+                       for j in range(12):
+                           Ke_[i, j] = Ke[i, j] - Ke[i, n]* Ke[n, j] / Ke[n, n]
+                           Me_[i, j] = Me[i, j] - Me[i, n]* Me[n, j] / Me[n, n]
+                       re_[i] = re[i] - re[n] * Ke[n, i] / Ke[n, n]
+               if releaseJ[n] == True:
+                   for i in range(12):
+                       for j in range(12):
+                           Ke_[i, j] = Ke[i, j] - Ke[i, n + 6]* Ke[n + 6, j] / Ke[n + 6, n + 6]
+                           Me_[i, j] = Me[i, j] - Me[i, n + 6]* Me[n + 6, j] / Me[n + 6, n + 6]
+                       re_[i] = re[i] - re[n + 6] * Ke[n + 6, i] / Ke[n + 6, n + 6]
 
-
-#        def resolve_element_force(self,ue):
-#            """
-#            compute beam forces with 
-#            """
-#            fe=np.zeros((12,1))
-##            
-##            releaseI=self._releases[0]
-##            releaseJ=self._releases[1]
-##            Ke=self._Ke
-##            Me=self._Me
-##            re=self._re
-##            Ke_ = Ke.copy()
-##            Me_ = Me.copy()
-##            re_ = re.copy()
-##            for n in range(0,6):
-##                if releaseI[n] == True:
-##                    for i in range(12):
-##                        for j in range(12):
-##                            Ke_[i, j] = Ke[i, j] - Ke[i, n]* Ke[n, j] / Ke[n, n]
-##                            Me_[i, j] = Me[i, j] - Me[i, n]* Me[n, j] / Me[n, n]
-##                        re_[i] = re[i] - re[n] * Ke[n, i] / Ke[n, n]
-##                if releaseJ[n] == True:
-##                    for i in range(12):
-##                        for j in range(12):
-##                            Ke_[i, j] = Ke[i, j] - Ke[i, n + 6]* Ke[n + 6, j] / Ke[n + 6, n + 6]
-##                            Me_[i, j] = Me[i, j] - Me[i, n + 6]* Me[n + 6, j] / Me[n + 6, n + 6]
-##                        re_[i] = re[i] - re[n + 6] * Ke[n + 6, i] / Ke[n + 6, n + 6]
-#
-#            fe=self._Ke_*ue+self._re_
-#            return fe
+           fe=self._Ke_*ue+self._re_
+           return fe
                 
                 
 
@@ -470,42 +615,6 @@ class Membrane3(Element):
                       [abc2[2],abc2[1]]])
         return np.hstack([B0,B1,B2])/2/self.area
     
-class IsoParametric(Element):
-    def __init__(self,dim,dof,name=None):
-        super(IsoParametric,self).__init__(dim,dof,name)
-        
-    #interpolate function
-    def _N(s):
-        pass
-    
-    def _J(s):
-        pass
-    
-    #strain matrix
-    def _B(self,s):
-        pass
-    
-    #stress matrix
-    def _S(self,s):
-        return np.dot(self.D,self.B(s))
-    
-    #csys transformation
-    def _x(self,s):
-        """
-        s: DIMx1 vector
-        """
-        n=self.dim*len(self.nodes)
-        x0=np.array([(node.x,node.y,node.z) for node in self.nodes]).reshape((n,1))
-        N=np.hstack([(np.eye(self.dim)*Ni) for Ni in self.N(s)]) #DIMx3*DIM matrix
-        return np.dot(N,x0)
-        
-    def _d(self,s,u):
-        """
-        compute strain with local coordinate s and displacement u.
-        s: 
-        """
-        return np.dot(self.__B(s),self.u)
-
 class Membrane4(IsoParametric):
     def __init__(self,node_i, node_j, node_k, node_l, t, E, mu, rho, name=None):
         r"""
@@ -575,17 +684,25 @@ class Membrane4(IsoParametric):
     def area(self):
         return self._area
         
-    def _N(self,x):
+    def _N(self,s,r):
         """
-        convert csys from x to N
-        return: 3x1 array represent x,y
+        params:
+            Lagrange's interpolate function
+            s:natural position of evalue point.
+        returns:
+            3x(3x4) shape function matrix.
         """
-        x,y=x[0],x[1]
-        x0,y0=self._x0[:,0],self._x0[:,1]
-        N=[]
-        for i in range(4):
-            N.append((1-x*x0[i])*(1-y*y0[i])/4)
-        return np.array(N).reshape(4,1)
+        la1=(1-s)/2
+        la2=(1+s)/2
+        lb1=(1-r)/2
+        lb2=(1+r)/2
+        N1=la1*lb1
+        N2=la1*lb2
+        N3=la2*lb1
+        N4=la2*lb2
+
+        N=np.hstack(N1*np.eye(3),N2*np.eye(3),N3*np.eye(3),N4*np.eye(3))
+        return N
     
     def _J(self,x):
         x,y=x[0],x[1]
@@ -662,6 +779,44 @@ class Plate4(IsoParametric):
         self.__alpha.append(self.angle(node_l,node_i,self.local_csys.x))
 
         self.__K=np.zeros((24,24))
+
+    def _N(self,s,r):
+        """
+        params:
+            Hermite's interpolate function
+            s:natural position of evalue point.
+        returns:
+            3x(3x16) shape function matrix.
+        """
+        H11=1-3*s**2+2*s**3
+        H12=  3*s**2-2*s**3
+        H21=s-2*s**2+s**3
+        H22=   -s**2+s**3
+        H31=1-3*r**2+2*r**3
+        H32=  3*r**2-2*r**3
+        H41=r-2*r**2+r**3
+        H42=   -r**2+r**3
+        N1=H11*H31
+        N2=H11*H41
+        N3=H12*H31
+        N4=H12*H41
+        N5=H11*H32
+        N6=H11*H42
+        N7=H12*H32
+        N8=H12*H42
+        N9=H21*H31
+        N10=H21*H41
+        N11=H22*H31
+        N12=H22*H41
+        N13=H21*H32
+        N14=H21*H42
+        N15=H22*H32
+        N16=H22*H42
+        N=np.hstack([np.eye(3)*N1,np.eye(3)*N2,np.eye(3)*N3,np.eye(3)*N4,
+                     np.eye(3)*N5,np.eye(3)*N6,np.eye(3)*N7,np.eye(3)*N8,
+                     np.eye(3)*N9,np.eye(3)*N10,np.eye(3)*N11,np.eye(3)*N12,
+                     np.eye(3)*N13,np.eye(3)*N14,np.eye(3)*N15,np.eye(3)*N16])
+        return N
 
     #interpolate function in r-s csys
     def __N(s):
