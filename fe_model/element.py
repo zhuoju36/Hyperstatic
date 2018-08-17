@@ -25,7 +25,6 @@ class Element(object):
         self._nodes=[]
 
         self._D=None
-        self._B=None
         self._L=None
 
         self._mass=None
@@ -377,7 +376,7 @@ class Beam(Line):
             self._Me=spr.csc_matrix(_Me)
         
         elif mass=='conc':#Concentrated mass matrix
-            self._Me=spr.eye(12)*rho*A*l/2
+            self._Me=spr.eye(12).tocsr()*rho*A*l/2
 
         #force vector
         self._re =np.zeros((12,1))
@@ -433,9 +432,9 @@ class Beam(Line):
         kij=self._Ke
         mij=self._Me
         rij=self._re
-        kij_bar = self._Ke
-        mij_bar = self._Me
-        rij_bar = self._re
+        kij_bar = self._Ke_
+        mij_bar = self._Me_
+        rij_bar = self._re_
         for n in range(0,6):
             if releaseI[n] == True:
                 for i in range(12):
@@ -609,7 +608,7 @@ class Membrane4(Quad):
         mu: Poisson ratio
         rho: mass density
         """
-        super(Membrane4,self).__init__(2,8,name)
+        super(Membrane4,self).__init__(node_i,node_j,node_k,node_l,t,E,mu,rho,8)
         self._t=t
         self._E=E
         self._mu=mu
@@ -619,10 +618,11 @@ class Membrane4(Quad):
         node_dof=2
         
         Ke = quadpy.quadrilateral.integrate(
-            lambda s,r: self._BtDB(s)*np.linalg.det(self._J(s,r)),
+            lambda s: self._BtDB(s[0],s[1])*np.linalg.det(self._J(s[0],s[1])),
             quadpy.quadrilateral.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
             quadpy.quadrilateral.Stroud('C2 7-2')
             )
+        Ke=sp.sparse.csr_matrix(Ke)
         row=[]
         col=[]
         for i in range(elm_node_count):
@@ -631,7 +631,6 @@ class Membrane4(Quad):
         data=[1]*(elm_node_count*node_dof)
         G=sp.sparse.csr_matrix((data,(row,col)),shape=(elm_node_count*node_dof,elm_node_count*6))
         self._Ke=G.transpose()*Ke*G
-#        np.set_printoptions(precision=1,suppress=True)
         #Concentrated mass matrix, may be wrong
         self._Me=G.transpose()*np.eye(node_dof*elm_node_count)*G*rho*self._area*t/4
         
@@ -643,9 +642,9 @@ class Membrane4(Quad):
         
     def _N(self,s,r):
         """
+        Lagrange's interpolate function
         params:
-            Lagrange's interpolate function
-            s:natural position of evalue point.
+            s,r:natural position of evalue point.2-array.
         returns:
             2x(2x4) shape function matrix.
         """
@@ -664,62 +663,69 @@ class Membrane4(Quad):
     def _J(self,s,r):
         """
         Jacobi matrix of Lagrange's interpolate function
+        Lagrange's interpolate function
+        params:
+            s,r:natural position of evalue point.2-array.
+        returns:
+            2x2 Jacobi matrix.
         """
-        J=np.zeros((2,2))
+        J=np.zeros((2,2,s.shape[0]))
         #coordinates on local catesian system
-        x1,y1=self._x1,self.y1
-        x2,y2=self._x2,self.y2
-        x3,y3=self._x3,self.y3
-        x4,y4=self._x4,self.y4
+        x2D=self._x2D
+        x1,y1=x2D[0,0],x2D[0,1]
+        x2,y2=x2D[1,0],x2D[1,1]
+        x3,y3=x2D[2,0],x2D[2,1]
+        x4,y4=x2D[3,0],x2D[3,1]
         J[0,0]=-x1*(-s/2 + 1/2)/2 + x2*(-s/2 + 1/2)/2 - x3*(s/2 + 1/2)/2 + x4*(s/2 + 1/2)/2
         J[1,0]=-x1*(-r/2 + 1/2)/2 - x2*(r/2 + 1/2)/2 + x3*(-r/2 + 1/2)/2 + x4*(r/2 + 1/2)/2
         J[0,1]=-y1*(-s/2 + 1/2)/2 + y2*(-s/2 + 1/2)/2 - y3*(s/2 + 1/2)/2 + y4*(s/2 + 1/2)/2
         J[1,1]=-y1*(-r/2 + 1/2)/2 - y2*(r/2 + 1/2)/2 + y3*(-r/2 + 1/2)/2 + y4*(r/2 + 1/2)/2
+        return J.transpose(2,0,1)
     
-    def _B(self,x):
+    def _B(self,s,r):
         """
         strain matrix, which is derivative of intepolate function
+        params:
+            s,r:natural position of evalue point.2-array.
+        returns:
+            3x(2x4) Jacobi matrix.
         """
-        B=[]
-        x0,y0=self._x0[:,0],self._x0[:,1]
-        x,y=x[0],x[1]
-        for i in range(4):
-            B.append(np.array([[-x0[i]*(1-y*y0[i])/4,                   0],
-                               [                   0,-y0[i]*(1-x*x0[i])/4],
-                               [-y0[i]*(1-x*x0[i])/4,-x0[i]*(1-y*y0[i])/4]]))
-        B=np.hstack(B)
+        
+        B=np.zeros((3,8,s.shape[0])) #vectorized
+        B[0,0]=B[2,1]=s/4 - 1/4
+        B[1,1]=B[2,0]=r/4 - 1/4
+        B[0,2]=B[2,3]=-s/4 + 1/4
+        B[1,3]=B[2,2]=-r/4 - 1/4
+        B[0,4]=B[2,5]=-s/4 - 1/4
+        B[1,5]=B[2,4]=-r/4 + 1/4
+        B[0,6]=B[2,7]=s/4 + 1/4
+        B[1,7]=B[2,6]=r/4 + 1/4
         return B
     
-    def _x(self,N):
+    def _BtDB(self,s,r):
         """
-        convert csys from L to x
-        return: 2x1 array represent x,y
+        dot product of B^T, D, B
+        params:
+            s,r:natural position of evalue point.2-array.
+        returns:
+            3x3 matrix.
         """
-        return np.dot(np.array(N).reshape(1,4),self._x0).reshape(2,1)
-
-    def _BtDB(self,x):
-        """
-        strain matrix, which is derivative of intepolate function
-        """
-        B=[]
-        x0,y0=self._x0[:,0],self._x0[:,1]
-        x,y=x[0],x[1]
-        for i in range(4):
-            B.append(np.array([[-x0[i]*(1-y*y0[i])/4,                 x*0],
-                               [                 y*0,-y0[i]*(1-x*x0[i])/4],
-                               [-y0[i]*(1-x*x0[i])/4,-x0[i]*(1-y*y0[i])/4]]))
-        B=np.hstack(B)
-        D=self._D
-        BtDB=np.zeros((8,8,B.shape[2]))
-        for k in range(B.shape[2]):
-            BtDB[:,:,k]=B[:,:,k].transpose().dot(D).dot(B[:,:,k])
-        return BtDB
+        print(self._B(s,r).transpose(2,0,1).shape)
+        print(
+            np.matmul(
+                np.dot(self._B(s,r).T,self._D),
+                self._B(s,r).transpose(2,0,1)).shape
+            )
+        print(self._D.shape)
+       
+        
+        return np.matmul(np.dot(self._B(s,r).T,self._D),self._B(s,r).transpose(2,0,1)).transpose(1,2,0)
     
-    def _S(self,x):
+    def _S(self,s,r):
         """
         stress matrix
         """
-        return np.dot(self._D,self._B(x))
+        return np.dot(self._D,self._B(s,r))
 
 class Plate4(Quad):
     def __init__(self,node_i, node_j, node_k, node_l,t, E, mu, rho, name=None):
@@ -805,332 +811,3 @@ class Plate4(Quad):
         return np.arccos(v.dot(x)/L1/L2)
 
         #derivation
-    def __dNds(s):
-        r,s=s[0],s=[1]
-        dNdr=[-(1-s)/4]
-        dNdr.append((1-s)/4)
-        dNdr.append((1+s)/4)
-        dNdr.append(-(1+s)/4)
-        dNdr.append(-(1-s)*r)
-        dNdr.append((1-s*s)/2)
-        dNdr.append(-(1+s)*r)
-        dNdr.append(-(1-s*s)/2)
-      
-        dNds=[-(1-r)/4]
-        dNds.append(-(1+r)/4)
-        dNds.append((1+r)/4)
-        dNds.append((1-r)/4)
-        dNds.append(-(1-r*r)/2)
-        dNds.append(-(1+r)*s)
-        dNds.append((1+r*r)/2)
-        dNds.append(-(1-r)*s)
-        return np.array([dNdr,dNds])
-        
-        #Jacobi matrix
-    def __J(self,x,s):
-        x,y=x[0],x=[1]
-        dxdr=np.sum(self.__dNds(s)[0]*x)
-        dydr=np.sum(self.__dNds(s)[0]*y)
-        dxds=np.sum(self.__dNds(s)[1]*x)
-        dyds=np.sum(self.__dNds(s)[1]*y)
-        J=[[dxdr,dydr],
-           [dxds,dyds]]
-        return J 
-        
-    def dxds():      
-        pass
-        
-#    def dNdx(self,x):
-#        dNdx=[]
-#        dNdy=[]
-#        for i in range(8): 
-#            dNdx.append(self.__dNdr[i]/dxds(r)+self.__dNds[i]/dxds)
-#            dNdy.append(self.__dNdr[i]/dyds(r)+self.__dNds[i]/dyds)
-        
-    def __dMds(self,s):
-        r,s=s[0],s[1]
-        N=self.__N(r,s)
-        alpha=self.__alpha()
-        Mx=[]
-        Mx.append(N[4]*np.sin(alpha[0]))
-        Mx.append(N[5]*np.sin(alpha[1]))
-        Mx.append(N[6]*np.sin(alpha[2]))
-        Mx.append(N[7]*np.sin(alpha[3]))
-        #derivation
-        dMxdr=[]
-        dMxdr.append(-(1-s)*r)*np.sin(alpha[0])
-        dMxdr.append((1-s*s)/2)*np.sin(alpha[1])
-        dMxdr.append(-(1+s)*r)*np.sin(alpha[2])
-        dMxdr.append(-(1-s*s)/2)*np.sin(alpha[3])
-        
-        My=[]
-        My.append(-N[4]*np.cos(alpha[0]))
-        My.append(-N[5]*np.cos(alpha[1]))
-        My.append(-N[6]*np.cos(alpha[2]))
-        My.append(-N[7]*np.cos(alpha[3]))
-        dMydr=[]
-        dMydr.append((1-s)*r)*np.cos(alpha[0])
-        dMydr.append(-(1-s*s)/2)*np.cos(alpha[1])
-        dMydr.append((1+s)*r)*np.cos(alpha[2])
-        dMydr.append((1-s*s)/2)*np.cos(alpha[3])
-      
-        dMxds=[]
-        dMxds.append(-(1-r)/4*np.sin(alpha[0]))
-        dMxds.append(-(1+r)/4*np.sin(alpha[1]))
-        dMxds.append((1+r)/4*np.sin(alpha[2]))
-        dMxds.append((1-r)/4*np.sin(alpha[3]))
-        dMyds=[]
-        dMyds.append((1-r*r)/2*np.cos(alpha[0]))
-        dMyds.append((1+r)*s*np.cos(alpha[1]))
-        dMyds.append(-(1+r*r)/2*np.cos(alpha[2]))
-        dMyds.append((1-r)*s*np.cos(alpha[3]))
-        
-        dMxdr=np.array(dMxdr)
-        dMydr=np.array(dMxdr)
-        dMxds=np.array(dMyds)
-        dMyds=np.array(dMyds)
-        return [[dMxdr,dMydr],
-                [dMxds,dMyds]]
-         
-#    def __dMdx(self,r):
-#        #dx/dr=1/(dr/dx)?
-#        dMxdx=[]
-#        dMxdy=[]
-#        dMydx=[]
-#        dMydy=[]
-#        dMxdr,dMydr,dMxds,dMyds=self.dMdr(r)
-#        for i in range(4): 
-#            dMxdx.append(dMxdr[i]/dxdr+dMxds[i]/dxds)
-#            dMxdy.append(dMxdr[i]/dxdr+dMxds[i]/dyds)
-#            dMydx.append(dMydr[i]/dxdr+dMyds[i]/dxds)
-#            dMydy.append(dMydr[i]/dydr+dMyds[i]/dyds)
-#        return (dMxdy,dMxdy,dMydx,dMydy)
-        
-        D=[np.cos(alpha[0])*np.sin(alpha[3])-np.sin(alpha[0])*np.cos(alpha[3]),
-           np.cos(alpha[1])*np.sin(alpha[0])-np.sin(alpha[1])*np.cos(alpha[0]),
-           np.cos(alpha[2])*np.sin(alpha[1])-np.sin(alpha[2])*np.cos(alpha[1]),
-           np.cos(alpha[3])*np.sin(alpha[2])-np.sin(alpha[3])*np.cos(alpha[2])]
-#        
-#        b=[[       0,       0,       0,       0,dNdx[0],dNdx[1],dNdx[2],dNdx[3],0,0,0,0,        dMydx[0],        dMydx[1],        dMydx[2],        dMydx[3]],
-#           [ dNdy[0], dNdy[1], dNdy[2], dNdy[3],      0,      0,      0,      0,0,0,0,0,        dMxdy[0],        dMxdy[1],        dMxdy[2],        dMxdy[3]],
-#           [-dNdx[0],-dNdx[1],-dNdx[2],-dNdx[3],dNdy[0],dNdy[1],dNdy[2],dNdy[3],0,0,0,0,dMydy[0]-dMxdx[0],dMydy[1]-dMxdx[1],dMydy[2]-dMxdx[2],dMydy[3]-dMxdx[3]],
-#           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-#           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
-#           
-#        for i in range(4):
-#            gamma_e[i]=1/L()
-#           
-##        detJ=J[1,1]*J[2,2]-J[1,2]*J[2,1]
-##        
-##        a=[[z,0,0,0,0],
-##           [0,z,0,0,0],
-##           [0,0,z,0,0],
-##           [0,0,0,1,0],
-##           [0,0,0,0,1]]
-##           
-##        gamma=np.zeros((4,4))
-##        for i in range(4):
-##            for j in range(4):
-##                gamma[i,j]=1/L*()
-##      
-##        
-##        M1dx,M2dx,M3dx,M4dx=N1dy,N2dy,N3dy,N4dy
-##        M1dy,M2dy,M3dy,M4dy=N1dy,N2dy,N3dy,N4dy
-##        
-##        if sec.Material.type=='Iso':
-##            D11=D22=E*h**3/(12*(1-mu**2))
-##            D12=D21=mu*E*h**3/(12*(1-mu**2))
-##            D44=D55=5*E*h**3/(12*(1+mu))
-##            D=[[D11,D12,0,  0,  0],
-##               [D21,D22,0,  0,  0],
-##               [  0,  0,0,  0,  0],
-##               [  0,  0,0,D44,  0],
-##               [  0,  0,0,  0,D55]]
-##
-##           
-##        k=sp.integrate.dblquad(
-##                       func,-1,1
-##                       )
-##           
-##        
-##        #Calculate edge shear
-##        alpha[0,1]=-alpha[1,0]
-##        alpha[1,2]=-alpha[2,1]
-##        alpha[2,3]=-alpha[3,2]
-##        alpha[3,0]=-alpha[0,3]
-##        
-##        gamma_e=[]
-##        for i in range(4):
-##            gamma.append()
-#        
-#    def membrane_to_integrate(self,r,s):
-#        """
-#        bT-D-b
-#        """
-#        alpha=[]
-#        for i in range(4):
-#            alpha.append("the angle between edge i and x")
-#        
-#        #derivation
-#        dNdr=[-(1-s)/4]
-#        dNdr.append((1-s)/4)
-#        dNdr.append((1+s)/4)
-#        dNdr.append(-(1+s)/4)
-#        dNdr.append(-(1-s)*r)
-#        dNdr.append((1-s*s)/2)
-#        dNdr.append(-(1+s)*r)
-#        dNdr.append(-(1-s*s)/2)
-#        
-#        dNds=[-(1-r)/4]
-#        dNds.append(-(1+r)/4)
-#        dNds.append((1+r)/4)
-#        dNds.append((1-r)/4)
-#        dNds.append(-(1-r*r)/2)
-#        dNds.append(-(1+r)*s)
-#        dNds.append((1+r*r)/2)
-#        dNds.append(-(1-r)*s)
-#        
-#        dNdr=np.array(dNdr)
-#        dNds=np.array(dNds)
-#        
-#        #Jacobi matrix
-#        dxdr=sum(dNdr*x)
-#        dydr=sum(dNdr*y)
-#        dxds=sum(dNds*x)
-#        dyds=sum(dNds*y)
-#        J=[[dxdr,dydr],
-#           [dxds,dyds]]
-#        
-#        #dx/dr=1/(dr/dx)?
-#        dNdx=[]
-#        dNdy=[]
-#        for i in range(8): 
-#            dNdx.append(dNdr[i]/dxdr+dNds[i]/dxds)
-#            dNdy.append(dNdr[i]/dydr+dNds[i]/dyds)
-#            
-#        N=self.__N
-#        Mx=[]
-#        Mx.append(N[4]*np.sin(alpha[0]))
-#        Mx.append(N[5]*np.sin(alpha[1]))
-#        Mx.append(N[6]*np.sin(alpha[2]))
-#        Mx.append(N[7]*np.sin(alpha[3]))
-#        My=[]
-#        My.append(-N[4]*np.cos(alpha[0]))
-#        My.append(-N[5]*np.cos(alpha[1]))
-#        My.append(-N[6]*np.cos(alpha[2]))
-#        My.append(-N[7]*np.cos(alpha[3]))
-#        
-#        #derivation
-#        dMxdr=[]
-#        dMxdr.append(-(1-s)*r)*np.sin(alpha[0])
-#        dMxdr.append((1-s*s)/2)*np.sin(alpha[1])
-#        dMxdr.append(-(1+s)*r)*np.sin(alpha[2])
-#        dMxdr.append(-(1-s*s)/2)*np.sin(alpha[3])
-#        dMydr=[]
-#        dMydr.append((1-s)*r)*np.cos(alpha[0])
-#        dMydr.append(-(1-s*s)/2)*np.cos(alpha[1])
-#        dMydr.append((1+s)*r)*np.cos(alpha[2])
-#        dMydr.append((1-s*s)/2)*np.cos(alpha[3])
-#        
-#        dMxds=[]
-#        dMxds.append(-(1-r)/4*np.sin(alpha[0]))
-#        dMxds.append(-(1+r)/4*np.sin(alpha[1]))
-#        dMxds.append((1+r)/4*np.sin(alpha[2]))
-#        dMxds.append((1-r)/4*np.sin(alpha[3]))
-#        dMyds=[]
-#        dMyds.append((1-r*r)/2*np.cos(alpha[0]))
-#        dMyds.append((1+r)*s*np.cos(alpha[1]))
-#        dMyds.append(-(1+r*r)/2*np.cos(alpha[2]))
-#        dMyds.append((1-r)*s*np.cos(alpha[3]))
-#        
-#        dMxdr=np.array(dMxdr)
-#        dMydr=np.array(dMxdr)
-#        dMxds=np.array(dMyds)
-#        dMyds=np.array(dMyds)
-#                
-#        #dx/dr=1/(dr/dx)?
-#        dMxdx=[]
-#        dMxdy=[]
-#        dMydx=[]
-#        dMydy=[]
-#        for i in range(4): 
-#            dMxdx.append(dMxdr[i]/dxdr+dMxds[i]/dxds)
-#            dMxdy.append(dMxdr[i]/dxdr+dMxds[i]/dyds)
-#            dMydx.append(dMydr[i]/dxdr+dMyds[i]/dxds)
-#            dMydy.append(dMydr[i]/dydr+dMyds[i]/dyds)
-#        
-#        B=[[ dNdx[0],dNdx[1],dNdx[2],dNdx[3],      0,      0,      0,      0,         dMxdx[0],         dMxdx[1],         dMxdx[2],         dMxdx[3]],
-#           [       0,      0,      0,      0,dNdy[0],dNdy[1],dNdy[2],dNdy[3],         dMydy[0],         dMydy[1],         dMydy[2],         dMydy[3]],
-#           [ dNdx[0],dNdx[1],dNdx[2],dNdx[3],dNdy[0],dNdy[1],dNdy[2],dNdy[3],dMxdy[0]+dMydx[0],dMxdy[1]+dMydx[1],dMxdy[2]+dMydx[2],dMxdy[3]+dMydx[3]]]
-#
-#        return B.T.dot(D).dot(B)
-#
-#    
-#    
-#
-#    def cartisian_to_area(x1,y1):    
-#        a[0]=x[0]*y[2]-x[2]*y[0]
-#        b[0]=y[1]-y[2]
-#        c[0]=-x[1]+x[2]
-#        
-#        a[1]=x[1]*y[0]-x[0]*y[1]
-#        b[1]=y[2]-y[0]
-#        c[1]=-x[2]+x[0]
-#        
-#        a[2]=x[2]*y[1]-x[1]*y[2]
-#        b[2]=y[0]-y[1]
-#        c[2]=-x[0]+x[1]
-#        
-#        for i in range(3):
-#            L[i]=(a[i]+b[i]*x1+c[i]*y1)
-#            
-#    def area_to_cartisian(L):
-#        x2=0
-#        y2=0
-#        for i in range(3):
-#            x2+=x[i]*L[i]
-#            y2+=y[i]*L[i]
-#            
-#    L1,L2,L3=L[1],L[2],L[0]
-#    a1,a2,a3=a[1],a[2],a[0]
-#    b1,b2,b3=b[1],b[2],b[0]
-#    c1,c2,c3=c[1],c[2],c[0]
-#    
-#    N[1]=[
-#    L1+L1**2*L2+L1**2*L3-L1*L2**2-L1*L3**2,
-#    b2*(L3*L1**2+L1*L2*L3/2)-b3*(L1**2*L2+L1*L2*L3/2),
-#    c2*(L3*L1**2+L1*L2*L3/2)-c3*(L1**2*L2+L1*L2*L3/2)
-#    ]
-#    
-#    L1,L2,L3=L[2],L[0],L[1]
-#    a1,a2,a3=a[2],a[0],a[1]
-#    b1,b2,b3=b[2],b[0],b[1]
-#    c1,c2,c3=c[2],c[0],c[1]
-#    
-#    N[2]=[
-#    L1+L1**2*L2+L1**2*L3-L1*L2**2-L1*L3**2,
-#    b2*(L3*L1**2+L1*L2*L3/2)-b3*(L1**2*L2+L1*L2*L3/2),
-#    c2*(L3*L1**2+L1*L2*L3/2)-c3*(L1**2*L2+L1*L2*L3/2)
-#    ]
-#    
-#    L1,L2,L3=L[0],L[1],L[2]
-#    a1,a2,a3=a[0],a[1],a[2]
-#    b1,b2,b3=b[0],b[1],b[2]
-#    c1,c2,c3=c[0],c[1],c[2]
-#    
-#    N[0]=[
-#    L1+L1**2*L2+L1**2*L3-L1*L2**2-L1*L3**2,
-#    b2*(L3*L1**2+L1*L2*L3/2)-b3*(L1**2*L2+L1*L2*L3/2),
-#    c2*(L3*L1**2+L1*L2*L3/2)-c3*(L1**2*L2+L1*L2*L3/2)
-#    ]
-    
-        
-#if __name__=='__main__':
-#    import Node
-#    import Material
-#    import Section
-#    m = Material.material(2.000E11, 0.3, 7849.0474, 1.17e-5)
-#    s = Section.section(m, 4.800E-3, 1.537E-7, 3.196E-5, 5.640E-6)
-#    n1=Node.node(1,2,3)
-#    n2=Node.node(2,3,4)
-#    b=beam(n1,n2,s)

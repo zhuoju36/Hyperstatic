@@ -144,7 +144,6 @@ class Model:
         return self.__mode_
     @mode_.setter
     def mode_(self,mode):
-        assert(mode.shape[0]==self.DOF)
         self.__mode_=mode
     
     @property
@@ -205,6 +204,25 @@ class Model:
             self.__nodes[node].dn+=np.array(disp).reshape((6,1))
         else:
             self.__nodes[node].dn=np.array(disp).reshape((6,1))
+            
+    def set_node_restraint(self,node,restraint):
+        """
+        set node restraint to model.
+        params:
+            node: int, hid of node
+            force: list of 6 of nodal force
+            append: bool, if True, the input force will be additional on current force.
+        return:
+            bool, status of success
+        """
+        assert(len(restraint)==6)
+        disp=[]
+        for i in range(6):
+            if restraint[i]:
+                disp.append(0)
+            else:
+                disp.append(self.__nodes[node].dn[i])
+        self.__nodes[node].dn=np.array(disp).reshape((6,1))
         
     def add_beam(self,node0,node1,E, mu, A, I2, I3, J, rho,check_dup=False):
         """
@@ -242,6 +260,19 @@ class Model:
             x,y,z coordinate of reference vector.
         """
         pass
+    
+    def set_beam_releases(self,beam,r1,r2):
+        """
+        set beams axis.
+        
+        params:
+            beam: hid of beam
+            r1: list-like, 6 bool of frame's i-end distributed
+            r1: list-like, 6 bool of frame's i-end distributed
+        """
+        assert(len(r1)==6)
+        assert(len(r2)==6)
+        self.beams[beam].releases=list(r1)+list(r2)
         
     def set_beam_force_by_frame_distributed(self,beam,q_i,q_j):
         """
@@ -440,14 +471,15 @@ class Model:
             for f in fn_.reshape(6):
                 if f!=0:
                     data_f.append(f)
-                    row_f.append(node.hid+k)
+                    row_f.append(node.hid*6+k)
                     col_f.append(0)
+                k+=1
             
         for beam in self.__beams.values():
             i = beam.nodes[0].hid
             j = beam.nodes[1].hid 
             #Transform matrix
-            Vl=np.matrix(beam.local_csys.transform_matrix)
+            Vl=np.matrix(beam._local_csys.transform_matrix)
             V=np.zeros((12, 12))
             V[:3,:3] =V[3:6,3:6]=V[6:9,6:9]=V[9:,9:]=Vl
             Vt = V.transpose()
@@ -472,7 +504,7 @@ class Model:
 
     def assemble_boundary(self,mode='KMCf'):
         """
-        assemble boundary conditions
+        assemble boundary conditions,using diagonal element englarging method.
         params:
             mode: 'K','M','C','f' or their combinations
         """
@@ -486,7 +518,7 @@ class Model:
         if 'f' in mode:
             self.__f_=self.f.copy()
         self.__dof=self.node_count*6
-        alpha=1e9
+        alpha=1e10
         for node in self.__nodes.values():
             i=node.hid
             for j in range(6):

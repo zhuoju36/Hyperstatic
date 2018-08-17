@@ -12,8 +12,8 @@ from scipy import linalg
 from scipy import sparse as sp
 import scipy.sparse.linalg as sl
 
-from ..fe_model import Model
-from .. import logger      
+from fe_model import Model
+import logger      
 
 def solve_modal(model,k:int):
     """
