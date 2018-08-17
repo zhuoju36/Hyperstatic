@@ -8,7 +8,7 @@ import uuid
 
 import numpy as np
 
-from ..csys import Cartisian
+from csys import Cartisian
 
 class Node(object):
     def __init__(self,x,y,z,name=None):

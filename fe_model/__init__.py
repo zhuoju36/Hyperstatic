@@ -11,7 +11,7 @@ import numpy as np
 
 import scipy.sparse as spr
 from scipy.sparse import linalg as sl
-from .. import logger
+import logger
 from .node import Node
 from .element import Beam,Membrane3,Membrane4
 
