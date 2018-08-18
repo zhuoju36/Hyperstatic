@@ -11,9 +11,9 @@ from sqlalchemy import create_engine
 import sqlalchemy.orm as o
 
 from .orm import Base,Config
-from .. import logger
+import logger
 
-def _create(self,database):
+def create(self,database):
     """
     params:
         database: str. Database to be created. The path should be included

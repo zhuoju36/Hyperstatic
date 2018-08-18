@@ -7,7 +7,7 @@ Created on Thu Jun 23 21:30:59 2016
 import uuid
 
 from .orm import Material,IsotropicElastic
-from .. import logger
+import logger
 
 def add_material(self,name,rho,mat_type,**kwargs):
     """
@@ -47,18 +47,34 @@ def add_material(self,name,rho,mat_type,**kwargs):
         return False
 
 def add_material_quick(self,code):
+    """
+    Add material to model with code, if the name already exists, an exception will be raised
+
+    param:
+        category: str, concrete, steel, wood or alumium
+        code: str, code of material.
+    return:
+        boolean, status of success.
+    """
     try:
-        pass
+        if code=='Q345':
+            self.add_material(name=code,rho=7850,mat_type='isoelastic',E=2.06e11,mu=0.3)
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
 def set_material_isotropic_elastic(self,name,E,mu):
     try:
-        pass
+        material=self.session.query(Material).filter_by(name=name).first()
+        if material==None:
+            raise Exception("Name doesn't exist!")
+        material.isotropic_elastic.E=E
+        material.isotropic_elastic.mu=mu
+        self.session.add(material)
+        return True
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
@@ -67,7 +83,7 @@ def get_material_names(self):
         materials=self.session.query(Material).all()
         return [m.name for m in materials]
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
@@ -79,7 +95,7 @@ def set_material_name(self,name):
         material.name=name
         self.session.add(material)
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
 
@@ -90,7 +106,7 @@ def delete_material(self,name):
             raise Exception("Material name doen't exist!")
         self.session.delete(material)
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
         

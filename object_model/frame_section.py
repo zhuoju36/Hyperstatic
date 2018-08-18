@@ -9,7 +9,7 @@ import numpy as np
 
 from . import FrameCrossSection
 from .orm import Material,FrameSection
-from .. import logger
+import logger
         
 class Rectangle(FrameCrossSection):
     def __init__(self,mat,h,b,name=None):
@@ -297,6 +297,6 @@ def delete_frame_section(self,name):
             raise Exception("Frame section doen't exist!")
         self.session.delete(sec)
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False

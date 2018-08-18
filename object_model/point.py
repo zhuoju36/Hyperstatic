@@ -9,9 +9,9 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config,Point,Frame,Area,PointLoad,PointRestraint
-from .. import logger
+import logger
 
-def _add_point(self,x,y,z):
+def add_point(self,x,y,z):
     """
     Add point object to model, if the name already exists, an exception will be raised.
     if a point in same location exists, the name of the point will be returned.
@@ -322,7 +322,7 @@ def set_point_name(self,name):
         pt.name=name
         self.session.add(pt)
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False
     
@@ -333,6 +333,6 @@ def delete_point(self,name):
             raise Exception("Point doen't exist!")
         self.session.delete(pt)
     except Exception as e:
-        log.info(str(e))
+        logger.info(str(e))
         self.session.rollback()
         return False

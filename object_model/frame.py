@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config,Point,Frame,FrameSection,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain
-from .. import logger
+import logger
 
 def add_frame(self,pt0_coor,pt1_coor,section,name=None):
     """
@@ -36,7 +36,7 @@ def add_frame(self,pt0_coor,pt1_coor,section,name=None):
                  (Point.y-pt0_coor[1]*scale['L'])<tol,(pt0_coor[1]*scale['L']-Point.y)<tol,
                   (Point.z-pt0_coor[2]*scale['L'])<tol,(pt0_coor[2]*scale['L']-Point.z)<tol)).first()
     if pt0==None:
-        pt0_name=self._add_point(pt0_coor[0]*scale['L'],pt0_coor[1]*scale['L'],pt0_coor[2]*scale['L'])
+        pt0_name=self.add_point(pt0_coor[0]*scale['L'],pt0_coor[1]*scale['L'],pt0_coor[2]*scale['L'])
     else:
         pt0_name=pt0.name
         
@@ -45,7 +45,7 @@ def add_frame(self,pt0_coor,pt1_coor,section,name=None):
                  (Point.y-pt1_coor[1])<tol,(pt1_coor[1]-Point.y)<tol,
                   (Point.z-pt1_coor[2])<tol,(pt1_coor[2]-Point.z)<tol)).first()
     if pt1==None:
-        pt1_name=self._add_point(pt1_coor[0],pt1_coor[1],pt1_coor[2])
+        pt1_name=self.add_point(pt1_coor[0],pt1_coor[1],pt1_coor[2])
     else:
         pt1_name=pt1.name
     
@@ -87,8 +87,8 @@ def add_frame_batch(self,pt_coors,section):
         frm_ends=[]
         scale=self.scale()
         for pt0,pt1 in pt_coors:
-            pt0_name=self._add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
-            pt1_name=self._add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
+            pt0_name=self.add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
+            pt1_name=self.add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
             frm_ends.append((pt0_name,pt1_name))
         tol=self.session.query(Config).first().tolerance
         pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()

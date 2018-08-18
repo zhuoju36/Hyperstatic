@@ -8,7 +8,7 @@ import os
 
 import ezdxf
 
-from .. import logger
+import logger
 
 def import_dxf(self,dxf_file,layers=[],types='fa',frm_sec=None,area_sec=None):
     """

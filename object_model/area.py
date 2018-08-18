@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config, AreaSection, Point, Area
-from .. import logger
+import logger
 
 def add_area(self,pt0_coor,pt1_coor,pt2_coor,pt3_coor,section,name=None):
     """

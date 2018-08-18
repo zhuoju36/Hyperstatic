@@ -9,7 +9,7 @@ import uuid
 from sqlalchemy.sql import and_
 
 from .orm import Config, AreaSection, Point, Area
-from .. import logger
+import logger
 
 class Combination(object):
     def __init__(self,name,lc_factor,method='linear_add'):

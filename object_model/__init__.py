@@ -6,8 +6,8 @@ Created on Tue Mar  6 14:07:55 2018
 """
 import uuid 
 
-from ..fe_model import Model as FEModel
-from .. import logger
+from fe_model import Model as FEModel
+import logger
 
 class StructuralObject(object):
     def __init__(self,name):

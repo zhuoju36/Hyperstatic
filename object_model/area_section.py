@@ -7,7 +7,7 @@ Created on Thu Jun 23 21:32:16 2016
 import uuid
 
 from .orm import AreaSection
-from .. import logger
+import logger
 
 def add_area_section(self,name,material,type,t):
     """

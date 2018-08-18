@@ -8,7 +8,7 @@ import uuid
 
 from .orm import LoadCase,LoadCaseStaticLinearSetting,LoadCase2ndSetting,LoadCase3ndSetting,\
 LoadCaseModalSetting,LoadCaseResponseSpectrumSetting,LoadCaseTimeHistorySetting,LoadCaseBucklingSetting
-from .. import logger
+import logger
 
 def add_loadcase(self,name,case_type,weight_factor=0,**kwargs):
     """

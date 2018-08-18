@@ -5,7 +5,7 @@ Created on Thu Mar 29 13:43:53 2018
 @author: Dell
 """
 from .orm import Config
-from .. import logger
+import logger
 
 def get_project_name(self):
     """

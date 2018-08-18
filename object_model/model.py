@@ -14,11 +14,11 @@ FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain,
 AreaLoadToFrame,\
 ResultModalPeriod,ResultPointDisplacement,ResultPointReaction,ResultFrameForce,ResultModalDisplacement
 
-from ..fe_model import Model as FEModel
+from fe_model import Model as FEModel
 
-from ..fe_solver.static import solve_linear
-from ..fe_solver.dynamic import solve_modal
-from ..model_io import dxf
+from fe_solver.static import solve_linear
+from fe_solver.dynamic import solve_modal
+from model_io import dxf
 from . import db
 from . import project
 from . import material
@@ -32,7 +32,7 @@ from . import area
 from . import curve
 from . import result
 
-from .. import logger
+import logger
 
 class Model():
     def __init__(self):
@@ -42,7 +42,7 @@ class Model():
         
         #database
         self.open=MethodType(db.open,self)
-        self._create=MethodType(db._create,self)
+        self.create=MethodType(db.create,self)
         self.save=MethodType(db.save,self)
         self.close=MethodType(db.close,self)
         
@@ -68,7 +68,7 @@ class Model():
         self.delete_material=MethodType(material.delete_material,self)
         
         #point
-        self._add_point=MethodType(point._add_point,self)
+        self.add_point=MethodType(point.add_point,self)
         self.get_point_coordinate=MethodType(point.get_point_coordinate,self)
         self.get_point_name_by_coor=MethodType(point.get_point_name_by_coor,self)
         self.get_point_names=MethodType(point.get_point_names,self)
@@ -79,7 +79,7 @@ class Model():
         self.set_point_mass=MethodType(point.set_point_mass,self)
         self.set_point_restraint=MethodType(point.set_point_restraint,self)
         self.set_point_restraint_batch=MethodType(point.set_point_restraint_batch,self)
-        self._delete_point=MethodType(point.delete_point,self)
+        self.delete_point=MethodType(point.delete_point,self)
         
         #frame section
         self.add_frame_section=MethodType(frame_section.add_frame_section,self)
@@ -160,12 +160,12 @@ class Model():
         self.delete_area=MethodType(area.delete_area,self)
         
         #result
-        self._add_result_point_displacement=None
-        self._add_result_point_reaction=None
-        self._add_result_frame_force=None
-        self._add_result_period=None
-        self._add_result_modal_mass=None
-        self._add_result_modal_participate_factor=None
+        self.add_result_point_displacement=None
+        self.add_result_point_reaction=None
+        self.add_result_frame_force=None
+        self.add_result_period=None
+        self.add_result_modal_mass=None
+        self.add_result_modal_participate_factor=None
         self.get_result_point_displacement=MethodType(result.get_result_point_displacement,self)
         self.get_result_point_reaction=MethodType(result.get_result_point_reaction,self)
         self.get_result_frame_force=MethodType(result.get_result_frame_force,self)
@@ -174,7 +174,7 @@ class Model():
         self.combine_result_point_displacement=None
         self.combine_result_frame_force=None
         self.combine_result_area_stress=None
-        self._clear_all_result=None
+        self.clear_all_result=None
         
         #design/checking
         self.set_global_steel_check_settings=None
@@ -298,12 +298,12 @@ class Model():
         
         for load in point_loads:
             self.fe_model.set_node_force(pn_map[load.point_name],
-                                         [load.u1,
-                                          load.u2,
-                                          load.u3,
-                                          load.r1,
-                                          load.r2,
-                                          load.r3],append=True)
+                                         [load.u1 if load.u1!=None else 0,
+                                          load.u2 if load.u2!=None else 0,
+                                          load.u3 if load.u3!=None else 0,
+                                          load.r1 if load.r1!=None else 0,
+                                          load.r2 if load.r2!=None else 0,
+                                          load.r3 if load.r3!=None else 0],append=True)
         
         for load in frame_load_distributeds:
 #            self.fe_model.set_beam_force_by_frame_distributed()
