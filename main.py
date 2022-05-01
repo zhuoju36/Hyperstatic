@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 
 from object_model.model import Model
 
@@ -34,7 +34,7 @@ model.set_point_load(pt1,'L',[0,0,-50000,0,0,0])
 #model.save()
 model.mesh()
 model.run(['S','D','L'])
-
+ 
 #print(model.get_result_point_reaction(pt0,'D'))
 #print(model.get_result_frame_force(f1,'D')[0][:6])
 print(model.get_result_period('Modal'))
