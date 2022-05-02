@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-import numpy as np
-
 from structengpy.fe_model.node import Node
 from structengpy.fe_model.element import Membrane4
 

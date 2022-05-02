@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Mar  6 14:07:55 2018
+import sys
+import os
+curdir=os.path.dirname(__file__)
+parentdir=os.path.dirname(curdir)
+sys.path.append(parentdir)
 
-@author: Dell
-"""
 import uuid 
 
 from fe_model import Model as FEModel

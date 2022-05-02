@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Dec 26 15:56:10 2016
 
-@author: Dell
-"""
 from time import ctime
 import threading
 

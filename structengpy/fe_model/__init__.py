@@ -7,10 +7,17 @@ Created on Fri Dec 30 10:36:12 2016
 
 __all__=[]
 
+import sys
+import os
+curdir=os.path.dirname(__file__)
+parentdir=os.path.dirname(curdir)
+sys.path.append(parentdir)
+
 import numpy as np
 
 import scipy.sparse as spr
 from scipy.sparse import linalg as sl
+
 import logger
 from .node import Node
 from .element import Beam,Membrane3,Membrane4

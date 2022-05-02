@@ -8,9 +8,10 @@ Created on Sat Mar 10 14:43:43 2018
 
 import sys
 import os
-sys.path.append(os.path.curdir)
-sys.path.append(os.path.join(os.path.curdir,'object_model'))
-sys.path.append(os.path.join(os.path.curdir,'fe_model'))
-sys.path.append(os.path.join(os.path.curdir,'fe_solver'))
+cwd=os.getcwd()
+sys.path.append(cwd)
+sys.path.append(os.path.join(cwd,'object_model'))
+sys.path.append(os.path.join(cwd,'fe_model'))
+sys.path.append(os.path.join(cwd,'fe_solver'))
 
 

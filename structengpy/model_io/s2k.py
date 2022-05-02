@@ -6,7 +6,7 @@ Created on Wed Mar 28 20:58:57 2018
 """
 import os
 
-from .. import logger
+import logger
 from object_model.model import Model
 
 def import_s2k(model:Model,s2k_file):

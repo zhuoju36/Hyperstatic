@@ -4,8 +4,6 @@ Created on Fri Dec 30 10:26:29 2016
 
 @author: HZJ
 """
-import sys
-sys.path.append('..')
 
 import numpy as np
 from scipy import linalg

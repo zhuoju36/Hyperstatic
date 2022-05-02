@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 22 21:57:50 2016
-
-@author: HZJ
-"""
 import numpy as np
 import uuid
-
 
 class Cartisian(object):
     def __init__(self,O, A, B, name=None):
