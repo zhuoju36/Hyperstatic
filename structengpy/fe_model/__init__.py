@@ -5,7 +5,7 @@ Created on Fri Dec 30 10:36:12 2016
 @author: HZJ
 """
 
-__all__=[]
+__all__=['line','quad','tri']
 
 import sys
 import os

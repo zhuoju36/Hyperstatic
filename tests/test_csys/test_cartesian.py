@@ -8,11 +8,10 @@ from structengpy.csys import Cartisian
 class TestCartesian():
     def test_vec(self):
         csys=Cartisian((0,0,1),(1,1,0),(0,1,0))
-        assert csys.origin==approx(0,0,0)
+        assert csys.origin==approx((0,0,1))
         assert nl.norm(csys.x,2)==approx(1,rel=1e-8)
         assert nl.norm(csys.y,2)==approx(1,rel=1e-8)
         assert nl.norm(csys.z,2)==approx(1,rel=1e-8)
-
 
     def test_T(self):
         csys=Cartisian((0,0,0),(1,1,0),(0,1,0))

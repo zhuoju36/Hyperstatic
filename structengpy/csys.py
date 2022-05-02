@@ -3,7 +3,7 @@ import numpy as np
 import uuid
 
 class Cartisian(object):
-    def __init__(self,O, A, B, name=None):
+    def __init__(self,O:tuple, A:tuple, B:tuple, name:str=None):
         """
         O: 3x1 vector
         A: 3x1 vector
@@ -53,7 +53,7 @@ class Cartisian(object):
         # return V.transpose()
         return np.array([x,y,z])
     
-    def set_by_3pts(self,O, A, B):
+    def set_by_3pts(self,O:tuple, A:tuple, B:tuple):
         """
         O: tuple 3
         A: tuple 3
@@ -71,7 +71,8 @@ class Cartisian(object):
         self.__z = z/np.linalg.norm(z)
         self.__y = np.cross(self.z, self.x)
     
-    def set_origin(self,x, y, z):
+    @origin.setter
+    def origin(self,x:float, y:float, z:float):
         self.__O = (x,y,z)
     
     def align_with_global(self):
