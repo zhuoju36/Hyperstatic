@@ -5,7 +5,7 @@ from structengpy.fe_model.node import Node
 from structengpy.fe_model.element import Membrane4
 
 class TestMembrane4():
-    def test_contruction():
+    def test_contruction(self):
         n1=Node(0,0,0)
         n2=Node(0,1,0)
         n3=Node(1,1,0)

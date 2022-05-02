@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+from pytest import approx,raises
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from structengpy.fe_solver.static import solve_linear
 
 class TestFrameSystem():
 
-    def test_cantilever_beam():
+    def test_cantilever_beam(self):
         #FEModel Test
         model=FEModel()
         model.add_node(0,0,0)
@@ -30,10 +31,11 @@ class TestFrameSystem():
         model.assemble_f()
         model.assemble_boundary()
         solve_linear(model)
-        print(np.round(model.d_,6))
-        print("The result of node 1 should be about [0.12879,0.06440,-0.32485,-0.09320,0.18639,0]")
+        # print(np.round(model.d_,6))
+        # print("The result of node 1 should be about [0.12879,0.06440,-0.32485,-0.09320,0.18639,0]")
+        assert model.d_[0:6]==approx(np.array([0.12879,0.06440,-0.32485,-0.09320,0.18639,0]),1e-5)
 
-    def test_simply_released_beam():
+    def test_simply_released_beam(self):
         #FEModel Test
         model=FEModel()
 
@@ -66,7 +68,7 @@ class TestFrameSystem():
         print(np.round(model.d_,6))
         print("The result of node 1 should be about [0.00445,0.00890,-0.02296,-0.01930,-0.03860,-0.01930]")
 
-    def test_simply_supported_beam():
+    def test_simply_supported_beam(self):
         #FEModel Test
         model=FEModel()
 
@@ -96,7 +98,7 @@ class TestFrameSystem():
         print(np.round(model.d_,6))
         print("The result of node 1 should be about [0.00796,0.00715,-0.02296,-0.01553,-0.03106,-0.01903]")
 
-    def test_2Dframe():
+    def test_2Dframe(self):
         #FEModel Test
         model=FEModel()
         n1=Node(0,0,0)

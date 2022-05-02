@@ -28,7 +28,7 @@ class Cartisian(object):
         
     @property
     def origin(self):
-        return self.__origin
+        return self.__O
         
     @property
     def x(self):
@@ -55,9 +55,9 @@ class Cartisian(object):
     
     def set_by_3pts(self,O, A, B):
         """
-        origin: tuple 3
-        pt1: tuple 3
-        pt2: tuple 3
+        O: tuple 3
+        A: tuple 3
+        B: tuple 3
         """
         tol=1e-8
         self.__O=O    
@@ -72,12 +72,7 @@ class Cartisian(object):
         self.__y = np.cross(self.z, self.x)
     
     def set_origin(self,x, y, z):
-        """
-        origin: tuple 3
-        pt1: tuple 3
-        pt2: tuple 3
-        """
-        self.origin = (x,y,z)
+        self.__O = (x,y,z)
     
     def align_with_global(self):
         self.__x=np.array([1,0,0])

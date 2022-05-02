@@ -10,7 +10,7 @@ from structengpy.fe_solver.static import solve_linear
 
 class TestMem3System():
 
-    def test_shear():
+    def test_shear(self):
         model=FEModel()
         n1=Node(0,0,0)
         n2=Node(0,0,5)
@@ -44,7 +44,7 @@ class TestMem3System():
         print(res)
         print(r"correct answer should be about ???")
 
-    def test_pseudo_cantilever():
+    def test_pseudo_cantilever(self):
         """
         This is a cantilever beam with 50x10
         l,h: division on l and h direction
