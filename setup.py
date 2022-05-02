@@ -2,7 +2,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-VERSION = '0.1.0'
+VERSION = '0.1.2'
 
 setup(
     name='StructEngPy', 
@@ -15,9 +15,9 @@ setup(
     zip_safe=False,
     python_requires=">=3.6",
     install_requires=[
-        'numpy>=1.14',
-        'scipy>=0.16',
-        'quadpy==0.11',
-        'mpmath==1.1.1',
+        'numpy>=1.21',
+        'scipy>=1.7',
+        'quadpy==0.16',
+        'mpmath==1.2.1',
     ],
 )
