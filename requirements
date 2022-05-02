@@ -1,4 +1,0 @@
-numpy==1.14
-scipy==0.16
-quadpy==0.11
-mpmath==1.1.1
