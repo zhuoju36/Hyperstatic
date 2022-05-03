@@ -8,13 +8,12 @@ import uuid
 
 import numpy as np
 
-from csys import Cartisian
+from structengpy.csys import Cartisian
 
 class Node(object):
     def __init__(self,x,y,z,name=None):
         self.__name=uuid.uuid1() if name==None else str(name)
         self.__hid=None #hidden id
-        self.__loc=np.array([x,y,z])
         o=[x,y,z]
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
@@ -38,19 +37,19 @@ class Node(object):
 
     @property
     def loc(self):
-        return self.__loc
+        return self.__local_csys.origin
 
     @property
     def x(self):
-        return self.__loc[0]
+        return self.loc[0]
     
     @property
     def y(self):
-        return self.__loc[1]
+        return self.loc[1]
     
     @property
     def z(self):
-        return self.__loc[2]
+        return self.loc[2]
         
     @property
     def local_csys(self):
@@ -65,7 +64,15 @@ class Node(object):
 
     def initialize_csys(self):
         self.__local_csys.align_with_global()
+    
+    def rotate_about_1axis(self,theta):
+        self.__local_csys.rotate_about_x(theta)
 
+    def rotate_about_2axis(self,theta):
+        self.__local_csys.rotate_about_y(theta)
+
+    def rotate_about_3axis(self,theta):
+        self.__local_csys.rotate_about_z(theta)
     # @property
     # def fn(self):
     #     return self.__load

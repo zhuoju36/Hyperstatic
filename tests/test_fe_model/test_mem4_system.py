@@ -4,8 +4,8 @@ import pytest
 import numpy as np
 
 from structengpy.fe_model.node import Node
-from structengpy.fe_model.element import Membrane4
-from structengpy.fe_model import Model as FEModel
+from structengpy.fe_model.quad.membrane import Membrane4
+from structengpy.fe_model.model import Model as FEModel
 from structengpy.fe_solver.static import solve_linear
 
 class TestMem4System():

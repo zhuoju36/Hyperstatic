@@ -9,7 +9,7 @@ import quadpy
 from . import Line
 
 class Beam(Line):
-    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None, mass='conc', tol=1e-6):
+    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None, tol=1e-6):
         """
         params:
             node_i,node_j: ends of beam.
@@ -23,15 +23,53 @@ class Beam(Line):
             mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
             tol: tolerance
         """
-        super(Beam,self).__init__(node_i,node_j,A,rho,12,name,mass)
-        self._releases=[[False,False,False,False,False,False],
+        super(Beam,self).__init__(node_i,node_j,12,name)
+        self.__releases=[[False,False,False,False,False,False],
                          [False,False,False,False,False,False]]
-        
+        self.__E=E
+        self.__mu=mu
+        self.__A=A
+        self.__I2=I2
+        self.__I3=I3
+        self.__J=J
+        self.__rho=rho
+
+    @property
+    def rotation(self,theta):
+        self.local_csys.rotate_about_x(theta)
+
+    @property
+    def releases(self):
+        return self._releases
+    
+    @releases.setter
+    def releases(self,rls):
+        if len(rls)!=12:
+            raise ValueError('rls must be a 12 boolean array')
+        self.__releases=np.array(rls).reshape((2,6))
+
+    @property
+    def length(self):
+        return super().length
+
+    @property
+    def transform_matrix(self):
+        return super().transform_matrix
+
+    def integrate_K(self):
+        #Initialize local matrices
+        #form the stiffness matrix:
+        E=self.__E
+        mu=self.__mu
+        A=self.__A
+        I2=self.__I2
+        I3=self.__I3
+        J=self.__J
+        rho=self.__rho
+
         l=self.length
         G=E/2/(1+mu)
 
-        #Initialize local matrices
-        #form the stiffness matrix:
         K_data=(
         (E*A / l,(0, 0)),
         (-E*A / l,(0, 6)),
@@ -88,9 +126,20 @@ class Beam(Line):
         data=[k[0] for k in K_data]
         row=[k[1][0] for k in K_data]
         col=[k[1][1] for k in K_data]
-        self._Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
+        _Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
+        return _Ke
 
-        #form mass matrix
+    def integrate_M(self,mass='conc'):
+        #Initialize local matrices
+        #form the stiffness matrix:
+        E=self.__E
+        mu=self.__mu
+        A=self.__A
+        I2=self.__I2
+        I3=self.__I3
+        J=self.__J
+        rho=self.__rho
+        l=self.length
         if mass=='coor':#Coordinated mass matrix
             _Me=np.zeros((12,12))
             _Me[0, 0]=140
@@ -132,40 +181,12 @@ class Beam(Line):
             _Me[11, 11]=4 * l*l
     
             _Me*= (rho*A*l / 420)
-            self._Me=spr.csc_matrix(_Me)
+            _Me = spr.csc_matrix(_Me)
         
         elif mass=='conc':#Concentrated mass matrix
-            self._Me=spr.eye(12).tocsr()*rho*A*l/2
-
-        #force vector
-        self._re =np.zeros((12,1))
+            _Me=spr.eye(12).tocsr()*rho*A*l/2
         
-        #condensated matrices and vector
-        self._Ke_=self._Ke.copy()
-        self._Me_=self._Me.copy()
-        self._re_=self._re.copy()
-                
-    @property
-    def Ke_(self):
-        return self._Ke_
-    
-    @property
-    def Me_(self):
-        return self._Me_
-    
-    @property    
-    def re_(self):
-        return self._re_
-    
-    @property
-    def releases(self):
-        return self._releases
-    
-    @releases.setter
-    def releases(self,rls):
-        if len(rls)!=12:
-            raise ValueError('rls must be a 12 boolean array')
-        self._releases=np.array(rls).reshape((2,6))
+        return _Me
         
     def _N(self,s):
         """
@@ -182,34 +203,32 @@ class Beam(Line):
         N=np.hstack([np.eye(3)*N1,np.eye(3)*N2,np.eye(3)*N3,np.eye(3)*N4])
         return N
         
-    def static_condensation(self):
+    def static_condensation(self,Ke,Me,re:np.array):
         """
         Perform static condensation.
         """
-        releaseI=self._releases[0]
-        releaseJ=self._releases[1]
-        kij=self._Ke
-        mij=self._Me
-        rij=self._re
-        kij_bar = self._Ke_
-        mij_bar = self._Me_
-        rij_bar = self._re_
+        releaseI=self.__releases[0]
+        releaseJ=self.__releases[1]
+        kij=Ke
+        mij=Me
+        rij=re
+        kij_ = Ke.copy()
+        mij_ = Me.copy()
+        rij_ = re.copy()
         for n in range(0,6):
             if releaseI[n] == True:
                 for i in range(12):
                     for j in range(12):
-                        kij_bar[i, j] = kij[i, j] - kij[i, n]* kij[n, j] / kij[n, n]
-                        mij_bar[i, j] = mij[i, j] - mij[i, n]* mij[n, j] / mij[n, n]
-                    rij_bar[i] = rij[i] - rij[n] * kij[n, i] / kij[n, n]
+                        kij_[i, j] = kij[i, j] - kij[i, n]* kij[n, j] / kij[n, n]
+                        mij_[i, j] = mij[i, j] - mij[i, n]* mij[n, j] / mij[n, n]
+                    rij_[i] = rij[i] - rij[n] * kij[n, i] / kij[n, n]
             if releaseJ[n] == True:
                 for i in range(12):
                     for j in range(12):
-                        kij_bar[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
-                        mij_bar[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
-                    rij_bar[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
-        self._Ke_=kij_bar
-        self._Me_=mij_bar
-        self._re_=rij_bar
+                        kij_[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
+                        mij_[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
+                    rij_[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
+        return kij_,mij_,rij_ #condensated Ke_,Me_,re_
 #        ##pythonic code, not finished
 #        Ke=self._Ke.copy()
 #        Me=self._Me.copy()
@@ -244,33 +263,30 @@ class Beam(Line):
 #        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
 
 #code here should be revised
-        def resolve_element_force(self,ue):
-           """
-           compute beam forces with 
-           """
-           fe=np.zeros((12,1))
-           
-           releaseI=self._releases[0]
-           releaseJ=self._releases[1]
-           Ke=self._Ke
-           Me=self._Me
-           re=self._re
-           Ke_ = Ke.copy()
-           Me_ = Me.copy()
-           re_ = re.copy()
-           for n in range(0,6):
-               if releaseI[n] == True:
-                   for i in range(12):
-                       for j in range(12):
-                           Ke_[i, j] = Ke[i, j] - Ke[i, n]* Ke[n, j] / Ke[n, n]
-                           Me_[i, j] = Me[i, j] - Me[i, n]* Me[n, j] / Me[n, n]
-                       re_[i] = re[i] - re[n] * Ke[n, i] / Ke[n, n]
-               if releaseJ[n] == True:
-                   for i in range(12):
-                       for j in range(12):
-                           Ke_[i, j] = Ke[i, j] - Ke[i, n + 6]* Ke[n + 6, j] / Ke[n + 6, n + 6]
-                           Me_[i, j] = Me[i, j] - Me[i, n + 6]* Me[n + 6, j] / Me[n + 6, n + 6]
-                       re_[i] = re[i] - re[n + 6] * Ke[n + 6, i] / Ke[n + 6, n + 6]
-
-           fe=self._Ke_*ue+self._re_
-           return fe
+    def resolve_element_force(self,Ke,Me,re,ue):
+        """
+        compute beam forces with 
+        """
+        fe=np.zeros((12,1))
+        
+        releaseI=self.__releases[0]
+        releaseJ=self.__releases[1]
+        Ke_ = Ke.copy()
+        Me_ = Me.copy()
+        re_ = re.copy()
+        for n in range(0,6):
+            if releaseI[n] == True:
+                for i in range(12):
+                    for j in range(12):
+                        Ke_[i, j] = Ke[i, j] - Ke[i, n]* Ke[n, j] / Ke[n, n]
+                        Me_[i, j] = Me[i, j] - Me[i, n]* Me[n, j] / Me[n, n]
+                    re_[i] = re[i] - re[n] * Ke[n, i] / Ke[n, n]
+            if releaseJ[n] == True:
+                for i in range(12):
+                    for j in range(12):
+                        Ke_[i, j] = Ke[i, j] - Ke[i, n + 6]* Ke[n + 6, j] / Ke[n + 6, n + 6]
+                        Me_[i, j] = Me[i, j] - Me[i, n + 6]* Me[n + 6, j] / Me[n + 6, n + 6]
+                    re_[i] = re[i] - re[n + 6] * Ke[n + 6, i] / Ke[n + 6, n + 6]
+        Ke_,Me_,re_=self.static_condensation(Ke,Me,re)
+        fe=self._Ke_*ue+self._re_
+        return fe

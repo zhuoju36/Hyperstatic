@@ -1,6 +1,7 @@
 import pytest
 from pytest import approx,raises
 
+import numpy as np
 import numpy.linalg as nl
 
 from structengpy.csys import Cartisian
@@ -20,3 +21,13 @@ class TestCartesian():
     def test_inline(self):
         with pytest.raises(Exception):
             csys=Cartisian((10,10,0),(1,1,0),(2,2,0))
+
+    def test_rotate(self):
+        csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+        csys.rotate_about_z(np.pi/4)
+        assert csys.transform_matrix[0,0]==approx(2**0.5/2,rel=1e-3)
+        assert csys.transform_matrix[1,0]==approx(-2**0.5/2,rel=1e-3)
+        csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+        csys.rotate_about_x(np.pi/2)
+        assert csys.transform_matrix[1]==approx(np.array([0,0,1]),rel=1e-3)
+        assert csys.transform_matrix[2]==approx(np.array([0,-1,0]),rel=1e-3)

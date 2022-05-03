@@ -27,7 +27,7 @@ class Line(Element):
     @property
     def transform_matrix(self):
         T=np.zeros((12,12))
-        V=self.__local_csys.transform_matrix
+        V=super(Line,self).local_csys.transform_matrix
         T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
         return spr.csr_matrix(T)
 
@@ -35,3 +35,5 @@ if __name__=="__main__":
     n1=Node(0,1,0)
     n2=Node(1,1,0)
     l=Line(n1,n2,6)
+    print(l.length)
+    print(l.transform_matrix)

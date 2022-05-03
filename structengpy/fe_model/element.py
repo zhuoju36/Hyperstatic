@@ -75,6 +75,10 @@ class Element(object):
     #     self.__re=np.array(force).reshape((self._dof,1))
 
     @property
+    def local_csys(self):
+        return self.__local_csys
+
+    @property
     def mass(self):
         raise NotImplementedError()
 
@@ -84,5 +88,5 @@ class Element(object):
 
 if __name__=="__main__":
     csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
-    ele=Element(2,6,csys)
+    ele=Element([],2,6,csys)
     print(ele.transform_matrix)
