@@ -5,7 +5,7 @@ import numpy as np
 
 from structengpy.fe_model.node import Node
 from structengpy.fe_model.tri.membrane import Membrane3
-from structengpy.fe_model import Model as FEModel
+from structengpy.fe_model.model import Model as FEModel
 from structengpy.fe_solver.static import solve_linear
 
 class TestMem3System():
