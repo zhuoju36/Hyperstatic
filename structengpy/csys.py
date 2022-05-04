@@ -7,13 +7,19 @@ from scipy.spatial.transform import Rotation as R
 
 class Cartisian(object):
     def __init__(self,O:tuple, A:tuple, B:tuple, name:str=None):
-        """
-        O: 3x1 vector
-        A: 3x1 vector
-        B: 3x1 vector
+        """_summary_
+
+        Args:
+            O (tuple): array-like
+            A (tuple): array-like
+            B (tuple): array-like
+            name (str, optional):  Defaults to None.
+
+        Raises:
+            Exception: _description_
         """
         tol=absolute_tolerance()
-        self.__O=O    
+        self.__O=np.array(O)    
         OA = np.array(A)-np.array(O)
         OB = np.array(B)-np.array(O)
         cos = np.dot(OA, OB)/np.linalg.norm(OA)/np.linalg.norm(OB)
@@ -50,43 +56,57 @@ class Cartisian(object):
     def transform_matrix(self):
         return self.__T
 
-    def rotate_about_external_x(self,theta):
+    def rotate_about_external_x(self,theta:float):
         r=R.from_quat([1*np.sin(theta/2),0,0,np.cos(theta/2)])
         self.__T=r.apply(self.__T)
 
-    def rotate_about_external_y(self,theta):
+    def rotate_about_external_y(self,theta:float):
         r=R.from_quat([0,1*np.sin(theta/2),0,np.cos(theta/2)])
         self.__T=r.apply(self.__T)
 
-    def rotate_about_external_z(self,theta):
+    def rotate_about_external_z(self,theta:float):
         r=R.from_quat([0,0,1*np.sin(theta/2),np.cos(theta/2)])
         self.__T=r.apply(self.__T)
 
-    def rotate_about_x(self,theta):
+    def rotate_about_x(self,theta:float):
         x,y,z=self.__T[0,:]
         r=R.from_quat([x*np.sin(theta/2),y*np.sin(theta/2),z*np.sin(theta/2),np.cos(theta/2)])
         self.__T=r.apply(self.__T)
 
-    def rotate_about_y(self,theta):
+    def rotate_about_y(self,theta:float):
         x,y,z=self.__T[1,:]
         r=R.from_quat([x*np.sin(theta/2),y*np.sin(theta/2),z*np.sin(theta/2),np.cos(theta/2)])
         self.__T=r.apply(self.__T)
 
-    def rotate_about_z(self,theta):
+    def rotate_about_z(self,theta:float):
         x,y,z=self.__T[2,:]
         r=R.from_quat([x*np.sin(theta/2),y*np.sin(theta/2),z*np.sin(theta/2),np.cos(theta/2)])
         self.__T=r.apply(self.__T)
 
-    def rotate_about_vec(self,x,y,z,theta):
+    def rotate_about_vec(self,x:float,y:float,z:float,theta:float):
+        """绕给定轴线旋转
+
+        Args:
+            x (float): 旋转轴x分量
+            y (float): 旋转轴y分量
+            z (float): 旋转轴z分量
+            theta (float): 旋转角
+        """
         l=np.linalg.norm(np.array([x,y,z]))
         r=R.from_quat([x/l*np.sin(theta/2),y/l*np.sin(theta/2),z/l*np.sin(theta/2),np.cos(theta/2)])
         self.__T=r.apply(self.__T)
     
     def set_by_3pts(self,O:tuple, A:tuple, B:tuple):
-        """
-        O: tuple 3
-        A: tuple 3
-        B: tuple 3
+        """以三点设定坐标系方向
+
+        Args:
+            O (tuple): array-like
+            A (tuple): array-like
+            B (tuple): array-like
+            name (str, optional):  Defaults to None.
+
+        Raises:
+            Exception: _description_
         """
         tol=1e-8
         self.__O=O    
@@ -105,6 +125,8 @@ class Cartisian(object):
         self.__O = (x,y,z)
     
     def align_with_global(self):
+        """对齐绝对坐标系
+        """
         self.__T=np.array([[1,0,0],[0,1,0],[0,0,1]])
 
 if __name__=='__main__':

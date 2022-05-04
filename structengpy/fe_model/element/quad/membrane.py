@@ -3,7 +3,7 @@ import scipy as sp
 import scipy.sparse as spr
 import quadpy
 
-from . import Quad
+from structengpy.fe_model.element.quad import Quad
 
 class Membrane4(Quad):
     def __init__(self,node_i, node_j, node_k, node_l, t, E, mu, rho, name=None):
@@ -23,10 +23,10 @@ class Membrane4(Quad):
         elm_node_count=4
         node_dof=2
         
-        Ke = quadpy.quadrilateral.integrate(
+        scheme=quadpy.c2.get_good_scheme(7)
+        Ke = scheme.integrate(
             lambda s: self._BtDB(s[0],s[1])*np.linalg.det(self._J(s[0],s[1])),
-            quadpy.quadrilateral.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
-            quadpy.quadrilateral.Stroud('C2 7-2')
+            quadpy.c2.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
             )
         Ke=sp.sparse.csr_matrix(Ke)
         row=[]

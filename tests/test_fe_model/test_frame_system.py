@@ -6,7 +6,7 @@ import numpy as np
 
 from structengpy.fe_model.node import Node
 from structengpy.fe_model.line.beam import Beam
-from structengpy.fe_model import Model as FEModel
+from structengpy.fe_model.structure import Model as FEModel
 from structengpy.fe_solver.static import solve_linear
 
 class TestFrameSystem():

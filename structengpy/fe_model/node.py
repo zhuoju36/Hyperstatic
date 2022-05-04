@@ -11,9 +11,8 @@ import numpy as np
 from structengpy.csys import Cartisian
 
 class Node(object):
-    def __init__(self,x,y,z,name=None):
-        self.__name=uuid.uuid1() if name==None else str(name)
-        self.__hid=None #hidden id
+    def __init__(self,name:str,x:float,y:float,z:float):
+        self.__name=name
         o=[x,y,z]
         pt1=[x+1,y,z]
         pt2=[x,y+1,z]
@@ -26,14 +25,14 @@ class Node(object):
     def name(self):
         return self.__name
         
-    @property
-    def hid(self):
-        return self.__hid
+    # @property
+    # def hid(self):
+    #     return self.__hid
 
-    @hid.setter
-    def hid(self,hid):
-        assert type(hid)==int
-        self.__hid=hid
+    # @hid.setter
+    # def hid(self,hid):
+    #     assert type(hid)==int
+    #     self.__hid=hid
 
     @property
     def loc(self):
@@ -56,7 +55,12 @@ class Node(object):
         return self.__local_csys
     
     @property
-    def transform_matrix(self):
+    def transform_matrix(self)->np.ndarray:
+        """获取结点的变换矩阵
+
+        Returns:
+            np.ndarray: 6x6变换矩阵
+        """
         V=self.__local_csys.transform_matrix
         V_=np.zeros((6,6))
         V_[:3,:3]=V_[3:,3:]=V

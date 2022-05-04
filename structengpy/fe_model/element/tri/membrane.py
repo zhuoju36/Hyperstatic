@@ -1,3 +1,7 @@
+import numpy as np
+import scipy as sp
+
+from structengpy.fe_model.element.tri import Tri
 class Membrane3(Tri):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):
         """
@@ -11,8 +15,8 @@ class Membrane3(Tri):
         super(Membrane3,self).__init__(node_i,node_j,node_k,t,E,mu,rho,6,name)
 
         x0=np.array([(node.x,node.y,node.z) for node in self._nodes])
-        V=self._local_csys.transform_matrix
-        o=self._local_csys.origin
+        V=self.local_csys.transform_matrix
+        o=self.local_csys.origin
         self._x0=(x0-np.array(o)).dot(V.T)[:,:2]
         
         D=self._D

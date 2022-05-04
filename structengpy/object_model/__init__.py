@@ -7,7 +7,7 @@ sys.path.append(parentdir)
 
 import uuid 
 
-from fe_model import Model as FEModel
+from structengpy.fe_model.structure import Model
 import logger
 
 class StructuralObject(object):

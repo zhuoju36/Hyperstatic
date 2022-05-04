@@ -6,7 +6,7 @@ import scipy.sparse as spr
 import scipy.interpolate as interp
 import quadpy
 
-from . import Line
+from structengpy.fe_model.element.line import Line
 
 class Link(Line):
     def __init__(self,node_i, node_j, E, A, rho, name=None, mass='conc', tol=1e-6):
