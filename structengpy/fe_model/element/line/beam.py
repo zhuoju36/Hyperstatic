@@ -1,4 +1,4 @@
-import uuid
+# -*- coding: utf-8 -*-
 
 import numpy as np
 import scipy as sp
@@ -24,7 +24,7 @@ class Beam(Line):
             mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
         """
         tol=Tolerance.abs_tol()
-        super(Beam,self).__init__(node_i,node_j,12,name)
+        super(Beam,self).__init__(name,node_i,node_j,12)
         self.__releases=[[False,False,False,False,False,False],
                          [False,False,False,False,False,False]]
         self.__E=E

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import scipy.sparse as spr
 
@@ -12,12 +13,10 @@ class Line(Element):
         tol=Tolerance.abs_tol()
         o = node_i.loc
         pt1 = node_j.loc
-        pt2 = node_i.loc
-        if abs(node_i.x - node_j.x) < tol and abs(node_i.y - node_j.y) < tol:
-            pt2[0] += 1
-        else:
-            pt2[2] += 1
-        super(Line,self).__init__([node_i,node_j],1,dof,Cartisian(o, pt1, pt2),name)
+        pt2 = o + np.array([0,0,1])
+        if np.max(np.abs((node_i.loc-node_j.loc)[:2])) < tol:
+            pt2 = o + np.array([1,0,0])
+        super(Line,self).__init__(name,[node_i,node_j],1,dof,Cartisian(o, pt1, pt2))
 
     @property
     def length(self):

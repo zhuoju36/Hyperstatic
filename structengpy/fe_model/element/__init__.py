@@ -9,19 +9,14 @@ import scipy.sparse as spr
 from structengpy.csys import Cartisian
 
 class Element(object):
-    def __init__(self,nodes:list,dim:int,dof:int,csys:Cartisian,name:str=None):
-        self.__name=uuid.uuid1() if name==None else str(name)
-        self.__hid=None #hidden id
-        
+    def __init__(self,name,nodes:list,dim:int,dof:int,csys:Cartisian):        
         self.__dim = dim #dimension
         self.__dof = dof #degree of freedom
-
         self.__nodes=nodes #list of nodes
 
-        self.__D=None
-        self.__L=None
-
-        self.__mass=None
+        # self.__D=None
+        # self.__L=None
+        # self.__mass=None
         
         # self._T=None
         # self._Ke=None
@@ -49,6 +44,14 @@ class Element(object):
     @property
     def node_count(self):
         return len(self.__nodes)
+
+    @property
+    def dof(self):
+        return self.__dof
+
+    @property
+    def dim(self):
+        return self.__dim
     
     # @property  
     # def Ke(self):
