@@ -2,7 +2,7 @@
 import numpy as np
 import uuid
 
-from structengpy.fe_model.common import absolute_tolerance
+from structengpy.fe_model.common import Tolerance
 from scipy.spatial.transform import Rotation as R
 
 class Cartisian(object):
@@ -18,12 +18,13 @@ class Cartisian(object):
         Raises:
             Exception: _description_
         """
-        tol=absolute_tolerance()
+        tol=Tolerance.abs_tol()
         self.__O=np.array(O)    
         OA = np.array(A)-np.array(O)
         OB = np.array(B)-np.array(O)
-        cos = np.dot(OA, OB)/np.linalg.norm(OA)/np.linalg.norm(OB)
-        if  np.abs(np.abs(cos)-1.)<tol:
+        # cos = np.dot(OA, OB)/np.linalg.norm(OA)/np.linalg.norm(OB)
+        # if  np.abs(np.abs(cos)-1.)<tol:
+        if np.max(np.abs(np.cross(OA,OB)))<tol:
             raise Exception("Three points should not in a line!!")        
         x = OA/np.linalg.norm(OA)
         z = np.cross(OA, OB)
@@ -133,7 +134,7 @@ if __name__=='__main__':
     #basic
     csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
     print(csys.transform_matrix)
-    
+
     #rotate pi/4
     csys=Cartisian((0,0,0),(1,1,0),(0,1,0))
     print(csys.transform_matrix)
@@ -153,5 +154,9 @@ if __name__=='__main__':
     csys.rotate_about_vec(1,1,1,np.pi/3)
     print(csys.transform_matrix)
     csys.rotate_about_z(np.pi/4)
+    print(csys.transform_matrix)
+
+    #co-line
+    csys=Cartisian((0,0,0),(1,2,0),(2,4,0))
     print(csys.transform_matrix)
     

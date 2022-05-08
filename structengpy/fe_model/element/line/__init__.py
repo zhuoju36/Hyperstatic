@@ -4,13 +4,15 @@ import scipy.sparse as spr
 from structengpy.csys import Cartisian
 from structengpy.fe_model.node import Node
 from structengpy.fe_model.element import Element
+from structengpy.fe_model.common import Tolerance
 
 class Line(Element):
-    def __init__(self,node_i:Node,node_j:Node,dof:int,name=None,tol=1e-6):        
+    def __init__(self,name,node_i:Node,node_j:Node,dof:int):        
         #Initialize local CSys
-        o = [ node_i.x, node_i.y, node_i.z ]
-        pt1 = [ node_j.x, node_j.y, node_j.z ]
-        pt2 = [ node_i.x, node_i.y, node_i.z ]
+        tol=Tolerance.abs_tol()
+        o = node_i.loc
+        pt1 = node_j.loc
+        pt2 = node_i.loc
         if abs(node_i.x - node_j.x) < tol and abs(node_i.y - node_j.y) < tol:
             pt2[0] += 1
         else:

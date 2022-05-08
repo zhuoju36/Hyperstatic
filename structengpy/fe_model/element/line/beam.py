@@ -7,9 +7,10 @@ import scipy.interpolate as interp
 import quadpy
 
 from structengpy.fe_model.element.line import Line
+from structengpy.fe_model.common import Tolerance
 
 class Beam(Line):
-    def __init__(self,node_i, node_j, E, mu, A, I2, I3, J, rho, name=None, tol=1e-6):
+    def __init__(self,name,node_i, node_j, E, mu, A, I2, I3, J, rho):
         """
         params:
             node_i,node_j: ends of beam.
@@ -21,8 +22,8 @@ class Beam(Line):
             J: torsianl constant
             rho: mass density
             mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
-            tol: tolerance
         """
+        tol=Tolerance.abs_tol()
         super(Beam,self).__init__(node_i,node_j,12,name)
         self.__releases=[[False,False,False,False,False,False],
                          [False,False,False,False,False,False]]
