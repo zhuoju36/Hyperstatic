@@ -29,13 +29,13 @@ class Element(object):
     def name(self):
         return self.__name
         
-    @property
-    def hid(self):
-        return self.__hid
-    @hid.setter
-    def hid(self,hid:int):
-        assert type(hid)==int
-        self.__hid=hid
+    # @property
+    # def hid(self):
+    #     return self.__hid
+    # @hid.setter
+    # def hid(self,hid:int):
+    #     assert type(hid)==int
+    #     self.__hid=hid
         
     @property
     def nodes(self):
