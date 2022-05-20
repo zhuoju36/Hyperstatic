@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 22 22:17:28 2016
 
-@author: HZJ
-"""
 import uuid
 import scipy.sparse as spr
-from structengpy.csys import Cartisian
+from structengpy.common.csys import Cartisian
 
 class Element(object):
-    def __init__(self,name,nodes:list,dim:int,dof:int,csys:Cartisian):        
+    def __init__(self,name,nodes:list,dim:int,dof:int,csys:Cartisian):  
+        self.__name = name      
         self.__dim = dim #dimension
         self.__dof = dof #degree of freedom
         self.__nodes=nodes #list of nodes
@@ -88,6 +85,10 @@ class Element(object):
     @property
     def transform_matrix(self):
         raise NotImplementedError()
+
+    def get_node_names(self):
+        names=[node.name for node in self.__nodes]
+        return names
 
 if __name__=="__main__":
     csys=Cartisian((0,0,0),(1,0,0),(0,1,0))

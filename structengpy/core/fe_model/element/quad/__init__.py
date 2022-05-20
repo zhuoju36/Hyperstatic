@@ -1,7 +1,7 @@
 import numpy as np
 
-from structengpy.csys import Cartisian
-from structengpy.fe_model.element import Element
+from structengpy.common.csys import Cartisian
+from structengpy.core.fe_model.element import Element
 
 class Quad(Element):
     def __init__(self,node_i,node_j,node_k,node_l,t,E,mu,rho,dof,name=None,tol=1e-6):

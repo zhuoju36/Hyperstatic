@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-from structengpy.fe_model.element.tri import Tri
+from structengpy.core.fe_model.element.tri import Tri
 class Membrane3(Tri):
     def __init__(self,node_i, node_j, node_k, t, E, mu, rho, name=None):
         """

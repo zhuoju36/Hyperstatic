@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from structengpy.csys import Cartisian
+from structengpy.common.csys import Cartisian
 
 class Node(object):
     def __init__(self,name:str,x:float,y:float,z:float):

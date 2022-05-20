@@ -2,7 +2,7 @@
 import numpy as np
 import uuid
 
-from structengpy.fe_model.common import Tolerance
+from structengpy.common.tolerance import Tolerance
 from scipy.spatial.transform import Rotation as R
 
 class Cartisian(object):
@@ -22,10 +22,8 @@ class Cartisian(object):
         self.__O=np.array(O)    
         OA = np.array(A)-np.array(O)
         OB = np.array(B)-np.array(O)
-        # cos = np.dot(OA, OB)/np.linalg.norm(OA)/np.linalg.norm(OB)
-        # if  np.abs(np.abs(cos)-1.)<tol:
         if np.max(np.abs(np.cross(OA,OB)))<tol:
-            raise Exception("Three points should not in a line!!")        
+            raise Exception("Three points should not be in a line!!")        
         x = OA/np.linalg.norm(OA)
         z = np.cross(OA, OB)
         z = z / np.linalg.norm(z)

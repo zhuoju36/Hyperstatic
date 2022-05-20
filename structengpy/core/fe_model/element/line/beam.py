@@ -6,8 +6,8 @@ import scipy.sparse as spr
 import scipy.interpolate as interp
 import quadpy
 
-from structengpy.fe_model.element.line import Line
-from structengpy.fe_model.common import Tolerance
+from structengpy.core.fe_model.element.line import Line
+from structengpy.core.fe_model.common import Tolerance
 
 class Beam(Line):
     def __init__(self,name,node_i, node_j, E, mu, A, I2, I3, J, rho):
@@ -41,7 +41,15 @@ class Beam(Line):
 
     @property
     def releases(self):
-        return self._releases
+        return self.__releases
+
+    @property
+    def start(self):
+        return super().start
+
+    @property
+    def end(self):
+        return super().end
     
     @releases.setter
     def releases(self,rls):

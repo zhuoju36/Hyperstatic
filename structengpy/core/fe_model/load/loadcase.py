@@ -1,31 +1,16 @@
+# -*- coding: utf-8 -*-
 import numpy as np
-from structengpy.fe_model.model import Model
-from structengpy.fe_model.load.pattern import Pattern
-
-class LoadCase(object):
-    def __init__(self,name:str):
-        self.__name=name
-        self.__hid
-
-    @property
-    def name(self):
-        return self.__name
-
-    @property
-    def hid(self):
-        return self.__hid
-
-    @hid.setter
-    def hid(self,val):
-        assert type(val)==int
-        self.__hid=val
+from structengpy.core.fe_model.model import Model
+from structengpy.core.fe_model.load.pattern import Pattern
+from structengpy.core.fe_model.load import LoadCase
 
 class StaticCase(LoadCase):
     def __init__(self,name:str,order=1):
         super().__init__(name)
         self.__order=1
-        self.__pattern={}
-        self.__loadfactor={}
+        self.__preloadcase=None
+        self.__pattern={} #to save pattern objects
+        self.__loadfactor={} #to assign load factor
 
     @property
     def order(self):
@@ -34,10 +19,14 @@ class StaticCase(LoadCase):
     @order.setter
     def order(self,val):
         assert val in [1,2,3]
-        self.__order=val   
+        self.__order=val
 
     def add_pattern(self,pattern:Pattern,factor:float):
-        self.__pattern_factor[pattern.name]=factor
+        self.__pattern=pattern
+        self.__loadfactor[pattern.name]=factor
+
+    def set_pattern_factor(self,name,factor):
+        self.__loadfactor[name]=factor
 
     def get_nodal_load_vector(self,name):
         fn=np.zeros(6)

@@ -8,11 +8,11 @@ class Solver(object):
     def __init__(self,workpath:str):
         self.__workpath=workpath
         with open(workpath) as f:
-            self.__model=pickle.load()
+            self.__assembly=pickle.load(f)
 
     @property
-    def model(self):
-        return self.__model
+    def assembly(self):
+        return self.__assembly
 
     @property
     def workpath(self):

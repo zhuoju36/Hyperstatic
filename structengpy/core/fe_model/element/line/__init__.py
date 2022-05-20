@@ -2,10 +2,10 @@
 import numpy as np
 import scipy.sparse as spr
 
-from structengpy.csys import Cartisian
-from structengpy.fe_model.node import Node
-from structengpy.fe_model.element import Element
-from structengpy.fe_model.common import Tolerance
+from structengpy.common.csys import Cartisian
+from structengpy.core.fe_model.node import Node
+from structengpy.core.fe_model.element import Element
+from structengpy.core.fe_model.common import Tolerance
 
 class Line(Element):
     def __init__(self,name,node_i:Node,node_j:Node,dof:int):        
@@ -17,6 +17,14 @@ class Line(Element):
         if np.max(np.abs((node_i.loc-node_j.loc)[:2])) < tol:
             pt2 = o + np.array([1,0,0])
         super(Line,self).__init__(name,[node_i,node_j],1,dof,Cartisian(o, pt1, pt2))
+
+    @property
+    def start(self):
+        return super().nodes[0].loc
+
+    @property
+    def end(self):
+        return super().nodes[1].loc
 
     @property
     def length(self):

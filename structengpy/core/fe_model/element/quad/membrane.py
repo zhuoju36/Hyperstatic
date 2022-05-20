@@ -3,7 +3,7 @@ import scipy as sp
 import scipy.sparse as spr
 import quadpy
 
-from structengpy.fe_model.element.quad import Quad
+from structengpy.core.fe_model.element.quad import Quad
 
 class Membrane4(Quad):
     def __init__(self,node_i, node_j, node_k, node_l, t, E, mu, rho, name=None):

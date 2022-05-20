@@ -3,8 +3,8 @@ import pytest
 from pytest import approx,raises
 
 import numpy as np
-from structengpy.fe_model.node import Node
-from structengpy.fe_model.element.line.beam import Beam
+from structengpy.core.fe_model.node import Node
+from structengpy.core.fe_model.element.line.beam import Beam
 
 class TestBeam():
     def test_construction(self):
