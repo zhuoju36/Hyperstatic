@@ -25,5 +25,5 @@ class TestAssembly():
         asb=Assembly(model,lc)
         asb.assemble_K()
         asb.assemble_f("case1")
-        asb.save("D:\\test","test.sep")
+        # asb.save("./test1","test.sep")
         
