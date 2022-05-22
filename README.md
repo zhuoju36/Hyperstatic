@@ -1,3 +1,5 @@
+[![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)   
+
 # StructEngPy：A Structural Design Program base on Python 基于Python的建筑结构有限元分析程序
 ##目的 Purpose
 当代建筑结构设计行业中集成化的商业软件流行，不少结构工程师对结构分析原理毫不理解，昂贵的商业软件自身的封闭削弱了结构工程师的技术基础。结果懂设计的工程师不懂计算分析，懂计算分析的工程师又不懂设计。<br>
