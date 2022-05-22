@@ -7,7 +7,7 @@ import scipy.interpolate as interp
 import quadpy
 
 from structengpy.core.fe_model.element.line import Line
-from structengpy.core.fe_model.common import Tolerance
+from structengpy.common.tolerance import Tolerance
 
 class Beam(Line):
     def __init__(self,name,node_i, node_j, E, mu, A, I2, I3, J, rho):

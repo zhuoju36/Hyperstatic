@@ -17,7 +17,7 @@ permissions:
 jobs:
   deploy:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
     - uses: actions/checkout@master
@@ -30,13 +30,19 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U pythran pytest cython numpy pybind11 
+        python -m pip install -U pythran pytest cython numpy pybind11
+        python -m pip install -U coverage codecov pytest-cov 
         
     - name: Build package
       run: python setup.py build install
       
     - name: Install and test
-      run: py.test
+      run: py.test --cov
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@master
+      with:
+        token: ${{secrets.CODECOV_API_TOKEN}}
       
     - name: Publish package to Test PyPI
       if: startsWith(github.ref, 'refs/tags')

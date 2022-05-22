@@ -5,7 +5,7 @@ import scipy.sparse as spr
 from structengpy.common.csys import Cartisian
 from structengpy.core.fe_model.node import Node
 from structengpy.core.fe_model.element import Element
-from structengpy.core.fe_model.common import Tolerance
+from structengpy.common.tolerance import Tolerance
 
 class Line(Element):
     def __init__(self,name,node_i:Node,node_j:Node,dof:int):        
