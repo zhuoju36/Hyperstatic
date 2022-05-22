@@ -29,9 +29,8 @@ jobs:
         
     - name: Install dependencies
       run: |
-        sudo apt-get install -y gcc g++ make cmake zlib1g zlib1g-dev libsqlite3-dev openssl libssl-dev libffi-dev unzip pciutils net-tools libblas-dev gfortran libblas3 libopenblas-dev libbz2-dev
         python -m pip install --upgrade pip
-        python -m pip install -U pytest cython numpy pybind11 
+        python -m pip install -U pythran pytest cython numpy pybind11 
         
     - name: Build package
       run: python setup.py build install
