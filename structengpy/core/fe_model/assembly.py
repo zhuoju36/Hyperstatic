@@ -12,10 +12,11 @@ class Assembly(object):
     def __init__(self,model:Model,loadcase:LoadCase):
         self.__model=model
         self.__loadcase=loadcase
+        self.__dof=self.node_count*6
 
     @property
     def DOF(self):
-        return self.__model.node_count*6
+        return self.__dof
 
     @property
     def node_count(self):
@@ -43,7 +44,7 @@ class Assembly(object):
             #Static condensation to consider releases
             Ke=self.__model.get_beam_K(elm)
 
-            re=np.zeros(12)
+            # re=np.zeros(12)
             # Ke,Me,re=elm.static_condensation(Ke,Ke,re)
 
             Ke_ = (Tt*Ke*T).tocoo()
@@ -111,6 +112,8 @@ class Assembly(object):
         #     #assemble
         #     __K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
         return __K
+
+
 
     def assemble_KM(self):
         """
@@ -243,7 +246,8 @@ class Assembly(object):
         row_f=[]
         col_f=[]
         for node in self.__model.get_node_names():
-            Tt=self.__model.get_node_transform_matrix(node).transpose()
+            T=self.__model.get_node_transform_matrix(node)
+            Tt=T.transpose()
 #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
             fn=self.__loadcase.get_nodal_load_vector(node)
             fn_=np.dot(Tt,fn)
@@ -281,38 +285,34 @@ class Assembly(object):
         __f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
         return __f
 
-    def assemble_boundary(self,mode='KMCf'):
+    def assemble_boundary(self,casename:str,matrixKMCF:spr.spmatrix,vectorF:spr.spmatrix=None):
         """
         assemble boundary conditions,using diagonal element englarging method.
         params:
             mode: 'K','M','C','f' or their combinations
         """
         logger.info('Assembling boundary condition..')
-        if 'K' in mode:
-            self.__K_=self.K.copy()
-        if 'M' in mode:
-            self.__M_=self.M.copy()
-        if 'C' in mode:
-            self.__C_=self.C.copy()
-        if 'f' in mode:
-            self.__f_=self.f.copy()
-        self.__dof=self.node_count*6
+        K=matrixKMCF.copy()
+        f=vectorF.copy()
         alpha=1e10
-        for node in self.__nodes.values():
-            i=node.hid
+        # restraint=self.__loadcase.get_nodal_restraints()
+        disp=self.__loadcase.get_nodal_disp_dict()
+        for node in disp.keys():
+            i=self.__model.get_node_hid(node)
             for j in range(6):
-                if node.dn[j]!= None:
-                    if 'K' in mode:
-                        self.__K_[i*6+j,i*6+j]*=alpha
-                    if 'M' in mode:
-                        self.__M_[i*6+j,i*6+j]*=alpha
-                    if 'C' in mode:
-                        self.__C_[i*6+j,i*6+j]*=alpha
-                    if 'f' in mode:
-                        self.__f_[i*6+j]=self.__K_[i*6+j,i*6+j]*node.dn[j]
+                if disp[node][j]!= None:
+                    K[i*6+j,i*6+j]*=alpha
+                    if vectorF!=None:
+                        f[i*6+j]=K[i*6+j,i*6+j]*disp[node][j]
                     self.__dof-=1
+        if vectorF!=None:
+            return K,f
+        else:
+            return K
 
     def save(self,path,filename):
+        if not os.path.exists(path):
+            os.mkdir(path)
         with open(os.path.join(path,filename),'wb+') as f:
             pickle.dump(self,f)
 

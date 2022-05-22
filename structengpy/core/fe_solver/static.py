@@ -30,8 +30,9 @@ class StaticSolver(Solver):
         assembly=super().assembly
         logger.info('solving problem with %d DOFs...'%assembly.DOF)
         
-        K_=assembly.assemble_K()
-        f_=assembly.assemble_f(casename)
+        K=assembly.assemble_K()
+        f=assembly.assemble_f(casename)
+        K_,f_=assembly.assemble_boundary(casename,K,f)
 
         delta,info=sl.lgmres(K_,f_.toarray())
         logger.info('Done!')

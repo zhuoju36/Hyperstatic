@@ -74,7 +74,6 @@ class Beam(Line):
         I2=self.__I2
         I3=self.__I3
         J=self.__J
-        rho=self.__rho
 
         l=self.length
         G=E/2/(1+mu)

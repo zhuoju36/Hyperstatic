@@ -31,8 +31,17 @@ class Pattern(object):
         else:
             return None
 
+    def get_nodal_load_dict(self):
+        return self.__nodal_disp.copy()
+
     def get_nodal_disp(self,name):
-        return self.__nodal_disp[name]
+        if name in self.__nodal_disp.keys():
+            return self.__nodal_disp[name]
+        else:
+            return None
+
+    def get_nodal_disp_dict(self):
+        return self.__nodal_disp.copy()
 
     def get_beam_distributed(self,name):
         if name in self.__beam_distributed.keys():
