@@ -2,12 +2,14 @@
 
 __all__=['static','dynamic']
 
+import os
 import pickle
 
 class Solver(object):
-    def __init__(self,workpath:str):
+    def __init__(self,workpath:str,filename:str):
         self.__workpath=workpath
-        with open(workpath) as f:
+        filename=os.path.join(workpath,filename)
+        with open(filename,"rb") as f:
             self.__assembly=pickle.load(f)
 
     @property

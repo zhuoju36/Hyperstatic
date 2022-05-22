@@ -6,8 +6,8 @@ class Pattern(object):
         self.__name=name
         self.__nodal_load={}
         self.__nodal_disp={}
-        self.__beam_distribute={}
-        self.__beam_concentrate={}
+        self.__beam_distributed={}
+        self.__beam_concentrated={}
 
     @property
     def name(self):
@@ -26,13 +26,23 @@ class Pattern(object):
         self.__beam_concentrate[name]=np.array([F1,F2,F3,M1,M2,M3,r]) 
 
     def get_nodal_load(self,name):
-        return self.__nodal_load[name].reshape((6,1))
+        if name in self.__nodal_load.keys():
+            return self.__nodal_load[name]
+        else:
+            return None
 
     def get_nodal_disp(self,name):
-        return self.__nodal_load[name].reshape((6,1))
+        return self.__nodal_disp[name]
 
-    def get_beam_distribute(self,name):
-        return self.__beam_distribute[name]
+    def get_beam_distributed(self,name):
+        if name in self.__beam_distributed.keys():
+            return self.__beam_distributed[name]
+        return None
+
+    def get_beam_concentrated(self,name):
+        if name in self.__beam_distributed.keys():
+            return self.__beam_distributed[name]
+        return None
 
     # def set_node_force(self,node,force,append=False):
     #     """

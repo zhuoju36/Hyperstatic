@@ -11,6 +11,7 @@ class TestBeam():
         n1=Node("1",0,0,0)
         n2=Node("2",1,0,0)
         b=Beam("myBeam",n1,n2,2e6,0.2,100,3e8,4e8,4e8,7.85e3)
+        assert id(b._Element__nodes[0])==id(n1) #identity check
         assert b.length==approx(1,rel=1e-9)
         assert b.dim==1
         assert b.dof==12

@@ -70,17 +70,17 @@ class Model:
     def membrane4s(self):
         return self.__membrane4s
 
-    @property
-    def is_assembled(self):
-        return self.__dof != None
+    # @property
+    # def is_assembled(self):
+    #     return self.__dof != None
         
     @property 
     def index(self):
         return self.__index
 
-    @property
-    def DOF(self):
-        return self.__dof
+    # @property
+    # def DOF(self):
+    #     return self.__dof
     
     # @property
     # def K(self):
@@ -214,6 +214,7 @@ class Model:
             beam: hid of beam
             x,y,z coordinate of reference vector.
         """
+        beam=self.__beams[name]
         pass
     
     def set_beam_releases(self,name:str,r1:str,r2:str):
@@ -227,7 +228,7 @@ class Model:
         """
         assert(len(r1)==6)
         assert(len(r2)==6)
-        self.beams[beam].releases=list(r1)+list(r2)
+        self.beams[name].releases=list(r1)+list(r2)
 
     def get_node_names(self):
         return list(self.__nodes.keys())

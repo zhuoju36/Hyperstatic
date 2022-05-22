@@ -12,32 +12,31 @@ from scipy import linalg
 from scipy import sparse as spr
 import scipy.sparse.linalg as sl
 
-from structengpy.fe_model.model import Model
-from structengpy.fe_model.load.loadcase import StaticCase
-from structengpy.fe_solver import Solver
+from structengpy.core.fe_model.model import Model
+from structengpy.core.fe_model.load.loadcase import StaticCase
+from structengpy.core.fe_solver import Solver
 
-
-import logger
+from structengpy.common import logger
 
 class StaticSolver(Solver):
-    def __init__(self,workpath:str):
-        super().__init__(workpath)
+    def __init__(self,workpath:str,filename:str):
+        super().__init__(workpath,filename)
 
     @property
     def workpath(self):
         return super().workpath
 
     def solve_linear(self,casename):
-        model=super().model
-        logger.info('solving problem with %d DOFs...'%model.DOF)
+        assembly=super().assembly
+        logger.info('solving problem with %d DOFs...'%assembly.DOF)
         
-        K_=model.assemble_K()
-        f_=model.assemble_f(casename)
+        K_=assembly.assemble_K()
+        f_=assembly.assemble_f(casename)
 
         delta,info=sl.lgmres(K_,f_.toarray())
         logger.info('Done!')
-        d_=delta.reshape((model.node_count*6,1))
-        path=os.path.join(self.workpath,casename+'d')
+        d_=delta.reshape((assembly.node_count*6,1))
+        path=os.path.join(self.workpath,casename+'.d')
         np.save(path,d_)
    
     def solve_2nd(self):

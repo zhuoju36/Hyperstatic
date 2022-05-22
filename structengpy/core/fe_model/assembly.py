@@ -2,15 +2,24 @@
 import os
 import pickle
 import numpy as np
+import scipy.sparse as spr
 from structengpy.common import logger
 from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load import LoadCase
 
 
 class Assembly(object):
-    def __init__(self,model:Model,load:LoadCase):
+    def __init__(self,model:Model,loadcase:LoadCase):
         self.__model=model
-        self.__load=load
+        self.__loadcase=loadcase
+
+    @property
+    def DOF(self):
+        return self.__model.node_count*6
+
+    @property
+    def node_count(self):
+        return self.__model.node_count
 
 
     def assemble_K(self):
@@ -27,12 +36,12 @@ class Assembly(object):
         col_k=[]
         data_k=[]
         for elm in self.__model.get_beam_names():
-            i,j=self.__model.get_beam_node_hids()
-            T=self.__model.get_beam_transform_matrix()
+            i,j=self.__model.get_beam_node_hids(elm)
+            T=self.__model.get_beam_transform_matrix(elm)
             Tt = T.transpose()
 
             #Static condensation to consider releases
-            Ke=self.__model.get_beam_K()
+            Ke=self.__model.get_beam_K(elm)
 
             re=np.zeros(12)
             # Ke,Me,re=elm.static_condensation(Ke,Ke,re)
@@ -234,9 +243,9 @@ class Assembly(object):
         row_f=[]
         col_f=[]
         for node in self.__model.get_node_names():
-            Tt=self.__model.get_node_transform_matrix().transpose()
+            Tt=self.__model.get_node_transform_matrix(node).transpose()
 #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
-            fn=self.__loadcase[casename].get_nodal_load_vec(node)
+            fn=self.__loadcase.get_nodal_load_vector(node)
             fn_=np.dot(Tt,fn)
             k=0
             for f in fn_.reshape(6):
@@ -248,15 +257,13 @@ class Assembly(object):
                 k+=1
             
         for beam in self.__model.get_beam_names():
-            i,j=self.__model.get_beam_node_hids()
+            i,j=self.__model.get_beam_node_hids(beam)
             #Transform matrix
-            Vl=np.matrix(self.__model.get_beam_transform_matrix(beam))
-            V=np.zeros((12, 12))
-            V[:3,:3] =V[3:6,3:6]=V[6:9,6:9]=V[9:,9:]=Vl
+            V=self.__model.get_beam_transform_matrix(beam)
             Vt = V.transpose()
             
-            re=self.__loadcase[casename].get_beam_load_vec(beam.name)
-            re_=np.dot(Vt,re)
+            re=self.__loadcase.get_beam_load_vector(beam)
+            re_=Vt.dot(re)
             k=0
             for r in re_.reshape(12):
                 if r!=0:
@@ -306,5 +313,28 @@ class Assembly(object):
                     self.__dof-=1
 
     def save(self,path,filename):
-        with open(os.path.join(path,filename)) as f:
+        with open(os.path.join(path,filename),'wb+') as f:
             pickle.dump(self,f)
+
+
+if __name__ == '__main__':
+    import numpy as np
+    from structengpy.core.fe_model.model import Model
+    from structengpy.core.fe_model.load.pattern import Pattern
+    from structengpy.core.fe_model.load.loadcase import StaticCase
+
+    model=Model()
+    model.add_node("1",0,0,0)
+    model.add_node("2",1,0,0)
+    model.add_beam("A","1","2",2e6,0.2,1,2,3,4,7.85e10)
+
+    patt1=Pattern("pat1")
+    patt1.set_nodal_load("2",1,2,3,4,5,6)
+    patt1.set_nodal_disp("1",0,0,0,0,0,0)
+
+    lc=StaticCase("case1")
+    lc.add_pattern(patt1,1.0)
+
+    asb=Assembly(model,lc)
+    asb.assemble_K()
+    asb.assemble_f("case1")
