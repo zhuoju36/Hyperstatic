@@ -30,7 +30,7 @@ class TestLoad():
         lc=StaticCase("case1")
         lc.add_pattern(patt1,1.0)
         lc.add_pattern(patt2,2.0)
-        r=lc.get_nodal_load_vector("a")
+        r=lc.get_nodal_load("a")
 
         assert r==approx(np.array([3,4,5,4,5,6]).reshape(6),rel=1e-9)
 
