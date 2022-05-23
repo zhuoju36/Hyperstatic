@@ -38,9 +38,7 @@ class StaticCase(LoadCase):
             res[k]=np.array(v)
         return res
 
-
-
-    def get_nodal_load_vector(self,name):
+    def get_nodal_load(self,name):
         fn=np.zeros(6)
         for patname,factor in self.__loadfactor.items():
             pat=self.__pattern[patname]
@@ -49,6 +47,17 @@ class StaticCase(LoadCase):
                 continue
             fn+=f*factor   
         return fn
+
+    def get_nodal_load_dict(self):
+        res={}
+        for patname,pat in self.__pattern.items():
+            d=pat.get_nodal_load_dict()
+            for node,load in d.items():
+                if node in res.keys():
+                    res[node]+=load*self.__loadfactor[patname]
+                else:
+                    res[node]=np.zeros(6)
+        return res
 
     def get_nodal_disp_dict(self):
         res={}
@@ -62,7 +71,7 @@ class StaticCase(LoadCase):
         return res
 
 
-    def get_beam_load_vector(self,name):
+    def get_beam_load(self,name):
         fe=np.zeros(12)
         for patname,factor in self.__loadfactor.items():
             pat=self.__pattern[patname]
@@ -72,6 +81,17 @@ class StaticCase(LoadCase):
             fn+=f*factor
             ###TODO transfer to end force
         return fe
+
+    def get_beam_load_dict(self):
+        res={}
+        for patname,pat in self.__pattern.items():
+            d=pat.get_beamload_dict()
+            for beam,load in d.items():
+                if beam in res.keys():
+                    res[beam]+=load*self.__loadfactor[patname]
+                else:
+                    res[beam]=np.zeros(6)
+        return res
 
 class ModalCase(LoadCase):
     pass

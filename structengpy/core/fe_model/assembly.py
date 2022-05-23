@@ -249,7 +249,7 @@ class Assembly(object):
             T=self.__model.get_node_transform_matrix(node)
             Tt=T.transpose()
 #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
-            fn=self.__loadcase.get_nodal_load_vector(node)
+            fn=self.__loadcase.get_nodal_load(node)
             fn_=np.dot(Tt,fn)
             k=0
             for f in fn_.reshape(6):
@@ -266,7 +266,7 @@ class Assembly(object):
             V=self.__model.get_beam_transform_matrix(beam)
             Vt = V.transpose()
             
-            re=self.__loadcase.get_beam_load_vector(beam)
+            re=self.__loadcase.get_beam_load(beam)
             re_=Vt.dot(re)
             k=0
             for r in re_.reshape(12):

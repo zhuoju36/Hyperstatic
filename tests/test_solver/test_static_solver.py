@@ -30,7 +30,7 @@ class TestStaticSolver():
         
         asb=Assembly(model,lc)
 
-        path="~/test"
+        path="./test"
         if sys.platform=="win32":
             path="c:\\test"
         asb.save(path,"test.sep")
