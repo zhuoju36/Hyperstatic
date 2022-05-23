@@ -53,6 +53,30 @@ class Pattern(object):
             return self.__beam_distributed[name]
         return None
 
+    def get_beam_load_dict(self,l):
+        d={}
+        for k,v in self.__beam_distributed.items():
+            if k not in d.keys():
+                d[k]=np.zeros(6)
+            #TODO correct this
+            d[k][0]+=(v[0]+v[6])*l/2
+            d[k][1]+=(v[1]+v[7])*l/2
+            d[k][2]+=(v[2]+v[8])*l/2
+            d[k][3]+=(v[3]+v[9])*l/2
+            d[k][4]+=(v[4]+v[10])*l/2
+            d[k][5]+=(v[5]+v[11])*l/2
+
+        for k,v in self.__beam_concentrated.items():
+            if k not in d.keys():
+                d[k]=np.zeros(6)
+            #TODO correct this
+            d[k][0]+=(v[0]+v[6])*l/2
+            d[k][1]+=(v[1]+v[7])*l/2
+            d[k][2]+=(v[2]+v[8])*l/2
+            d[k][3]+=(v[3]+v[9])*l/2
+            d[k][4]+=(v[4]+v[10])*l/2
+            d[k][5]+=(v[5]+v[11])*l/2
+
     # def set_node_force(self,node,force,append=False):
     #     """
     #     add node force to model.
