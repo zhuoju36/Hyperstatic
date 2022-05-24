@@ -249,7 +249,7 @@ class Assembly(object):
             T=self.__model.get_node_transform_matrix(node)
             Tt=T.transpose()
 #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
-            fn=self.__loadcase.get_nodal_load(node)
+            fn=self.__loadcase.get_nodal_f(node)
             fn_=np.dot(Tt,fn)
             k=0
             for f in fn_.reshape(6):
@@ -286,25 +286,29 @@ class Assembly(object):
         return __f
 
     def assemble_boundary(self,casename:str,matrixKMCF:spr.spmatrix,vectorF:spr.spmatrix=None):
-        """
-        assemble boundary conditions,using diagonal element englarging method.
-        params:
-            mode: 'K','M','C','f' or their combinations
-        """
         logger.info('Assembling boundary condition..')
         K=matrixKMCF.copy()
         f=vectorF.copy()
         alpha=1e10
-        # restraint=self.__loadcase.get_nodal_restraints()
-        disp=self.__loadcase.get_nodal_disp_dict()
-        for node in disp.keys():
+        rest=self.__loadcase.get_nodal_restraint_dict()
+        for node in rest.keys():
             i=self.__model.get_node_hid(node)
             for j in range(6):
-                if disp[node][j]!= None:
+                if rest[node][j]:
                     K[i*6+j,i*6+j]*=alpha
                     if vectorF!=None:
-                        f[i*6+j]=K[i*6+j,i*6+j]*disp[node][j]
+                        f[i*6+j]=0
                     self.__dof-=1
+
+        # disp=self.__loadcase.get_nodal_disp_dict()
+        # for node in disp.keys():
+        #     i=self.__model.get_node_hid(node)
+        #     for j in range(6):
+        #         if disp[node][j]!= None:
+        #             K[i*6+j,i*6+j]*=alpha
+        #             if vectorF!=None:
+        #                 f[i*6+j]=K[i*6+j,i*6+j]*disp[node][j]
+        #             self.__dof-=1
         if vectorF!=None:
             return K,f
         else:

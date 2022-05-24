@@ -5,7 +5,7 @@ from pytest import approx,raises
 import numpy as np
 from structengpy.core.fe_model.assembly import Assembly
 from structengpy.core.fe_model.model import Model
-from structengpy.core.fe_model.load.pattern import Pattern
+from structengpy.core.fe_model.load.pattern import LoadPattern
 from structengpy.core.fe_model.load.loadcase import StaticCase
 
 class TestAssembly():
@@ -15,8 +15,8 @@ class TestAssembly():
         model.add_node("2",1,0,0)
         model.add_beam("A","1","2",2e6,0.2,1,2,3,4,7.85e10)
 
-        patt1=Pattern("pat1")
-        patt1.set_nodal_load("2",1,2,3,4,5,6)
+        patt1=LoadPattern("pat1")
+        patt1.set_nodal_force("2",1,2,3,4,5,6)
         patt1.set_nodal_disp("1",0,0,0,0,0,0)
 
         lc=StaticCase("case1")

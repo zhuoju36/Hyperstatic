@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-class Pattern(object):
+class LoadPattern(object):
     def __init__(self,name:str):
         self.__name=name
         self.__nodal_load={}
@@ -13,7 +13,7 @@ class Pattern(object):
     def name(self):
         return self.__name
 
-    def set_nodal_load(self,name,f1,f2,f3,m1,m2,m3):
+    def set_nodal_force(self,name,f1,f2,f3,m1,m2,m3):
         self.__nodal_load[name]=np.array([f1,f2,f3,m1,m2,m3])
 
     def set_nodal_disp(self,name,u1,u2,u3,r1,r2,r3):
@@ -25,7 +25,7 @@ class Pattern(object):
     def set_beam_concentrate(self,name,F1,F2,F3,M1,M2,M3,r):
         self.__beam_concentrate[name]=np.array([F1,F2,F3,M1,M2,M3,r]) 
 
-    def get_nodal_load(self,name):
+    def get_nodal_f(self,name):
         if name in self.__nodal_load.keys():
             return self.__nodal_load[name]
         else:
