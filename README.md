@@ -1,6 +1,9 @@
-# StructEngPy：A Structural Design Program base on Python 基于Python的建筑结构分析程序
+# StructEngPy：基于Python的建筑结构分析程序
 
-[![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)   [![codecov](https://codecov.io/gh/zhuoju36/StructEngPy/branch/master/graph/badge.svg?token=4C6a6QwvKA)](https://codecov.io/gh/zhuoju36/StructEngPy)
+![GitHub](https://img.shields.io/github/license/zhuoju36/structengpy) [![codecov](https://codecov.io/gh/zhuoju36/StructEngPy/branch/master/graph/badge.svg?token=4C6a6QwvKA)](https://codecov.io/gh/zhuoju36/StructEngPy) ![PyPI](https://img.shields.io/pypi/v/structengpy) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/structengpy)
+
+## 简介
+采用面向对象方式开发，针对建筑领域特点开发的结构分析包，提供基础的结构数值分析
 
 ## 快速开始
 ### 安装

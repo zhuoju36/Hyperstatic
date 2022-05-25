@@ -8,15 +8,16 @@ from structengpy.core.fe_model.element import Element
 from structengpy.common.tolerance import Tolerance
 
 class Line(Element):
-    def __init__(self,name,node_i:Node,node_j:Node,dof:int):        
+    def __init__(self,name,start:Node,end:Node,dof:int):        
         #Initialize local CSys
         tol=Tolerance.abs_tol()
-        o = node_i.loc
-        pt1 = node_j.loc
+        o = (start.loc+end.loc)/2
+        pt1 = end.loc
         pt2 = o + np.array([0,0,1])
-        if np.max(np.abs((node_i.loc-node_j.loc)[:2])) < tol:
+        if np.max(np.abs((start.loc-end.loc)[:2])) < tol:
             pt2 = o + np.array([1,0,0])
-        super(Line,self).__init__(name,[node_i,node_j],1,dof,Cartisian(o, pt1, pt2))
+        csys=Cartisian(o, pt1, pt2)
+        super().__init__(name,[start,end],1,dof,csys)
 
     @property
     def start(self):
