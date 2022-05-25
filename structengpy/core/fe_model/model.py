@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import Dict
 import numpy as np
 
 from scipy.sparse import linalg as sl
@@ -11,12 +12,12 @@ from structengpy.core.fe_model.element.quad.membrane import Membrane4
 
 class Model:
     def __init__(self):
-        self.__nodes={}
-        self.__beams={}
+        self.__nodes:Dict[str,Node]={}
+        self.__beams:Dict[str,Beam]={}
         self.__membrane3s={}
         self.__membrane4s={}
 
-        self.__hid={}
+        self.__hid:Dict[str,Dict[str,int]]={}
         self.__hid['node']={}
         self.__hid['beam']={}
         self.__hid['membrane3s']={}
@@ -217,18 +218,10 @@ class Model:
         beam=self.__beams[name]
         pass
     
-    def set_beam_releases(self,name:str,r1:str,r2:str):
-        """
-        set beams axis.
-        
-        params:
-            beam: hid of beam
-            r1: list-like, 6 bool of frame's i-end distributed
-            r1: list-like, 6 bool of frame's i-end distributed
-        """
-        assert(len(r1)==6)
-        assert(len(r2)==6)
-        self.beams[name].releases=list(r1)+list(r2)
+    def set_beam_releases(self,name:str,
+        u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
+        u1j=False,u2j=False,u3j=False,r1j=False,r2j=False,r3j=False):
+        self.beams[name].releases=np.array([u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j])
 
     def get_node_names(self):
         return list(self.__nodes.keys())
@@ -257,7 +250,16 @@ class Model:
 
     def get_beam_K(self,name):
         beam=self.__beams[name]
-        return beam.integrate_K()
+        return beam.integrate_K()     
+
+    def get_beam_condensated_K(self,name,Ke):
+        beam=self.__beams[name]
+        return beam.static_condensate(Ke)
+
+    def get_beam_condensated_f(self,name,re):
+        beam=self.__beams[name]
+        K=beam.integrate_K()
+        return beam.static_condensate_f(re,K)
 
 
         

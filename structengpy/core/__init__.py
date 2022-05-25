@@ -121,10 +121,11 @@ class Api(object):
             logging.warning("exception")
             return False
 
-    def set_beam_release(self,name,r1i=False,r2i=False,r3i=False,m1i=False,m2i=False,m3i=False,r1j=False,r2j=False,r3j=False,m1j=False,m2j=False,m3j=False)->bool:
+    def set_beam_release(self,name,
+        u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
+        u1j=False,u2j=False,u3j=False,r1j=False,r2j=False,r3j=False)->bool:
         try:
-            res=np.array([r1i,r2i,r3i,m1i,m2i,m3i,r1j,r2j,r3j,m1j,m2j,m3j])
-            self.__model.set_beam_releases(name,)
+            self.__model.set_beam_releases(name,u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j)
             return True
         except:
             logging.warning("exception")

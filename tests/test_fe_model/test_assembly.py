@@ -25,5 +25,22 @@ class TestAssembly():
         asb=Assembly(model,lc)
         asb.assemble_K()
         asb.assemble_f("case1")
-        # asb.save("./test1","test.sep")
+
+    def test_static_condensation(self):
+        model=Model()
+        model.add_node("1",0,0,0)
+        model.add_node("2",1,0,0)
+        model.add_beam("A","1","2",2e6,0.2,1,2,3,4,7.85e10)
+        model.set_beam_releases("A",r2i=True,r3i=True,r2j=True,r3j=True)
+
+        patt1=LoadPattern("pat1")
+        patt1.set_nodal_force("2",1,2,3,4,5,6)
+        patt1.set_nodal_disp("1",0,0,0,0,0,0)
+
+        lc=StaticCase("case1")
+        lc.add_pattern(patt1,1.0)
+
+        asb=Assembly(model,lc)
+        asb.assemble_K()
+        asb.assemble_f("case1")
         

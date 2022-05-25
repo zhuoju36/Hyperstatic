@@ -27,3 +27,16 @@ class TestBeam():
         n2=Node("2",1,0,0)
         b=Beam("myBeam",n1,n2,2e6,0.2,100,3e8,4e8,4e8,7.85e3)
         b.integrate_M()
+
+    # def test_static_condensation(self):
+    #     n1=Node("1",0,0,0)
+    #     n2=Node("2",1,0,0)
+    #     b=Beam("myBeam",n1,n2,2e6,0.2,100,3e8,4e8,4e8,7.85e3)
+    #     b.releases[5]=True
+    #     Ke=b.integrate_K()
+    #     fe=np.arange(12)
+    #     Ke_,fe_=b.static_condensation(Ke,fe)
+    #     Ke_2,fe_2=b.static_condensation2(Ke,fe)
+    #     assert np.allclose(Ke_.todense(),Ke_2.todense())==True
+    #     assert np.allclose(fe_,fe_2)
+

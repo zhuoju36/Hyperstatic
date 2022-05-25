@@ -25,8 +25,7 @@ class Beam(Line):
         """
         tol=Tolerance.abs_tol()
         super(Beam,self).__init__(name,node_i,node_j,12)
-        self.__releases=[[False,False,False,False,False,False],
-                         [False,False,False,False,False,False]]
+        self.__releases=np.array([False,False,False,False,False,False,False,False,False,False,False,False])
         self.__E=E
         self.__mu=mu
         self.__A=A
@@ -34,10 +33,8 @@ class Beam(Line):
         self.__I3=I3
         self.__J=J
         self.__rho=rho
-
-    @property
-    def rotation(self,theta):
-        self.local_csys.rotate_about_x(theta)
+        self.__rotation=0
+        self.__offset=np.zeros(2)
 
     @property
     def releases(self):
@@ -53,9 +50,7 @@ class Beam(Line):
     
     @releases.setter
     def releases(self,rls):
-        if len(rls)!=12:
-            raise ValueError('rls must be a 12 boolean array')
-        self.__releases=np.array(rls).reshape((2,6))
+        self.__releases=np.array(rls)
 
     @property
     def length(self):
@@ -64,6 +59,15 @@ class Beam(Line):
     @property
     def transform_matrix(self):
         return super().transform_matrix
+
+    @property
+    def rotation(self):
+        return self.__rotation
+
+    @rotation.setter
+    def rotation(self,radian:float):
+        self.__rotation=radian
+        super().local_csys.rotate_about_x(radian)
 
     def integrate_K(self):
         #Initialize local matrices
@@ -211,32 +215,32 @@ class Beam(Line):
         N=np.hstack([np.eye(3)*N1,np.eye(3)*N2,np.eye(3)*N3,np.eye(3)*N4])
         return N
         
-    def static_condensation(self,Ke,Me,re:np.array):
-        """
-        Perform static condensation.
-        """
-        releaseI=self.__releases[0]
-        releaseJ=self.__releases[1]
-        kij=Ke
-        mij=Me
-        rij=re
-        kij_ = Ke.copy()
-        mij_ = Me.copy()
-        rij_ = re.copy()
-        for n in range(0,6):
-            if releaseI[n] == True:
-                for i in range(12):
-                    for j in range(12):
-                        kij_[i, j] = kij[i, j] - kij[i, n]* kij[n, j] / kij[n, n]
-                        mij_[i, j] = mij[i, j] - mij[i, n]* mij[n, j] / mij[n, n]
-                    rij_[i] = rij[i] - rij[n] * kij[n, i] / kij[n, n]
-            if releaseJ[n] == True:
-                for i in range(12):
-                    for j in range(12):
-                        kij_[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
-                        mij_[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
-                    rij_[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
-        return kij_,mij_,rij_ #condensated Ke_,Me_,re_
+    # def static_condensation(self,Ke,Me,re:np.array):
+    #     """
+    #     Perform static condensation.
+    #     """
+    #     releaseI=self.__releases[:6]
+    #     releaseJ=self.__releases[6:]
+    #     kij=Ke
+    #     mij=Me
+    #     rij=re
+    #     kij_ = Ke.copy()
+    #     mij_ = Me.copy()
+    #     rij_ = re.copy()
+    #     for n in range(0,6):
+    #         if releaseI[n] == True:
+    #             for i in range(12):
+    #                 for j in range(12):
+    #                     kij_[i, j] = kij[i, j] - kij[i, n]* kij[n, j] / kij[n, n]
+    #                     mij_[i, j] = mij[i, j] - mij[i, n]* mij[n, j] / mij[n, n]
+    #                 rij_[i] = rij[i] - rij[n] * kij[n, i] / kij[n, n]
+    #         if releaseJ[n] == True:
+    #             for i in range(12):
+    #                 for j in range(12):
+    #                     kij_[i, j] = kij[i, j] - kij[i, n + 6]* kij[n + 6, j] / kij[n + 6, n + 6]
+    #                     mij_[i, j] = mij[i, j] - mij[i, n + 6]* mij[n + 6, j] / mij[n + 6, n + 6]
+    #                 rij_[i] = rij[i] - rij[n + 6] * kij[n + 6, i] / kij[n + 6, n + 6]
+    #     return kij_,mij_,rij_ #condensated Ke_,Me_,re_
 #        ##pythonic code, not finished
 #        Ke=self._Ke.copy()
 #        Me=self._Me.copy()
@@ -270,6 +274,59 @@ class Beam(Line):
 #            re_=np.insert(re_,i,0,axis=0)
 #        self._Ke_,self._Me_,self._re_=Ke_,Me_,re_
 
+    def static_condensation(self,Ke,re,Me=None):
+        """
+        Perform static condensation.
+        """
+        releaseI=self.__releases[:6]
+        releaseJ=self.__releases[6:]
+        k=Ke
+        r=re
+        k_ = Ke.copy()
+        r_ = re.copy()
+        for n in range(0,6):
+            if releaseI[n] == True:
+                for i in range(12):
+                    for j in range(12):
+                        k_[i, j] = k[i, j] - k[i, n]* k[n, j] / k[n, n]
+                    r_[i] = r[i] - r[n] * k[n, i] / k[n, n]
+            if releaseJ[n] == True:
+                for i in range(12):
+                    for j in range(12):
+                        k_[i, j] = k[i, j] - k[i, n + 6]* k[n + 6, j] / k[n + 6, n + 6]
+                    r_[i] = r[i] - r[n + 6] * k[n + 6, i] / k[n + 6, n + 6]
+        if Me!=None:
+            m=Me
+            m_ = Me.copy()
+            for n in range(0,6):
+                if releaseI[n] == True:
+                    for i in range(12):
+                        for j in range(12):
+                            m_[i, j] = m[i, j] - m[i, n]* m[n, j] / m[n, n]
+                if releaseJ[n] == True:
+                    for i in range(12):
+                        for j in range(12):
+                            m_[i, j] = m[i, j] - m[i, n + 6]* m[n + 6, j] / m[n + 6, n + 6]
+            
+        return (k_,r_,m_) if Me!=None else (k_,r_) #condensated Ke_,Me_,re_
+
+    def static_condensate(self,Ke):
+        k=Ke
+        k_ = Ke.copy()
+        for n in np.arange(12):
+            if self.__releases[n] == True:
+                k_ = k - k[:,n]* k[n,:] / k[n, n]
+        return k_
+
+    def static_condensate_f(self,re,Ke):
+        k=Ke
+        r=re
+        r_ = re.copy()
+        for n in np.arange(12):
+            if self.__releases[n] == True:
+                r_ = r - r[n] * k[n, :].toarray() / k[n, n]
+        return r_.reshape(12)
+
 #code here should be revised
     def resolve_element_force(self,Ke,Me,re,ue):
         """
@@ -298,3 +355,15 @@ class Beam(Line):
         Ke_,Me_,re_=self.static_condensation(Ke,Me,re)
         fe=self._Ke_*ue+self._re_
         return fe
+
+# from structengpy.core.fe_model.node import Node
+
+# n1=Node("1",0,0,0)
+# n2=Node("2",1,0,0)
+# b=Beam("myBeam",n1,n2,2e6,0.2,100,3e8,4e8,4e8,7.85e3)
+# b.releases[5]=True
+# Ke=b.integrate_K()
+# fe=np.arange(12)
+# Ke_,fe_=b.static_condensation(Ke,fe)
+# Ke_2,fe_2=b.static_condensation2(Ke,fe)
+# Ke_==Ke_2

@@ -24,16 +24,12 @@ class Assembly(object):
 
 
     def assemble_K(self):
-        """
-        Assemble integrated stiffness matrix.
-        Meanwhile, The force vector will be initialized.
-        """
         logger.info('Assembling K and M..')
         n_nodes=self.__model.node_count
         __K = spr.csr_matrix((n_nodes*6, n_nodes*6))
         __f = np.zeros((n_nodes*6, 1))
         #Beam load and displacement, and reset the index 
-        row_k=[]
+        row_k=[] 
         col_k=[]
         data_k=[]
         for elm in self.__model.get_beam_names():
@@ -43,9 +39,7 @@ class Assembly(object):
 
             #Static condensation to consider releases
             Ke=self.__model.get_beam_K(elm)
-
-            # re=np.zeros(12)
-            # Ke,Me,re=elm.static_condensation(Ke,Ke,re)
+            Ke=self.__model.get_beam_condensated_K(elm,Ke)
 
             Ke_ = (Tt*Ke*T).tocoo()
             
@@ -54,63 +48,6 @@ class Assembly(object):
             col_k.extend([i*6+c if c<6 else j*6+c-6 for c in Ke_.col])
                       
         __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
-        
-        # for elm in self.__membrane3s.values():
-        #     i = elm.nodes[0].hid
-        #     j = elm.nodes[1].hid
-        #     k = elm.nodes[2].hid
-            
-        #     T=elm.transform_matrix
-        #     Tt = T.transpose()
-
-        #     Ke=elm.integrate_K()
-        #     Me=elm.integrate_M()
-            
-        #     #expand
-        #     row=[a for a in range(0*6,0*6+6)]+\
-        #         [a for a in range(1*6,1*6+6)]+\
-        #         [a for a in range(2*6,2*6+6)]
-
-        #     col=[a for a in range(i*6,i*6+6)]+\
-        #         [a for a in range(j*6,j*6+6)]+\
-        #         [a for a in range(k*6,k*6+6)]
-        #     elm_node_count=elm.node_count
-        #     data=[1]*(elm_node_count*6)
-        #     G=spr.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
-            
-        #     Ke_ = spr.csr_matrix(np.dot(np.dot(Tt,Ke),T))
-        #     __K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
-            
-        # for elm in self.__membrane4s.values():
-        #     i = elm.nodes[0].hid
-        #     j = elm.nodes[1].hid
-        #     k = elm.nodes[2].hid
-        #     l = elm.nodes[3].hid
-            
-        #     T=elm.transform_matrix
-        #     Tt = T.transpose()
-
-        #     Ke=elm.Ke
-            
-        #     #transform
-        #     Ke_ = spr.csr_matrix(Tt.dot(Ke).dot(T))
-            
-        #     #expand
-        #     row=[a for a in range(0*6,0*6+6)]+\
-        #         [a for a in range(1*6,1*6+6)]+\
-        #         [a for a in range(2*6,2*6+6)]+\
-        #         [a for a in range(3*6,3*6+6)]
-
-        #     col=[a for a in range(i*6,i*6+6)]+\
-        #         [a for a in range(j*6,j*6+6)]+\
-        #         [a for a in range(k*6,k*6+6)]+\
-        #         [a for a in range(l*6,l*6+6)]
-        #     elm_node_count=elm.node_count
-        #     data=[1]*(elm_node_count*6)
-            
-        #     G=spr.csr_matrix((data,(row,col)),shape=(elm_node_count*6,n_nodes*6))
-        #     #assemble
-        #     __K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
         return __K
 
 
@@ -265,8 +202,8 @@ class Assembly(object):
             #Transform matrix
             V=self.__model.get_beam_transform_matrix(beam)
             Vt = V.transpose()
-            
             re=self.__loadcase.get_beam_load(beam)
+            re=self.__model.get_beam_condensated_f(beam,re)
             re_=Vt.dot(re)
             k=0
             for r in re_.reshape(12):
@@ -324,16 +261,17 @@ class Assembly(object):
 if __name__ == '__main__':
     import numpy as np
     from structengpy.core.fe_model.model import Model
-    from structengpy.core.fe_model.load.pattern import Pattern
+    from structengpy.core.fe_model.load.pattern import LoadPattern
     from structengpy.core.fe_model.load.loadcase import StaticCase
 
     model=Model()
     model.add_node("1",0,0,0)
     model.add_node("2",1,0,0)
     model.add_beam("A","1","2",2e6,0.2,1,2,3,4,7.85e10)
+    model.set_beam_releases("A",r2i=True,r3i=True,r2j=True,r3j=True)
 
-    patt1=Pattern("pat1")
-    patt1.set_nodal_load("2",1,2,3,4,5,6)
+    patt1=LoadPattern("pat1")
+    patt1.set_nodal_force("2",1,2,3,4,5,6)
     patt1.set_nodal_disp("1",0,0,0,0,0,0)
 
     lc=StaticCase("case1")
