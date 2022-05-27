@@ -13,7 +13,7 @@ pip install -U structengpy
 
 ### Core API使用
 
-6m悬臂梁，A端固定，B端施加10kN竖直向下荷载
+10m悬臂梁，A端固定，B端施加10kN竖直向下荷载
 
 ```python
 # -*- coding: utf-8 -*-
