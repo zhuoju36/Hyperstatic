@@ -4,54 +4,46 @@ Created on Fri Dec 30 10:26:29 2016
 
 @author: HZJ
 """
+import os
 
+import logging
 import numpy as np
 from scipy import linalg
 from scipy import sparse as sp
 import scipy.sparse.linalg as sl
 
-from structengpy.fe_model.model import Model
-import logger
-from structengpy.fe_solver import Solver 
+from structengpy.core.fe_model.model import Model
+from structengpy.core.fe_model.load.loadcase import StaticCase
+from structengpy.core.fe_solver import Solver
 
-class StaticSolver(Solver):
-    def __init__(self,workpath:str):
-        super.__init__(workpath)
+class ModalSolver(Solver):
+    def __init__(self,workpath:str,filename:str):
+        super().__init__(workpath,filename)
 
-    def solve_modal(self,k:int):
-        """
-        Solve eigen mode of the MDOF system
-        
-        params:
-            model: FEModel.
-            k: number of modes to extract.
-        """
-        model=self.model
-        K_,M_=model.K_,model.M_
-        if k>model.DOF:
-            logger.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%model.DOF)
-            k=model.DOF
+    @property
+    def workpath(self):
+        return super().workpath
+
+    def solve_modal(self,casename):
+        assembly=super().assembly
+        logging.info('solving problem with %d DOFs...'%assembly.DOF)
+        K=assembly.assemble_K()
+        M=assembly.assemble_K()
+        K_=assembly.assemble_boundary(casename,K)
+        M_=assembly.assemble_boundary(casename,M)
+        if k>assembly.DOF:
+            logging.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%assembly.DOF)
+            k=assembly.DOF
         omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
-        delta = modes/np.sum(modes,axis=0)
-        model.is_solved=True
-        model.mode_=delta
-        model.omega_=np.sqrt(omega2s).reshape((k,1))
+        mode_= modes/np.sum(modes,axis=0)
+        omega_=np.sqrt(omega2s).reshape((k,1))
+        logging.info('Done!')
+        path=os.path.join(self.workpath,casename+'.m')
+        np.save(path,mode_)
+        path=os.path.join(self.workpath,casename+'.o')
+        np.save(path,omega_)
         
-    def Riz_mode(model:Model,n,F):
-        """
-        Solve the Riz mode of the MDOF system\n
-        n: number of modes to extract\n
-        F: spacial load pattern
-        """
-        #            alpha=np.array(mode).T
-    #            #Grum-Schmidt procedure            
-    #            beta=[]
-    #            for i in range(len(mode)):
-    #                beta_i=alpha[i]
-    #                for j in range(i):
-    #                    beta_i-=np.dot(alpha[i],beta[j])/np.dot(alpha[j],alpha[j])*beta[j]
-    #                beta.append(beta_i)
-    #            mode_=np.array(beta).T
+    def solve_modal_ritz(model:Model,n,F):
         pass
 
     def spectrum_analysis(model,n,spec):
