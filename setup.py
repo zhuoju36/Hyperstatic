@@ -13,11 +13,11 @@ setup(
     description='package for structural engineering', 
     packages=find_packages(),
     zip_safe=False,
-    python_requires=">=3.6",
+    python_requires=">=3.6, <=3.8",
     install_requires=[
         'numpy>=1.21',
         'scipy>=1.7',
-        'quadpy==0.16',
+        'quadpy>=0.16',
         'mpmath==1.2.1',
     ],
 )
