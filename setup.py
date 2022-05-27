@@ -17,7 +17,7 @@ setup(
     install_requires=[
         'numpy>=1.21',
         'scipy>=1.7',
-        'quadpy==0.16.1',
+        'quadpy==0.16',
         'mpmath==1.2.1',
     ],
 )
