@@ -240,6 +240,9 @@ class Model:
         nodes=beam.get_node_names()
         return [self.get_node_hid(name) for name in nodes]
 
+    def get_beam_length(self,name):
+        return self.__beams[name].length
+
     def get_node_transform_matrix(self,name):
         node=self.__nodes[name]
         return node.transform_matrix

@@ -59,3 +59,6 @@ api.solve_static("case1")
 d=api.result_get_nodal_displacement("case1","B")
 print("Deflection at node B is %4.6f m"%d[2])
 ```
+
+## 更新日志
+2022-05-28：增加梁荷载设置

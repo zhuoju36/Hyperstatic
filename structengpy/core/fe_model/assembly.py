@@ -2,6 +2,7 @@
 import os
 import pickle
 import numpy as np
+from typing import Dict
 import scipy.sparse as spr
 from structengpy.common import logger
 from structengpy.core.fe_model.model import Model
@@ -10,9 +11,9 @@ from structengpy.core.fe_model.load import LoadCase
 
 class Assembly(object):
     def __init__(self,model:Model,loadcase:LoadCase):
-        self.__model=model
-        self.__loadcase=loadcase
-        self.__dof=self.node_count*6
+        self.__model:Model=model
+        self.__loadcase:LoadCase=loadcase
+        self.__dof:int=self.node_count*6
 
     @property
     def DOF(self):
@@ -42,15 +43,13 @@ class Assembly(object):
             Ke=self.__model.get_beam_condensated_K(elm,Ke)
 
             Ke_ = (Tt*Ke*T).tocoo()
-            
+
             data_k.extend(Ke_.data)
             row_k.extend([i*6+r if r<6 else j*6+r-6 for r in Ke_.row])
             col_k.extend([i*6+c if c<6 else j*6+c-6 for c in Ke_.col])
-                      
+
         __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
         return __K
-
-
 
     def assemble_KM(self):
         """
@@ -199,10 +198,11 @@ class Assembly(object):
             
         for beam in self.__model.get_beam_names():
             i,j=self.__model.get_beam_node_hids(beam)
+            l=self.__model.get_beam_length(beam)
             #Transform matrix
             V=self.__model.get_beam_transform_matrix(beam)
             Vt = V.transpose()
-            re=self.__loadcase.get_beam_load(beam)
+            re=self.__loadcase.get_beam_f(beam,l)
             re=self.__model.get_beam_condensated_f(beam,re)
             re_=Vt.dot(re)
             k=0
@@ -211,13 +211,13 @@ class Assembly(object):
                     data_f.append(r)
                     row_f.append(i*6+k if k<6 else j*6+k-6)
                     col_f.append(0)
-                k+=1    
-#            row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
-#            col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
-#            data=[1]*(2*6)
-#            G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
-#            #Assemble nodal force vector
-#            self.__f += G.transpose()*np.dot(Vt,beam.re)
+                k+=1
+            # row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
+            # col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
+            # data=[1]*(2*6)
+            # G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+            # #Assemble nodal force vector
+            # self.__f += G.transpose()*re_
         #### other elements
         __f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
         return __f
@@ -259,24 +259,29 @@ class Assembly(object):
 
 
 if __name__ == '__main__':
-    import numpy as np
+    import sys
     from structengpy.core.fe_model.model import Model
     from structengpy.core.fe_model.load.pattern import LoadPattern
     from structengpy.core.fe_model.load.loadcase import StaticCase
 
     model=Model()
     model.add_node("1",0,0,0)
-    model.add_node("2",1,0,0)
-    model.add_beam("A","1","2",2e6,0.2,1,2,3,4,7.85e10)
-    model.set_beam_releases("A",r2i=True,r3i=True,r2j=True,r3j=True)
+    model.add_node("2",6,0,0)
+    model.add_node("3",12,0,0)
+    model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+    model.add_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
     patt1=LoadPattern("pat1")
-    patt1.set_nodal_force("2",1,2,3,4,5,6)
-    patt1.set_nodal_disp("1",0,0,0,0,0,0)
+    patt1.set_beam_load_dist("A",qi3=-1e4,qj3=-1e4)
+    patt1.set_beam_load_dist("B",qi3=-1e4,qj3=-1e4)
 
     lc=StaticCase("case1")
     lc.add_pattern(patt1,1.0)
-
+    lc.set_nodal_restraint("1",True,True,True,True,True,True)
+    lc.set_nodal_restraint("3",True,True,True,True,True,True)
+    
     asb=Assembly(model,lc)
-    asb.assemble_K()
-    asb.assemble_f("case1")
+    K=asb.assemble_K()
+    f=asb.assemble_f("case1")
+    K_,f_ =asb.assemble_boundary("case1",K,f)
+    print(f)

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
+from typing import Dict
 import numpy as np
 from structengpy.core.fe_model.load.pattern import LoadPattern
 class LoadCase(object):
     def __init__(self,name:str):
         self.__name=name
         self.__preloadcase=None
-        self.__pattern={} #to save pattern objects
-        self.__loadfactor={} #to assign load factor
-        self.__restraint={}
+        self.__pattern:Dict[str,LoadPattern]={} #to save pattern objects
+        self.__loadfactor:Dict[str,float]={} #to assign load factor
+        self.__restraint:Dict[str,np.array]={}
 
     @property
     def name(self):
@@ -39,10 +40,10 @@ class LoadCase(object):
             fn+=f*factor   
         return fn
 
-    def get_nodal_load_dict(self):
+    def get_nodal_f_dict(self):
         res={}
         for patname,pat in self.__pattern.items():
-            d=pat.get_nodal_load_dict()
+            d=pat.get_nodal_f_dict()
             for node,load in d.items():
                 if node in res.keys():
                     res[node]+=load*self.__loadfactor[patname]
@@ -50,10 +51,10 @@ class LoadCase(object):
                     res[node]=np.zeros(6)
         return res
 
-    def get_nodal_disp_dict(self):
+    def get_nodal_d_dict(self):
         res={}
         for patname,pat in self.__pattern.items():
-            d=pat.get_nodal_disp_dict()
+            d=pat.get_nodal_d_dict()
             for node,load in d.items():
                 if node in res.keys():
                     res[node]+=load*self.__loadfactor[patname]
@@ -62,21 +63,20 @@ class LoadCase(object):
         return res
 
 
-    def get_beam_load(self,name):
+    def get_beam_f(self,name,l):
         fe=np.zeros(12)
         for patname,factor in self.__loadfactor.items():
             pat=self.__pattern[patname]
-            f=pat.get_beam_distributed(name)
+            f=pat.get_beam_f(name,l)
             if f is None:
                 continue
-            fn+=f*factor
-            ###TODO transfer to end force
+            fe+=f*factor
         return fe
 
-    def get_beam_load_dict(self):
+    def get_beam_f_dict(self,ldict):
         res={}
         for patname,pat in self.__pattern.items():
-            d=pat.get_beamload_dict()
+            d=pat.get_beam_f_dict(ldict)
             for beam,load in d.items():
                 if beam in res.keys():
                     res[beam]+=load*self.__loadfactor[patname]

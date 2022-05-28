@@ -142,7 +142,7 @@ class Api(object):
             logging.warning("exception")
             return False
 
-    def set_nodal_force(self,pattern:str,node:str,
+    def set_nodal_load(self,pattern:str,node:str,
             f1:float=0,f2:float=0,f3:float=0,
             m1:float=0,m2:float=0,m3:float=0)->bool:
         """向荷载样式中添加结点荷载
@@ -161,7 +161,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__loadpatterns[pattern].set_nodal_force(node,f1,f2,f3,m1,m2,m3)
+            self.__loadpatterns[pattern].set_nodal_load(node,f1,f2,f3,m1,m2,m3)
             return True
         except:
             logging.warning("Error when setting nodal load")
