@@ -46,8 +46,8 @@ class Api(object):
         try:
             self.__model.add_node(name,x,y,z)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when adding node")
             return False
 
     def set_nodal_restraint(self,case:str,node:str,
@@ -71,8 +71,8 @@ class Api(object):
         try:
             self.__loadcases[case].set_nodal_restraint(node,u1,u2,u3,r1,r2,r3)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal restraints")
             return False
 
     def set_nodal_mass(self,name:str,
@@ -95,8 +95,8 @@ class Api(object):
         try:
             self.__model.set_nodal_mass(name,u1,u2,u3,r1,r2,r3)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal mass")
             return False
 
     def add_beam(self,name:str,start:str,end:str,
@@ -122,8 +122,8 @@ class Api(object):
         try:
             self.__model.add_beam(name,start,end,E,mu,A,I2,I3,J,rho)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when adding beam")
             return False
 
     def add_loadpattern(self,name:str)->bool:
@@ -138,8 +138,8 @@ class Api(object):
         try:
             self.__loadpatterns[name]=LoadPattern(name)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when adding load pattern")
             return False
 
     def set_nodal_load(self,pattern:str,node:str,
@@ -163,34 +163,59 @@ class Api(object):
         try:
             self.__loadpatterns[pattern].set_nodal_load(node,f1,f2,f3,m1,m2,m3)
             return True
-        except:
-            logging.warning("Error when setting nodal load")
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal load")
             return False
 
-    def add_beam_concentration(self)->bool:
-        """_summary_
+    def set_beam_load_distributed(self,pattern:str,beam:str,
+        pi:float=0,pj:float=0,qi2:float=0,qj2:float=0,qi3:float=0,qj3:float=0,ti:float=0,tj:float=0)->bool:
+        """向荷载样式中添加梁分布荷载
+
+        Args:
+            pattern (str): 样式名
+            beam (str): 单元名
+            pi (float, optional): 起始端轴向力分布值. 默认为0.
+            pj (float, optional): 终结端轴向力分布值. 默认为0.
+            qi2 (float, optional): 起始端2方向侧向力分布值. 默认为0.
+            qj2 (float, optional): 终结端2方向侧向力分布值. 默认为0.
+            qi3 (float, optional): 起始端3方向侧向力分布值. 默认为0.
+            qj3 (float, optional): 终结端3方向侧向力分布值. 默认为0.
+            ti (float, optional): 起始端扭矩分布值. 默认为0.
+            tj (float, optional): 终结端扭矩分布值. 默认为0.
 
         Returns:
             bool: _description_
         """
         try:
-            #TODO
+            self.__loadpatterns[pattern].set_beam_load_dist(beam,pi,pj,qi2,qj2,qi3,qj3,ti,tj)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when setting beam distributed load")
             return False
 
-    def add_beam_distribution(self)->bool:
-        """_summary_
+    def set_beam_load_concentrated(self,pattern:str,beam:str,
+        F1:float=0,F2:float=0,F3:float=0,M1:float=0,M2:float=0,M3:float=0,r:float=0.5)->bool:
+        """向荷载样式中添加梁集中荷载
+
+        Args:
+            pattern (str): 样式名
+            beam (str): 单元名
+            F1 (float, optional): 1向集中力. 默认为0.
+            F2 (float, optional): 2向集中力. 默认为0.
+            F3 (float, optional): 3向集中力. 默认为0.
+            M1 (float, optional): 1向集中力矩. 默认为0.
+            M2 (float, optional): 2向集中力矩. 默认为0.
+            M3 (float, optional): 3向集中力矩. 默认为0.
+            r (float, optional): 梁上相对位置. 默认为0.5.
 
         Returns:
             bool: _description_
         """
         try:
-            #TODO
+            self.__loadpatterns[pattern].set_beam_load_conc(beam,F1,F2,F3,M1,M2,M3,r)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when setting beam concentrated load")
             return False
 
     def add_static_case(self,name:str)->bool:
@@ -205,8 +230,8 @@ class Api(object):
         try:
             self.__loadcases[name]=StaticCase(name)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when adding static case")
             return False
 
     def add_case_pattern(self,case:str,pattern:str,factor:float)->bool:
@@ -225,8 +250,8 @@ class Api(object):
             pat=self.__loadpatterns[pattern]
             lc.add_pattern(pat,factor)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when adding load pattern to static case")
             return False
 
     def set_beam_release(self,name,
@@ -255,8 +280,8 @@ class Api(object):
         try:
             self.__model.set_beam_releases(name,u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j)
             return True
-        except:
-            logging.warning("exception")
+        except Exception as e:
+            logging.warning(str(e)+" when settring beam releases")
             return False
 
     def solve_static(self,casename:str)->bool:
@@ -278,8 +303,8 @@ class Api(object):
             solver.solve_linear(casename)
             logging.info("solution finished")
             return True
-        except:
-            logging.warning("solution error")
+        except Exception as e:
+            logging.warning(str(e)+" when solving case"+str(casename))
             return False
 
     def result_get_nodal_displacement(self,case:str,node:str)->np.array:
@@ -298,7 +323,7 @@ class Api(object):
             resolver=NodeResultResolver(workpath)
             res=resolver.get_nodal_displacement(case,hid)
             return res
-        except:
-            logging.warning("Error when resolving nodal displacement")
-            return None
+        except Exception as e:
+            logging.warning(str(e)+" when getting nodal displacement of "+str(case))
+            return False
         

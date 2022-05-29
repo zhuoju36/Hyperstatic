@@ -65,18 +65,13 @@ if __name__=='__main__':
     model=Model()
     model.add_node("1",0,0,0)
     model.add_node("2",6,0,0)
-    model.add_node("3",12,0,0)
     model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-    model.add_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
     patt1=LoadPattern("pat1")
-    patt1.set_beam_load_dist("A",qi2=-1e4,qj2=-1e4)
-    patt1.set_beam_load_dist("B",qi2=-1e4,qj2=-1e4)
-
+    patt1.set_beam_load_conc("A",M2=1e4,r=0.75)
     lc=StaticCase("case1")
     lc.add_pattern(patt1,1.0)
-    lc.set_nodal_restraint("1",True,True,True,True,True,True)
-    lc.set_nodal_restraint("3",True,True,True,True,True,True)
+    lc.set_nodal_restraint("1",True,True,True,True,True,True,)
     
     asb=Assembly(model,lc)
     asb.save(path,"test.sep")
@@ -84,3 +79,4 @@ if __name__=='__main__':
     solver=StaticSolver(path,"test.sep")
     solver.solve_linear("case1")
     d=np.load(os.path.join(path,"case1.d.npy")).reshape(18)
+    print(d)

@@ -18,7 +18,7 @@ class TestBeam():
             [ 1/2, 0,  0,  0,  0,  0, 1/2, 0, 0,  0,  0,  0],
             [0, 0.5, 0, 0, 0, 1/12, 0, 0.5, 0, 0, 0, -1/12],
             [0, 0, 0.5, 0, -1/12, 0, 0, 0, 0.5, 0, 1/12, 0],
-            [0, 0,  0, 1/2,  0,  0,  0, 0, 0, -1/2,  0,  0],
+            [0, 0,  0, 1/2,  0,  0,  0, 0, 0, 1/2,  0,  0],
             ])
         for i,o in zip(inp,oup):
             load.set_beam_load_dist("1",*tuple(i))
@@ -26,3 +26,28 @@ class TestBeam():
             assert np.allclose(fd[:6],o[:6]) == True
             assert np.allclose(fd[6:],o[6:]) == True
 
+    def test_beam_concentrated(self):
+        load=LoadPattern("test")
+            #P,F2,F3,T,M2,M3,ratio;
+        inp=np.array([
+            [1,  0,  0,  0,  0,  0,  0.5,  ],
+            [0,  1,  0,  0,  0,  0,  0.5,  ],
+            [0,  0,  1,  0,  0,  0,  0.5,  ],
+            [0,  0,  0,  1,  0,  0,  0.5,  ],
+            [0,  0,  0,  0,  1,  0,  0.5,  ],
+            [0,  0,  0,  0,  0,  1,  0.5,  ],
+            ])
+        oup=np.array([
+            [1/2, 0,  0,  0,  0,  0, 1/2, 0, 0,  0,  0,  0],
+            [0, 1/2, 0, 0, 0, 1/8, 0, 1/2, 0, 0, 0, -1/8],
+            [0, 0, 1/2, 0, -1/8, 0, 0, 0, 1/2, 0, 1/8, 0],
+            [0, 0,  0, 1/2,  0,  0,  0, 0, 0, 1/2,  0,  0],
+            [0, 0, 3/2, 0, -1/4, 0, 0, 0, -3/2, 0, -1/4, 0], #
+            [0, -3/2, 0, 0, 0, -1/4, 0,3/2, 0, 0, 0, -1/4],
+            ])
+        for i,o in zip(inp,oup):
+            load.set_beam_load_conc("1",*tuple(i))
+            fd=load.get_beam_f("1",1)
+            assert np.allclose(fd[:6],o[:6]) == True
+            assert np.allclose(fd[6:],o[6:]) == True
+            # assert np.allclose(fd,o) == True

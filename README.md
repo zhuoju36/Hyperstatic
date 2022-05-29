@@ -61,4 +61,6 @@ print("Deflection at node B is %4.6f m"%d[2])
 ```
 
 ## 更新日志
-2022-05-28：增加梁荷载设置
+2022-05-29 v0.1.10 
+- 增加梁集中荷载设置 core.api.set_beam_load_concentrated
+- 增加梁局部荷载设置 core.api.set_beam_load_distributed
