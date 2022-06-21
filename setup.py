@@ -1,7 +1,6 @@
 from setuptools import setup
 from setuptools import find_packages
 
-
 VERSION = '0.1.11'
 
 setup(
@@ -18,6 +17,5 @@ setup(
         'numpy>=1.21',
         'scipy>=1.7',
         'quadpy>=0.16',
-        'mpmath==1.2.1',
     ],
 )
