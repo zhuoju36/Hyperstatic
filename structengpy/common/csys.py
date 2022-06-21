@@ -5,7 +5,7 @@ import uuid
 from structengpy.common.tolerance import Tolerance
 from scipy.spatial.transform import Rotation as R
 
-class Cartisian(object):
+class Cartesian(object):
     def __init__(self,O:tuple, A:tuple, B:tuple, name:str=None):
         """_summary_
 
@@ -130,31 +130,31 @@ class Cartisian(object):
 
 if __name__=='__main__':
     #basic
-    csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+    csys=Cartesian((0,0,0),(1,0,0),(0,1,0))
     print(csys.transform_matrix)
 
     #rotate pi/4
-    csys=Cartisian((0,0,0),(1,1,0),(0,1,0))
+    csys=Cartesian((0,0,0),(1,1,0),(0,1,0))
     print(csys.transform_matrix)
 
     #rotate pi/4 with eular angle
-    csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+    csys=Cartesian((0,0,0),(1,0,0),(0,1,0))
     csys.rotate_about_external_z(np.pi/4)
     print(csys.transform_matrix)
 
     #rotate pi/4 with quaterion
-    csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+    csys=Cartesian((0,0,0),(1,0,0),(0,1,0))
     csys.rotate_about_vec(0,0,1,np.pi/4)
     print(csys.transform_matrix)
 
     #rotate pi/3 with quaterion
-    csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+    csys=Cartesian((0,0,0),(1,0,0),(0,1,0))
     csys.rotate_about_vec(1,1,1,np.pi/3)
     print(csys.transform_matrix)
     csys.rotate_about_z(np.pi/4)
     print(csys.transform_matrix)
 
     #co-line
-    csys=Cartisian((0,0,0),(1,2,0),(2,4,0))
+    csys=Cartesian((0,0,0),(1,2,0),(2,4,0))
     print(csys.transform_matrix)
     

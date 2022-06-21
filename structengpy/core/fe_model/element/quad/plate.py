@@ -15,7 +15,7 @@ class Plate4(Quad):
         self.__t=t
         
         center=np.mean([node_i,node_j,node_k,node_l])
-#        self.local_csys = CoordinateSystem.cartisian(center,nodes[4],nodes[5])
+#        self.local_csys = CoordinateSystem.Cartesian(center,nodes[4],nodes[5])
         
         self.__alpha=[]#the angle between edge and local-x, to be added
         self.__alpha.append(self.angle(node_i,node_j,self.local_csys.x))

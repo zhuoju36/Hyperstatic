@@ -46,7 +46,33 @@ class StaticCase(LoadCase):
         return super().get_beam_f_dict(ldict)
 
 class ModalCase(LoadCase):
-    pass
+    def __init__(self,name:str,isRitz=False):
+        super().__init__(name)
+        self.__isRitz=isRitz
+        self.__mass_source="mass"
+        self.__use_load_as_mass=False
+
+    @property
+    def use_load_as_mass(self):
+        return self.__use_load_as_mass
+
+    @use_load_as_mass.setter
+    def use_load_as_mass(self,val:bool):
+        self.__use_load_as_mass=val
+
+    def add_pattern(self,pattern:LoadPattern,factor:float):
+        super().add_pattern(pattern,factor)
+
+    def set_pattern_factor(self,name,factor):
+        super().set_pattern_factor(name,factor)
+
+    def set_nodal_restraint(self,name:str,u1:bool=False,u2:bool=False,u3:bool=False,r1:bool=False,r2:bool=False,r3:bool=False):
+        super().set_nodal_restraint(name,u1,u2,u3,r1,r2,r3)
+
+    def get_nodal_restraint_dict(self):
+        return super().get_nodal_restraint_dict()
+    
+    
 
 class SpectrumCase(LoadCase):
     pass

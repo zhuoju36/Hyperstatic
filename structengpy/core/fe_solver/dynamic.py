@@ -24,13 +24,12 @@ class ModalSolver(Solver):
     def workpath(self):
         return super().workpath
 
-    def solve_modal(self,casename):
+    def solve_eigen(self,casename:str, k:int):
         assembly=super().assembly
         logging.info('solving problem with %d DOFs...'%assembly.DOF)
-        K=assembly.assemble_K()
-        M=assembly.assemble_K()
-        K_=assembly.assemble_boundary(casename,K)
-        M_=assembly.assemble_boundary(casename,M)
+        K=assembly.assemble_K()        
+        M=assembly.assemble_M(casename)
+        K_,M_=assembly.assemble_boundary(casename,K,M)
         if k>assembly.DOF:
             logging.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%assembly.DOF)
             k=assembly.DOF
@@ -43,12 +42,12 @@ class ModalSolver(Solver):
         path=os.path.join(self.workpath,casename+'.o')
         np.save(path,omega_)
         
-    def solve_modal_ritz(model:Model,n,F):
+    def solve_ritz(model:Model,n,F):
         pass
 
-    def spectrum_analysis(model,n,spec):
+    def solve_spectrum(model,n,spec):
         """
-        sepctrum analysis
+        spectrum analysis
         
         params:
             n: number of modes to use\n
@@ -70,7 +69,7 @@ class ModalSolver(Solver):
         #CQC
         return d
         
-    def modal_decomposition(model:Model,n,T,F,u0,v0,a0,xi):
+    def solve_modal_decomposition(model:Model,n,T,F,u0,v0,a0,xi):
         """
         Solve time-history problems with modal decomposition method.\n
         u0,v0,a0: initial state.\n

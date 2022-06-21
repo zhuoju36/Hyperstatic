@@ -11,13 +11,13 @@ from structengpy.core.fe_model.load.pattern import LoadPattern
 from structengpy.core.fe_model.load import LoadCase
 from structengpy.core.fe_model.load.loadcase import StaticCase
 from structengpy.core.fe_solver.static import StaticSolver
-from structengpy.common.csys import Cartisian
+from structengpy.common.csys import Cartesian
 from structengpy.core.fe_post.node import NodeResultResolver
 
 
 class Api(object):
     def __init__(self,workpath:str):
-        self.__csys=Cartisian((0,0,0),(1,0,0),(0,1,0),"Global")
+        self.__csys=Cartesian((0,0,0),(1,0,0),(0,1,0),"Global")
         self.__model=Model()
         self.__loadcases:Dict[str,LoadCase]={}
         self.__loadpatterns:Dict[str,LoadPattern]={}

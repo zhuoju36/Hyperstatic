@@ -32,7 +32,7 @@ class StaticSolver(Solver):
         
         K=assembly.assemble_K()
         f=assembly.assemble_f(casename)
-        K_,f_ =assembly.assemble_boundary(casename,K,f)
+        K_,f_ =assembly.assemble_boundary(casename,K,vectorF=f)
 
         delta,info=sl.lgmres(K_,f_.toarray())
         logger.info('Done!')

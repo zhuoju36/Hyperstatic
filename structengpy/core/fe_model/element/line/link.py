@@ -4,7 +4,6 @@ import numpy as np
 import scipy as sp
 import scipy.sparse as spr
 import scipy.interpolate as interp
-import quadpy
 
 from structengpy.core.fe_model.element.line import Line
 

@@ -25,10 +25,9 @@ class Assembly(object):
 
 
     def assemble_K(self):
-        logger.info('Assembling K and M..')
+        # logger.info('Assembling K and M..')
         n_nodes=self.__model.node_count
         __K = spr.csr_matrix((n_nodes*6, n_nodes*6))
-        __f = np.zeros((n_nodes*6, 1))
         #Beam load and displacement, and reset the index 
         row_k=[] 
         col_k=[]
@@ -37,10 +36,9 @@ class Assembly(object):
             i,j=self.__model.get_beam_node_hids(elm)
             T=self.__model.get_beam_transform_matrix(elm)
             Tt = T.transpose()
-
             #Static condensation to consider releases
             Ke=self.__model.get_beam_K(elm)
-            Ke=self.__model.get_beam_condensated_K(elm,Ke)
+            Ke=self.__model.get_beam_condensated_matrix(elm,Ke)
 
             Ke_ = (Tt*Ke*T).tocoo()
 
@@ -50,6 +48,43 @@ class Assembly(object):
 
         __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
         return __K
+
+    def assemble_M(self,casename:str):
+        n_nodes=self.__model.node_count
+        __M = spr.csr_matrix((n_nodes*6, n_nodes*6))
+        row_m=[] 
+        col_m=[]
+        data_m=[]
+
+        if self.__loadcase.use_load_as_mass:
+            return spr.diags(self.assemble_f(casename),format="csr")/9.81
+        
+        for node in self.__model.get_node_names():
+            i=self.__model.get_node_hid(node)
+            T=self.__model.get_node_transform_matrix(node)
+            Tt=T.transpose
+            Mn=self.__model.get_node_M(node)
+            if len(Mn.data)!=0:
+                data_m.extend(Mn.data)
+                row_m.extend([i*6+r for r in Mn.row])
+                col_m.extend([i*6+c for c in Mn.col])
+
+        for elm in self.__model.get_beam_names():
+            i,j=self.__model.get_beam_node_hids(elm)
+            T=self.__model.get_beam_transform_matrix(elm)
+            Tt = T.transpose()
+            #Static condensation to consider releases
+            Me=self.__model.get_beam_M(elm)
+            Me=self.__model.get_beam_condensated_matrix(elm,Me)
+
+            Me_ = (Tt*Me*T).tocoo()
+
+            data_m.extend(Me_.data)
+            row_m.extend([i*6+r if r<6 else j*6+r-6 for r in Me_.row])
+            col_m.extend([i*6+c if c<6 else j*6+c-6 for c in Me_.col])
+
+        __M=spr.coo_matrix((data_m,(row_m,col_m)),shape=(n_nodes*6, n_nodes*6)).tocsr()
+        return __M
 
     def assemble_KM(self):
         """
@@ -222,10 +257,15 @@ class Assembly(object):
         __f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
         return __f
 
-    def assemble_boundary(self,casename:str,matrixKMCF:spr.spmatrix,vectorF:spr.spmatrix=None):
+    def assemble_boundary(self,casename:str,matrixK:spr.spmatrix,matrixM:spr.spmatrix=None,matrixC:spr.spmatrix=None,vectorF:spr.spmatrix=None):
         logger.info('Assembling boundary condition..')
-        K=matrixKMCF.copy()
-        f=vectorF.copy()
+        K=matrixK.copy()
+        if matrixM is not None:
+            M=matrixM.copy()
+        if matrixC is not None:
+            C=matrixC.copy()
+        if vectorF is not None:
+            f=vectorF.copy()
         alpha=1e10
         rest=self.__loadcase.get_nodal_restraint_dict()
         for node in rest.keys():
@@ -233,7 +273,11 @@ class Assembly(object):
             for j in range(6):
                 if rest[node][j]:
                     K[i*6+j,i*6+j]*=alpha
-                    if vectorF!=None:
+                    if matrixM is not None:
+                        M[i*6+j,i*6+j]*=alpha
+                    if matrixC is not None:
+                        C[i*6+j,i*6+j]*=alpha
+                    if vectorF is not None:
                         f[i*6+j]=0
                     self.__dof-=1
 
@@ -246,10 +290,17 @@ class Assembly(object):
         #             if vectorF!=None:
         #                 f[i*6+j]=K[i*6+j,i*6+j]*disp[node][j]
         #             self.__dof-=1
-        if vectorF!=None:
-            return K,f
-        else:
+        res=[K]
+        if matrixM is not None:
+            res.append(M)
+        if matrixC is not None:
+            res.append(C)
+        if vectorF is not None:
+            res.append(f)
+        if len(res)==1:
             return K
+        else:
+            return tuple(res)
 
     def save(self,path,filename):
         if not os.path.exists(path):

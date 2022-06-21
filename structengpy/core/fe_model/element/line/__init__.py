@@ -2,7 +2,7 @@
 import numpy as np
 import scipy.sparse as spr
 
-from structengpy.common.csys import Cartisian
+from structengpy.common.csys import Cartesian
 from structengpy.core.fe_model.node import Node
 from structengpy.core.fe_model.element import Element
 from structengpy.common.tolerance import Tolerance
@@ -16,7 +16,7 @@ class Line(Element):
         pt2 = o + np.array([0,0,1])
         if np.max(np.abs((start.loc-end.loc)[:2])) < tol:
             pt2 = o + np.array([1,0,0])
-        csys=Cartisian(o, pt1, pt2)
+        csys=Cartesian(o, pt1, pt2)
         super().__init__(name,[start,end],1,dof,csys)
 
     @property

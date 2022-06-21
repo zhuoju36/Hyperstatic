@@ -1,5 +1,5 @@
 import numpy as np
-from structengpy.common.csys import Cartisian
+from structengpy.common.csys import Cartesian
 from structengpy.core.fe_model.element import Element
 
 class Tri(Element):
@@ -12,7 +12,7 @@ class Tri(Element):
             (node_i.z+node_j.z+node_k.z)/3]
         pt1 = [ node_j.x, node_j.y, node_j.z ]
         pt2 = [ node_i.x, node_i.y, node_i.z ]
-        csys = Cartisian(o, pt1, pt2)
+        csys = Cartesian(o, pt1, pt2)
         super(Tri,self).__init__(2,dof,csys,name)
 
         self._area=0.5*np.linalg.det(np.array([[1,1,1],

@@ -168,6 +168,9 @@ class Model:
             dup_name=res[0].name
             res=self.__hid['node'][dup_name]
         return res
+
+    def set_nodal_mass(self,name:str,u1:float,u2:float,u3:float,r1:float,r2:float,r3:float):
+        self.__nodes[name].mass=np.array([u1,u2,u3,r1,r2,r3])
             
     # def set_node_restraint(self,node,restraint):
     #     """
@@ -226,40 +229,51 @@ class Model:
     def get_node_names(self):
         return list(self.__nodes.keys())
 
+    def get_nodal_mass(self,name:str):
+        return self.__nodes[name].mass
+
     def get_beam_names(self):
         return list(self.__beams.keys())
 
-    def get_node_hid(self,name):
+    def get_node_hid(self,name:str):
         return self.__hid['node'][name]
 
-    def get_beam_hid(self,name):
+    def get_beam_hid(self,name:str):
         return self.__hid['beam'][name]
 
-    def get_beam_node_hids(self,name):
+    def get_beam_node_hids(self,name:str):
         beam=self.__beams[name]
         nodes=beam.get_node_names()
         return [self.get_node_hid(name) for name in nodes]
 
-    def get_beam_length(self,name):
+    def get_beam_length(self,name:str):
         return self.__beams[name].length
 
-    def get_node_transform_matrix(self,name):
+    def get_node_transform_matrix(self,name:str):
         node=self.__nodes[name]
         return node.transform_matrix
 
-    def get_beam_transform_matrix(self,name):
+    def get_node_M(self,name:str):
+        node=self.__nodes[name]
+        return node.integrate_M()
+
+    def get_beam_transform_matrix(self,name:str):
         beam=self.__beams[name]
         return beam.transform_matrix
 
-    def get_beam_K(self,name):
+    def get_beam_K(self,name:str):
         beam=self.__beams[name]
         return beam.integrate_K()     
 
-    def get_beam_condensated_K(self,name,Ke):
+    def get_beam_M(self,name:str):
         beam=self.__beams[name]
-        return beam.static_condensate(Ke)
+        return beam.integrate_M()
 
-    def get_beam_condensated_f(self,name,re):
+    def get_beam_condensated_matrix(self,name:str,KMC):
+        beam=self.__beams[name]
+        return beam.static_condensate(KMC)
+
+    def get_beam_condensated_f(self,name:str,re):
         beam=self.__beams[name]
         K=beam.integrate_K()
         return beam.static_condensate_f(re,K)

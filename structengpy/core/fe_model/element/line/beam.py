@@ -4,7 +4,6 @@ import numpy as np
 import scipy as sp
 import scipy.sparse as spr
 import scipy.interpolate as interp
-import quadpy
 
 from structengpy.core.fe_model.element.line import Line
 from structengpy.common.tolerance import Tolerance
@@ -141,7 +140,7 @@ class Beam(Line):
         _Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
         return _Ke
 
-    def integrate_M(self,mass='conc'):
+    def integrate_M(self,is_coordinated=False):
         #Initialize local matrices
         #form the stiffness matrix:
         E=self.__E
@@ -152,7 +151,7 @@ class Beam(Line):
         J=self.__J
         rho=self.__rho
         l=self.length
-        if mass=='coor':#Coordinated mass matrix
+        if is_coordinated:#Coordinated mass matrix
             _Me=np.zeros((12,12))
             _Me[0, 0]=140
             _Me[0, 6]=70
@@ -195,7 +194,7 @@ class Beam(Line):
             _Me*= (rho*A*l / 420)
             _Me = spr.csc_matrix(_Me)
         
-        elif mass=='conc':#Concentrated mass matrix
+        else:#Concentrated mass matrix
             _Me=spr.eye(12).tocsr()*rho*A*l/2
         
         return _Me

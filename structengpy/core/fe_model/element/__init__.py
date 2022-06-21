@@ -2,10 +2,10 @@
 
 import uuid
 import scipy.sparse as spr
-from structengpy.common.csys import Cartisian
+from structengpy.common.csys import Cartesian
 
 class Element(object):
-    def __init__(self,name,nodes:list,dim:int,dof:int,csys:Cartisian):  
+    def __init__(self,name,nodes:list,dim:int,dof:int,csys:Cartesian):  
         self.__name = name      
         self.__dim = dim #dimension
         self.__dof = dof #degree of freedom
@@ -91,6 +91,6 @@ class Element(object):
         return names
 
 if __name__=="__main__":
-    csys=Cartisian((0,0,0),(1,0,0),(0,1,0))
+    csys=Cartesian((0,0,0),(1,0,0),(0,1,0))
     ele=Element([],2,6,csys)
     print(ele.transform_matrix)
