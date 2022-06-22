@@ -7,9 +7,9 @@ Created on Thu Jun 23 21:32:16 2016
 import uuid
 import numpy as np
 
-from . import FrameCrossSection
-from .orm import Material,FrameSection
-import logger
+from structengpy.app.general import FrameCrossSection
+from structengpy.app.general.orm import Material,FrameSection
+import logging
         
 class Rectangle(FrameCrossSection):
     def __init__(self,mat,h,b,name=None):
@@ -264,7 +264,7 @@ def add_frame_section(self,name,material,type,size):
         self.session.add(frmsec)
         return True  
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
@@ -286,7 +286,7 @@ def get_frame_section_names(self):
         names=[i.name for i in sections.all()]
         return names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     
@@ -297,6 +297,6 @@ def delete_frame_section(self,name):
             raise Exception("Frame section doen't exist!")
         self.session.delete(sec)
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False

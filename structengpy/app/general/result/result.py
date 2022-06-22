@@ -5,18 +5,18 @@ Created on Thu Mar 29 10:22:39 2018
 @author: Dell
 """
 
-from .orm import ResultPointDisplacement,ResultPointReaction,ResultFrameForce,ResultModalPeriod
+from structengpy.app.general.orm import ResultJointDisplacement,ResultJointReaction,ResultFrameForce,ResultModalPeriod
 
-def get_result_point_displacement(self,name,loadcase):
+def get_result_joint_displacement(self,name,loadcase):
     """
     Get the result in the database.
     
     params:
-        name: str, name of point
+        name: str, name of joint
         loadcase: str, name of loadcase
     return: list of float, displacement u1,u2,u3,r1,r2,r3
     """
-    res=self.session.query(ResultPointDisplacement).filter_by(point_name=name,loadcase_name=loadcase).first()
+    res=self.session.query(ResultJointDisplacement).filter_by(joint_name=name,loadcase_name=loadcase).first()
     if res==None:
         return None
     else:
@@ -24,16 +24,16 @@ def get_result_point_displacement(self,name,loadcase):
         return [res.u1/scale['L'],res.u2/scale['L'],res.u3/scale['L'],
                 res.r1,res.r2,res.r3]
         
-def get_result_point_reaction(self,name,loadcase):
+def get_result_joint_reaction(self,name,loadcase):
     """
     Get the result in the database.
     
     params:
-        name: str, name of point
+        name: str, name of joint
         loadcase: str, name of loadcase
     return: list of float, reaction in u1,u2,u3,r1,r2,r3
     """
-    res=self.session.query(ResultPointReaction).filter_by(point_name=name,loadcase_name=loadcase).first()
+    res=self.session.query(ResultJointReaction).filter_by(joint_name=name,loadcase_name=loadcase).first()
     if res==None:
         return None
     else:

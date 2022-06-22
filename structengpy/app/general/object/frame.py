@@ -9,16 +9,16 @@ import uuid
 
 from sqlalchemy.sql import and_
 
-from .orm import Config,Point,Frame,FrameSection,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain
-import logger
+from structengpy.app.general.orm import Config,Joint,Frame,FrameSection,FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain
+import logging
 
 def add_frame(self,pt0_coor,pt1_coor,section,name=None):
     """
     Add frame object to model, if the name already exists, an exception will be raised.
     
     param:
-        pt0_coor: tuple, coordinate of the end point 0 in current unit.
-        pt1_coor: tuple, coordinate of the end point 1 in current unit.
+        pt0_coor: tuple, coordinate of the end joint 0 in current unit.
+        pt1_coor: tuple, coordinate of the end joint 1 in current unit.
         [name]: str, name, optional.
     return:
         str, the new frame's name.
@@ -31,21 +31,21 @@ def add_frame(self,pt0_coor,pt1_coor,section,name=None):
     frm=Frame()
     scale=self.scale()
     tol=self.session.query(Config).first().tolerance
-    pt0=self.session.query(Point).filter(and_(
-                (Point.x-pt0_coor[0]*scale['L'])<tol,(pt0_coor[0]*scale['L']-Point.x)<tol,
-                 (Point.y-pt0_coor[1]*scale['L'])<tol,(pt0_coor[1]*scale['L']-Point.y)<tol,
-                  (Point.z-pt0_coor[2]*scale['L'])<tol,(pt0_coor[2]*scale['L']-Point.z)<tol)).first()
+    pt0=self.session.query(Joint).filter(and_(
+                (Joint.x-pt0_coor[0]*scale['L'])<tol,(pt0_coor[0]*scale['L']-Joint.x)<tol,
+                 (Joint.y-pt0_coor[1]*scale['L'])<tol,(pt0_coor[1]*scale['L']-Joint.y)<tol,
+                  (Joint.z-pt0_coor[2]*scale['L'])<tol,(pt0_coor[2]*scale['L']-Joint.z)<tol)).first()
     if pt0==None:
-        pt0_name=self.add_point(pt0_coor[0]*scale['L'],pt0_coor[1]*scale['L'],pt0_coor[2]*scale['L'])
+        pt0_name=self.add_joint(pt0_coor[0]*scale['L'],pt0_coor[1]*scale['L'],pt0_coor[2]*scale['L'])
     else:
         pt0_name=pt0.name
         
-    pt1=self.session.query(Point).filter(and_(
-                (Point.x-pt1_coor[0])<tol,(pt1_coor[0]-Point.x)<tol,
-                 (Point.y-pt1_coor[1])<tol,(pt1_coor[1]-Point.y)<tol,
-                  (Point.z-pt1_coor[2])<tol,(pt1_coor[2]-Point.z)<tol)).first()
+    pt1=self.session.query(Joint).filter(and_(
+                (Joint.x-pt1_coor[0])<tol,(pt1_coor[0]-Joint.x)<tol,
+                 (Joint.y-pt1_coor[1])<tol,(pt1_coor[1]-Joint.y)<tol,
+                  (Joint.z-pt1_coor[2])<tol,(pt1_coor[2]-Joint.z)<tol)).first()
     if pt1==None:
-        pt1_name=self.add_point(pt1_coor[0],pt1_coor[1],pt1_coor[2])
+        pt1_name=self.add_joint(pt1_coor[0],pt1_coor[1],pt1_coor[2])
     else:
         pt1_name=pt1.name
     
@@ -60,7 +60,7 @@ def add_frame(self,pt0_coor,pt1_coor,section,name=None):
         frm.pt1_name=pt0_name
         frm.order=order
     else:
-        raise Exception('Two points should not be the same!')
+        raise Exception('Two joints should not be the same!')
         
     frm.section_name=section
     frm.uuid=str(uuid.uuid1())
@@ -87,11 +87,11 @@ def add_frame_batch(self,pt_coors,section):
         frm_ends=[]
         scale=self.scale()
         for pt0,pt1 in pt_coors:
-            pt0_name=self.add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
-            pt1_name=self.add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
+            pt0_name=self.add_joint(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
+            pt1_name=self.add_joint(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
             frm_ends.append((pt0_name,pt1_name))
         tol=self.session.query(Config).first().tolerance
-        pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+        pts=self.session.query(Joint).order_by(Joint.x,Joint.y,Joint.z).all()
         pt_map=dict([(pt.name,pt.name) for pt in pts])
         pts_to_rmv=[]
         for pti,ptj in zip(pts[:-1],pts[1:]):
@@ -120,7 +120,7 @@ def add_frame_batch(self,pt_coors,section):
         self.session.commit()
         return True,names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -140,7 +140,7 @@ def set_frame_section(self,frame,section):
         self.session.add(frm)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -150,7 +150,7 @@ def set_frame_mesh(self,frame):
 def set_frame_load_distributed(self,frame,loadcase,load):
     """
     params:
-        point: str, name of point.
+        joint: str, name of joint.
         loadcase: str, name of loadcase. 
         load: float, list of 6 to set restraints.
     return:
@@ -182,14 +182,14 @@ def set_frame_load_distributed(self,frame,loadcase,load):
         self.session.add(ld)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
 def set_frame_load_concentrated(self,frame,loadcase,load,loc):
     """
     params:
-        point: str, name of point.
+        joint: str, name of joint.
         loadcase: str, name of loadcase. 
         load: float, list of 6 to set restraints.
     return:
@@ -216,14 +216,14 @@ def set_frame_load_concentrated(self,frame,loadcase,load,loc):
         self.session.add(ld)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
 def set_frame_load_strain(self,frame,loadcase,strain):
     """
     params:
-        point: str, name of point.
+        joint: str, name of joint.
         loadcase: str, name of loadcase. 
         strain: float, strain in 1-1 axis.
     return:
@@ -243,7 +243,7 @@ def set_frame_load_strain(self,frame,loadcase,strain):
         self.session.add(ld)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
@@ -269,22 +269,22 @@ def set_frame_load_temperature(self,frame,loadcase,temperature):
         self.session.add(ld)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
-def get_frame_names_by_points(self,pt1,pt2):
+def get_frame_names_by_joints(self,pt1,pt2):
     """
     params:
         name: str
     returns:
-        frame name list satisfies the points
+        frame name list satisfies the joints
     """
     pass
 
 def get_frame_names(self):
     """
-    Get all the name of points in the database
+    Get all the name of joints in the database
     
     returns:
         frame name list if successful or None if failed.
@@ -293,7 +293,7 @@ def get_frame_names(self):
         frms=self.session.query(Frame).all()
         return [frm.name for frm in frms]
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return None
 
@@ -302,7 +302,7 @@ def get_frame_end_names(self,frame):
     params:
         frame: str, name of frame.
     return:
-        two point names as frames start and end if successful or None if failed
+        two joint names as frames start and end if successful or None if failed
     """
     try:
         frm=self.session.query(Frame).filter_by(name=frame).first()
@@ -310,7 +310,7 @@ def get_frame_end_names(self,frame):
             raise Exception("Frame doesn't exists.")
         return frm.pt0.name,frm.pt1.name
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return None 
         
@@ -330,7 +330,7 @@ def get_frame_end_coors(self,frame):
         pt1=frm.pt1
         return [pt0.x/scale['L'],pt0.y/scale['L'],pt0.z/scale['L'],pt1.x/scale['L'],pt1.y/scale['L'],pt1.z/scale['L']]
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return None      
 

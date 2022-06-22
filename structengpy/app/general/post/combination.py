@@ -8,8 +8,8 @@ import uuid
 
 from sqlalchemy.sql import and_
 
-from .orm import Config, AreaSection, Point, Area
-import logger
+from structengpy.app.general.orm import Config, AreaSection, Joint, Area
+import logging
 
 class Combination(object):
     def __init__(self,name,lc_factor,method='linear_add'):

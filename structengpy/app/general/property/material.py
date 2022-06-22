@@ -6,8 +6,8 @@ Created on Thu Jun 23 21:30:59 2016
 """
 import uuid
 
-from .orm import Material,IsotropicElastic
-import logger
+from structengpy.app.general.orm import Material,IsotropicElastic
+import logging
 
 def add_material(self,name,rho,mat_type,**kwargs):
     """
@@ -42,7 +42,7 @@ def add_material(self,name,rho,mat_type,**kwargs):
         self.session.add(mat)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -60,7 +60,7 @@ def add_material_quick(self,code):
         if code=='Q345':
             self.add_material(name=code,rho=7850,mat_type='isoelastic',E=2.06e11,mu=0.3)
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -74,7 +74,7 @@ def set_material_isotropic_elastic(self,name,E,mu):
         self.session.add(material)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -83,7 +83,7 @@ def get_material_names(self):
         materials=self.session.query(Material).all()
         return [m.name for m in materials]
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -95,7 +95,7 @@ def set_material_name(self,name):
         material.name=name
         self.session.add(material)
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 
@@ -106,7 +106,7 @@ def delete_material(self,name):
             raise Exception("Material name doen't exist!")
         self.session.delete(material)
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         

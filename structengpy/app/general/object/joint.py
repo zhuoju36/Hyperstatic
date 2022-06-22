@@ -8,22 +8,22 @@ import uuid
 
 from sqlalchemy.sql import and_
 
-from .orm import Config,Point,Frame,Area,PointLoad,PointRestraint
-import logger
+from structengpy.app.general.orm import Config,Joint,Frame,Area,JointLoad,JointRestraint
+import logging
 
-def add_point(self,x,y,z):
+def add_joint(self,x,y,z):
     """
-    Add point object to model, if the name already exists, an exception will be raised.
-    if a point in same location exists, the name of the point will be returned.
+    Add joint object to model, if the name already exists, an exception will be raised.
+    if a joint in same location exists, the name of the joint will be returned.
     
     param:
         x,y,z: float-like, coordinates in SI.
         [name]: str, name, optional.
     return:
-        str, the new point's name.
+        str, the new joint's name.
     """
     try:
-        pt=Point()
+        pt=Joint()
         pt.x=x
         pt.y=y
         pt.z=z
@@ -32,14 +32,14 @@ def add_point(self,x,y,z):
         self.session.add(pt)
         return pt.name
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
-def set_point_restraint_batch(self,points,restraints):
+def set_joint_restraint_batch(self,joints,restraints):
     """
     params:
-        point: list of str, name of point
+        joint: list of str, name of joint
         restraints: bool, list of 6 to set restraints
     return:
         status of success
@@ -47,9 +47,9 @@ def set_point_restraint_batch(self,points,restraints):
     try:
         assert len(restraints)==6
         reses=[]
-        for point in points:
-            res=PointRestraint()
-            res.point_name=point
+        for joint in joints:
+            res=JointRestraint()
+            res.joint_name=joint
             res.u1=restraints[0]
             res.u2=restraints[1]
             res.u3=restraints[2]
@@ -60,27 +60,27 @@ def set_point_restraint_batch(self,points,restraints):
         self.session.add_all(reses)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False     
           
-def set_point_restraint(self,point,restraints):
+def set_joint_restraint(self,joint,restraints):
     """
     params:
-        point: str, name of point
+        joint: str, name of joint
         restraints: bool, list of 6 to set restraints
     return:
         status of success
     """
     try:
         assert len(restraints)==6
-        pt=self.session.query(Point).filter_by(name=point).first()
+        pt=self.session.query(Joint).filter_by(name=joint).first()
         if pt is None:
-            raise Exception("Point doesn't exists.")
-        res=self.session.query(PointRestraint).filter_by(point_name=point).first()
+            raise Exception("Joint doesn't exists.")
+        res=self.session.query(JointRestraint).filter_by(joint_name=joint).first()
         if res is None:
-            res=PointRestraint()
-            res.point_name=point
+            res=JointRestraint()
+            res.joint_name=joint
             res.u1=restraints[0]
             res.u2=restraints[1]
             res.u3=restraints[2]
@@ -101,14 +101,14 @@ def set_point_restraint(self,point,restraints):
             self.session.add(res)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
             
-def set_point_load(self,point,loadcase,load):
+def set_joint_load(self,joint,loadcase,load):
     """
     params:
-        point: str, name of point.
+        joint: str, name of joint.
         loadcase: str, name of loadcase. 
         load: float, list of 6 to set restraints.
     return:
@@ -116,14 +116,14 @@ def set_point_load(self,point,loadcase,load):
     """
     try:
         assert len(load)==6
-        pt=self.session.query(Point).filter_by(name=point).first()
+        pt=self.session.query(Joint).filter_by(name=joint).first()
         if pt is None:
-            raise Exception("Point doesn't exists.")
-        ld=self.session.query(PointLoad).filter_by(point_name=point,loadcase_name=loadcase).first()
+            raise Exception("Joint doesn't exists.")
+        ld=self.session.query(JointLoad).filter_by(joint_name=joint,loadcase_name=loadcase).first()
         if ld is None:
-            ld=PointLoad()
+            ld=JointLoad()
         scale=self.scale()
-        ld.point_name=point
+        ld.joint_name=joint
         ld.loadcase_name=loadcase
         ld.p1=load[0]*scale['F']
         ld.p2=load[1]*scale['F']
@@ -134,25 +134,25 @@ def set_point_load(self,point,loadcase,load):
         self.session.add(ld)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     
-def set_point_coordinate(self,name,x,y,z):
+def set_joint_coordinate(self,name,x,y,z):
     """
-    Set point coordinate.
-    if a point in same location exists, the name of the point will be returned.
+    Set joint coordinate.
+    if a joint in same location exists, the name of the joint will be returned.
             
     param:
         x,y,z: float-like, coordinates in current unit.
         [name]: str, name, optional.
     return:
-        str, the new point's name.
+        str, the new joint's name.
     """
     try:
-        pt=self.session.query(Point).filter_by(name=name).first()
+        pt=self.session.query(Joint).filter_by(name=name).first()
         if pt is None:
-            raise Exception("Point doesn't exists.")
+            raise Exception("Joint doesn't exists.")
         scale=self.scale()
         pt.x=x*scale['L']
         pt.y=y*scale['L']
@@ -160,20 +160,20 @@ def set_point_coordinate(self,name,x,y,z):
         self.session.add(pt)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
-def set_point_mass(self,name,u1,u2,u3,r1,r2,r3):
+def set_joint_mass(self,name,u1,u2,u3,r1,r2,r3):
     try:
-        pt=self.session.query(Point).filter_by(name=name).first()
+        pt=self.session.query(Joint).filter_by(name=name).first()
         if pt is None:
-            raise Exception("Point doesn't exists.")
+            raise Exception("Joint doesn't exists.")
         scale=self.scale()
         pass
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
@@ -181,78 +181,78 @@ def set_mass_sources(self,source):
     try:
         pass
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
-def get_point_names(self):
+def get_joint_names(self):
     """
-    Get all the name of points in the database
+    Get all the name of joints in the database
     
     returns:
-        point list satisfies the coordiniates if successful or None if failed.
+        joint list satisfies the coordiniates if successful or None if failed.
     """
     try:
-        pts=self.session.query(Point)
+        pts=self.session.query(Joint)
         names=[pt.name for pt in pts.all()]
         return names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return None
     
-def get_point_name_by_coor(self,x=None,y=None,z=None):
+def get_joint_name_by_coor(self,x=None,y=None,z=None):
     """
-    Get the name of points in the database
+    Get the name of joints in the database
     
     params:
         name: str
         x,y,z: coordinates in current_unit
     returns:
-        point list satisfies the coordiniates if successful or None if failed.
+        joint list satisfies the coordiniates if successful or None if failed.
     """
     try:
         tol=self.session.query(Config).first().tolerance
-        pts=self.session.query(Point)
+        pts=self.session.query(Joint)
         scale=self.scale()
         if x is not None:
-            pts=pts.filter(and_((Point.x-x*scale['L'])<tol,(x-Point.x*scale['L'])<tol))
+            pts=pts.filter(and_((Joint.x-x*scale['L'])<tol,(x-Joint.x*scale['L'])<tol))
         if y is not None:
-            pts=pts.filter(and_((Point.y-y*scale['L'])<tol,(y-Point.y*scale['L'])<tol))
+            pts=pts.filter(and_((Joint.y-y*scale['L'])<tol,(y-Joint.y*scale['L'])<tol))
         if z is not None:
-            pts=pts.filter(and_((Point.z-z*scale['L'])<tol,(z-Point.z*scale['L'])<tol))
+            pts=pts.filter(and_((Joint.z-z*scale['L'])<tol,(z-Joint.z*scale['L'])<tol))
         names=[pt.name for pt in pts.all()]
         return names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return None
         
-def get_point_coordinate(self,name):
+def get_joint_coordinate(self,name):
     """
-    Get point coordinate.
+    Get joint coordinate.
             
     param:
         name: str, name, optional.
     return:
-        status of success, and tuple of point's coordinate if or None if failed.
+        status of success, and tuple of joint's coordinate if or None if failed.
     """
     try:
-        pt=self.session.query(Point).filter_by(name=name).first()
+        pt=self.session.query(Joint).filter_by(name=name).first()
         if pt is None:
-            raise Exception("Point doesn't exists.")
+            raise Exception("Joint doesn't exists.")
         scale=self.scale()
         x=pt.x/scale['L']
         y=pt.y/scale['L']
         z=pt.z/scale['L']
         return x,y,z
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return None
 
-def merge_points(self,tol=1e-3):
+def merge_joints(self,tol=1e-3):
     """
-    merge points within certain tolerance.
+    merge joints within certain tolerance.
     
     params:
         tol: float, tolerance in in current unit.
@@ -260,26 +260,26 @@ def merge_points(self,tol=1e-3):
         status of success.
     """
     try:
-        pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+        pts=self.session.query(Joint).order_by(Joint.x,Joint.y,Joint.z).all()
         pt_map=dict([(pt.name,pt.name) for pt in pts])
         pts_to_rmv=[]
         scale=self.scale()
         for pti,ptj in zip(pts[:-1],pts[1:]):
             if (ptj.x-pti.x)**2+(ptj.y-pti.y)**2+(ptj.z-pti.z)**2<(tol*scale['L'])**2:
-#                pti.point_restraint.point_name=ptj.name
-#                pti.point_load.point_name=ptj.name
-#                pti.point_disp.point_name=ptj.name
-#                pti.point_mass.point_name=ptj.name
-#                pti.point_restraint+=ptj.point_restraint
-#                pti.point_load+=ptj.point_load
-#                pti.point_disp+=ptj.point_disp
-#                pti.point_mass+=ptj.point_mass
+#                pti.joint_restraint.joint_name=ptj.name
+#                pti.joint_load.joint_name=ptj.name
+#                pti.joint_disp.joint_name=ptj.name
+#                pti.joint_mass.joint_name=ptj.name
+#                pti.joint_restraint+=ptj.joint_restraint
+#                pti.joint_load+=ptj.joint_load
+#                pti.joint_disp+=ptj.joint_disp
+#                pti.joint_mass+=ptj.joint_mass
                 pt_map[ptj.name]=pt_map[pti.name]
                 pts_to_rmv.append(ptj)
                 
         frames=self.session.query(Frame).all()
         areas=self.session.query(Area).all()
-        logger.info(len(pts_to_rmv))
+        logging.info(len(pts_to_rmv))
         for frm in frames:
             if (frm.pt0_name in pts_to_rmv) or (frm.pt1_name in pts_to_rmv):
                 if pt_map[frm.pt0_name]<pt_map[frm.pt1_name]:
@@ -306,33 +306,33 @@ def merge_points(self,tol=1e-3):
             self.session.delete(pt) 
                 
         self.session.flush()
-        pts=self.session.query(Point).all()
-        logger.info('merge elements %d'%len(pts))
+        pts=self.session.query(Joint).all()
+        logging.info('merge elements %d'%len(pts))
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     
-def set_point_name(self,name):
+def set_joint_name(self,name):
     try:
-        pt=self.session.query(Point).filter_by(name=name)
+        pt=self.session.query(Joint).filter_by(name=name)
         if pt is None:
-            raise Exception("Point doen't exist!")
+            raise Exception("Joint doen't exist!")
         pt.name=name
         self.session.add(pt)
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     
-def delete_point(self,name):
+def delete_joint(self,name):
     try:
-        pt=self.session.query(Point).filter_by(name=name)
+        pt=self.session.query(Joint).filter_by(name=name)
         if pt is None:
-            raise Exception("Point doen't exist!")
+            raise Exception("Joint doen't exist!")
         self.session.delete(pt)
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False

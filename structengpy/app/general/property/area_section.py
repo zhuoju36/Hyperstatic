@@ -6,8 +6,8 @@ Created on Thu Jun 23 21:32:16 2016
 """
 import uuid
 
-from .orm import AreaSection
-import logger
+from structengpy.app.general.orm import AreaSection
+import logging
 
 def add_area_section(self,name,material,type,t):
     """
@@ -39,7 +39,7 @@ def add_area_section(self,name,material,type,t):
         self.session.add(areasec)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
@@ -58,7 +58,7 @@ def get_area_section_names(self):
         names=[i.name for i in sections.all()]
         return names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     

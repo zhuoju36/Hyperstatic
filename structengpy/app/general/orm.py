@@ -106,8 +106,8 @@ class LoadCase(Base):
     loadcase_time_history_setting=relationship('LoadCaseTimeHistorySetting',backref=backref('loadcase',uselist=False),uselist=False)
 
     #1 to many    
-    point_load=relationship('PointLoad',backref='loadcase')
-    point_disp=relationship('PointDisp',backref='loadcase')
+    joint_load=relationship('JointLoad',backref='loadcase')
+    joint_disp=relationship('JointDisp',backref='loadcase')
     frame_load_distributed=relationship('FrameLoadDistributed',backref='loadcase')
     frame_load_concentrated=relationship('FrameLoadConcentrated',backref='loadcase')
     frame_load_strain=relationship('FrameLoadStrain',backref='loadcase')
@@ -117,8 +117,8 @@ class LoadCase(Base):
     area_load_strain=relationship('AreaLoadStrain',backref='loadcase')
     area_load_temperature=relationship('AreaLoadTemperature',backref='loadcase')
     
-    result_point_displacement=relationship('ResultPointDisplacement',backref='loadcase')
-    result_point_reaction=relationship('ResultPointReaction',backref='loadcase')
+    result_joint_displacement=relationship('ResultJointDisplacement',backref='loadcase')
+    result_joint_reaction=relationship('ResultJointReaction',backref='loadcase')
     result_frame_force=relationship('ResultFrameForce',backref='loadcase')
     result_area_stress=relationship('ResultAreaStress',backref='loadcase')
     result_modal_displacement=relationship('ResultModalDisplacement',backref='loadcase')
@@ -183,8 +183,8 @@ class CombinationCase(Base):
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     method=Column('method',String(8))
     
-class Point(Base):
-    __tablename__='points'
+class Joint(Base):
+    __tablename__='joints'
     name=Column('name',String(32),primary_key=True)
     x=Column('x',Float)
     y=Column('y',Float)
@@ -192,17 +192,17 @@ class Point(Base):
     uuid=Column('uuid',String(32),nullable=False)
     
     #1 to 1
-    point_restraint=relationship('PointRestraint',backref=backref('point',uselist=False))
-    point_load=relationship('PointLoad',backref=backref('point',uselist=False))
-    point_disp=relationship('PointDisp',backref=backref('point',uselist=False))
-    point_mass=relationship('PointMass',backref=backref('point',uselist=False))
+    joint_restraint=relationship('JointRestraint',backref=backref('joint',uselist=False))
+    joint_load=relationship('JointLoad',backref=backref('joint',uselist=False))
+    joint_disp=relationship('JointDisp',backref=backref('joint',uselist=False))
+    joint_mass=relationship('JointMass',backref=backref('joint',uselist=False))
     
     def __repr__(self):
         return '%s<%r>'%(self.__class__.__name__,self.name)
     
-class PointRestraint(Base):
-    __tablename__='point_restraints'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class JointRestraint(Base):
+    __tablename__='joint_restraints'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     u1=Column('u1',Boolean())
     u2=Column('u2',Boolean())
     u3=Column('u3',Boolean())
@@ -210,9 +210,9 @@ class PointRestraint(Base):
     r2=Column('r2',Boolean())
     r3=Column('r3',Boolean())
 
-class PointLoad(Base):
-    __tablename__='pointloads'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class JointLoad(Base):
+    __tablename__='jointloads'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('p1',Float())
     u2=Column('p2',Float())
@@ -221,9 +221,9 @@ class PointLoad(Base):
     r2=Column('m2',Float())
     r3=Column('m3',Float())
     
-class PointDisp(Base):
-    __tablename__='point_disps'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class JointDisp(Base):
+    __tablename__='joint_disps'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
@@ -232,9 +232,9 @@ class PointDisp(Base):
     r2=Column('r2',Float())
     r3=Column('r3',Float())
 
-class PointMass( Base):
-    __tablename__='point_masses'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class JointMass( Base):
+    __tablename__='joint_masses'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
     u3=Column('u3',Float())
@@ -242,9 +242,9 @@ class PointMass( Base):
     r2=Column('r2',Float())
     r3=Column('r3',Float())
 
-class PointSpring(Base):
-    __tablename__='point_springs'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class JointSpring(Base):
+    __tablename__='joint_springs'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
     u3=Column('u3',Float())
@@ -280,10 +280,10 @@ class Frame(Base):
     name=Column('name',String(32),primary_key=True)
     section_name=Column('section_name',String(32),ForeignKey('frame_sections.name'))
     
-    pt0_name=Column('pt0_name',String(32),ForeignKey('points.name'),nullable=False)
-    pt1_name=Column('pt1_name',String(32),ForeignKey('points.name'),nullable=False)
-    pt0 = relationship("Point", foreign_keys=[pt0_name])
-    pt1 = relationship("Point", foreign_keys=[pt1_name])
+    pt0_name=Column('pt0_name',String(32),ForeignKey('joints.name'),nullable=False)
+    pt1_name=Column('pt1_name',String(32),ForeignKey('joints.name'),nullable=False)
+    pt0 = relationship("Joint", foreign_keys=[pt0_name])
+    pt1 = relationship("Joint", foreign_keys=[pt1_name])
     
     order=Column('order',String(2),default='01')
     uuid=Column('uuid',String(32),nullable=False)
@@ -368,14 +368,14 @@ class Area(Base):
     name=Column('name',String(32),primary_key=True)
     section_name=Column('section_name',String(32),ForeignKey('area_sections.name'))
 
-    pt0_name=Column('pt0_name',String(32),ForeignKey('points.name'),nullable=False)
-    pt1_name=Column('pt1_name',String(32),ForeignKey('points.name'),nullable=False)
-    pt2_name=Column('pt2_name',String(32),ForeignKey('points.name'),nullable=False)
-    pt3_name=Column('pt3_name',String(32),ForeignKey('points.name'),nullable=False)
-    pt0 = relationship("Point", foreign_keys=[pt0_name])
-    pt1 = relationship("Point", foreign_keys=[pt1_name])    
-    pt2 = relationship("Point", foreign_keys=[pt2_name])
-    pt3 = relationship("Point", foreign_keys=[pt3_name])  
+    pt0_name=Column('pt0_name',String(32),ForeignKey('joints.name'),nullable=False)
+    pt1_name=Column('pt1_name',String(32),ForeignKey('joints.name'),nullable=False)
+    pt2_name=Column('pt2_name',String(32),ForeignKey('joints.name'),nullable=False)
+    pt3_name=Column('pt3_name',String(32),ForeignKey('joints.name'),nullable=False)
+    pt0 = relationship("Joint", foreign_keys=[pt0_name])
+    pt1 = relationship("Joint", foreign_keys=[pt1_name])    
+    pt2 = relationship("Joint", foreign_keys=[pt2_name])
+    pt3 = relationship("Joint", foreign_keys=[pt3_name])  
     
     uuid=Column('uuid',String(32),nullable=False)   
     
@@ -427,9 +427,9 @@ class RunLoadCase(Base):
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     run=Column('run',Boolean())
 
-class ResultPointDisplacement(Base):
-    __tablename__='result_point_displacement'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class ResultJointDisplacement(Base):
+    __tablename__='result_joint_displacement'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     u1=Column('u1',Float())
     u2=Column('u2',Float())
@@ -439,9 +439,9 @@ class ResultPointDisplacement(Base):
     r3=Column('r3',Float())
 
 
-class ResultPointReaction(Base):
-    __tablename__='result_point_reactions'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+class ResultJointReaction(Base):
+    __tablename__='result_joint_reactions'
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     p1=Column('p1',Float())
     p2=Column('p2',Float())
@@ -490,7 +490,7 @@ class ResultModalPeriod(Base):
 
 class ResultModalDisplacement(Base):
     __tablename__='result_modal_displacement'
-    point_name=Column('point_name',String(32),ForeignKey('points.name'),primary_key=True)
+    joint_name=Column('joint_name',String(32),ForeignKey('joints.name'),primary_key=True)
     loadcase_name=Column('loadcase_name',String(32),ForeignKey('loadcases.name'),primary_key=True)
     order=Column('order',Integer(),primary_key=True)
     u1=Column('u1',Float())
