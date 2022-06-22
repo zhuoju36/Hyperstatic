@@ -10,8 +10,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 import sqlalchemy.orm as o
 
-from .orm import Base,Config
-import logger
+from structengpy.app.general.orm import Base,Config
 
 def create(self,database):
     """
