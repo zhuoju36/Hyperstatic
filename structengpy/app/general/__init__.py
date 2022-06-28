@@ -7,8 +7,8 @@ sys.path.append(parentdir)
 
 import uuid 
 
-from structengpy.fe_model.structure import Model
-import logger
+from structengpy.core.fe_model.model import Model
+import logging
 
 class StructuralObject(object):
     def __init__(self,name):

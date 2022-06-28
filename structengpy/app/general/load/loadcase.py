@@ -6,9 +6,9 @@ Created on Wed Mar 22 19:09:47 2017
 """
 import uuid
 
-from .orm import LoadCase,LoadCaseStaticLinearSetting,LoadCase2ndSetting,LoadCase3ndSetting,\
+from structengpy.app.general.orm import LoadCase,LoadCaseStaticLinearSetting,LoadCase2ndSetting,LoadCase3ndSetting,\
 LoadCaseModalSetting,LoadCaseResponseSpectrumSetting,LoadCaseTimeHistorySetting,LoadCaseBucklingSetting
-import logger
+import logging
 
 def add_loadcase(self,name,case_type,weight_factor=0,**kwargs):
     """
@@ -65,7 +65,7 @@ def add_loadcase(self,name,case_type,weight_factor=0,**kwargs):
         self.session.add(lc)
         return lc.name
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     
@@ -102,7 +102,7 @@ def get_loadcase_names(self):
         names=[lc.name for lc in lcs.all()]
         return names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
 

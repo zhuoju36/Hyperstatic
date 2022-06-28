@@ -4,8 +4,8 @@ Created on Thu Mar 29 13:43:53 2018
 
 @author: Dell
 """
-from .orm import Config
-import logger
+from structengpy.app.general.orm import Config
+import logging
 
 def get_project_name(self):
     """
@@ -16,7 +16,7 @@ def get_project_name(self):
         config=self.session.query(Config).first()
         return config.project_name
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return None 
         
 def get_author(self):
@@ -28,7 +28,7 @@ def get_author(self):
         config=self.session.query(Config).first()
         return config.author
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return False 
 
 def get_unit(self):
@@ -40,7 +40,7 @@ def get_unit(self):
         config=self.session.query(Config).first()
         return config.unit
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return False 
 
 def get_description(self):
@@ -52,7 +52,7 @@ def get_description(self):
         config=self.session.query(Config).first()
         return config.description
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return False  
     
 def get_tolerance(self):
@@ -65,7 +65,7 @@ def get_tolerance(self):
         config=self.session.query(Config).first()
         return config.tolerance/scale['L']
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return False  
         
 def set_project_name(self,name):
@@ -82,7 +82,7 @@ def set_project_name(self,name):
         self.session.add(config)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False 
         
@@ -100,7 +100,7 @@ def set_author(self,author):
         self.session.add(config)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False 
 
@@ -118,7 +118,7 @@ def set_unit(self,unit):
         self.session.add(config)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False 
 
@@ -136,7 +136,7 @@ def set_description(self,text):
         self.session.add(config)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False  
     
@@ -157,6 +157,6 @@ def set_tolerance(self,tol):
         self.session.add(config)
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False  

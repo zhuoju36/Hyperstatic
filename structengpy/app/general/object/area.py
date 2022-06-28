@@ -9,17 +9,17 @@ import uuid
 
 from sqlalchemy.sql import and_
 
-from .orm import Config, AreaSection, Point, Area
-import logger
+from structengpy.app.general.orm import Config, AreaSection, Joint, Area
+import logging
 
 def add_area(self,pt0_coor,pt1_coor,pt2_coor,pt3_coor,section,name=None):
     """
     Add area object to model, if the name already exists, an exception will be raised.
     param:
-        pt0_coor: tuple, coordinate of the end point 0.
-        pt1_coor: tuple, coordinate of the end point 1.
-        pt2_coor: tuple, coordinate of the end point 2.
-        pt3_coor: tuple, coordinate of the end point 3. if the area is a triagle, set it be None
+        pt0_coor: tuple, coordinate of the end joint 0.
+        pt1_coor: tuple, coordinate of the end joint 1.
+        pt2_coor: tuple, coordinate of the end joint 2.
+        pt3_coor: tuple, coordinate of the end joint 3. if the area is a triagle, set it be None
         [name]: str, name, optional.
     return:
         str, the new area's name.
@@ -34,45 +34,45 @@ def add_area(self,pt0_coor,pt1_coor,pt2_coor,pt3_coor,section,name=None):
         scale=self.scale()
         tol=self.session.query(Config).first().tolerance
         
-        pt0=self.session.query(Point).filter(and_(
-                    (Point.x-pt0_coor[0]*scale['L'])<tol,(pt0_coor[0]*scale['L']-Point.x)<tol,
-                     (Point.y-pt0_coor[1]*scale['L'])<tol,(pt0_coor[1]*scale['L']-Point.y)<tol,
-                      (Point.z-pt0_coor[2]*scale['L'])<tol,(pt0_coor[2]*scale['L']-Point.z)<tol)).first()
+        pt0=self.session.query(Joint).filter(and_(
+                    (Joint.x-pt0_coor[0]*scale['L'])<tol,(pt0_coor[0]*scale['L']-Joint.x)<tol,
+                     (Joint.y-pt0_coor[1]*scale['L'])<tol,(pt0_coor[1]*scale['L']-Joint.y)<tol,
+                      (Joint.z-pt0_coor[2]*scale['L'])<tol,(pt0_coor[2]*scale['L']-Joint.z)<tol)).first()
         if pt0==None:
-            pt0_name=self._add_point(pt0_coor[0],pt0_coor[1],pt0_coor[2])
+            pt0_name=self._add_joint(pt0_coor[0],pt0_coor[1],pt0_coor[2])
         else:
             pt0_name=pt0.name
             
-        pt1=self.session.query(Point).filter(and_(
-                    (Point.x-pt1_coor[0]*scale['L'])<tol,(pt1_coor[0]*scale['L']-Point.x)<tol,
-                     (Point.y-pt1_coor[1]*scale['L'])<tol,(pt1_coor[1]*scale['L']-Point.y)<tol,
-                      (Point.z-pt1_coor[2]*scale['L'])<tol,(pt1_coor[2]*scale['L']-Point.z)<tol)).first()
+        pt1=self.session.query(Joint).filter(and_(
+                    (Joint.x-pt1_coor[0]*scale['L'])<tol,(pt1_coor[0]*scale['L']-Joint.x)<tol,
+                     (Joint.y-pt1_coor[1]*scale['L'])<tol,(pt1_coor[1]*scale['L']-Joint.y)<tol,
+                      (Joint.z-pt1_coor[2]*scale['L'])<tol,(pt1_coor[2]*scale['L']-Joint.z)<tol)).first()
         if pt1==None:
-            pt1_name=self._add_point(pt1_coor[0],pt1_coor[1],pt1_coor[2])
+            pt1_name=self._add_joint(pt1_coor[0],pt1_coor[1],pt1_coor[2])
         else:
             pt1_name=pt1.name
             
-        pt2=self.session.query(Point).filter(and_(
-                    (Point.x-pt2_coor[0]*scale['L'])<tol,(pt2_coor[0]*scale['L']-Point.x)<tol,
-                     (Point.y-pt2_coor[1]*scale['L'])<tol,(pt2_coor[1]*scale['L']-Point.y)<tol,
-                      (Point.z-pt2_coor[2]*scale['L'])<tol,(pt2_coor[2]*scale['L']-Point.z)<tol)).first()
+        pt2=self.session.query(Joint).filter(and_(
+                    (Joint.x-pt2_coor[0]*scale['L'])<tol,(pt2_coor[0]*scale['L']-Joint.x)<tol,
+                     (Joint.y-pt2_coor[1]*scale['L'])<tol,(pt2_coor[1]*scale['L']-Joint.y)<tol,
+                      (Joint.z-pt2_coor[2]*scale['L'])<tol,(pt2_coor[2]*scale['L']-Joint.z)<tol)).first()
         if pt2==None:
-            pt2_name=self._add_point(pt2_coor[0],pt2_coor[1],pt2_coor[2])
+            pt2_name=self._add_joint(pt2_coor[0],pt2_coor[1],pt2_coor[2])
         else:
             pt2_name=pt2.name
             
         if pt3_coor is not None: 
-            pt3=self.session.query(Point).filter(and_(
-                    (Point.x-pt2_coor[0]*scale['L'])<tol,(pt2_coor[0]*scale['L']-Point.x)<tol,
-                     (Point.y-pt2_coor[1]*scale['L'])<tol,(pt2_coor[1]*scale['L']-Point.y)<tol,
-                      (Point.z-pt2_coor[2]*scale['L'])<tol,(pt2_coor[2]*scale['L']-Point.z)<tol)).first()
+            pt3=self.session.query(Joint).filter(and_(
+                    (Joint.x-pt2_coor[0]*scale['L'])<tol,(pt2_coor[0]*scale['L']-Joint.x)<tol,
+                     (Joint.y-pt2_coor[1]*scale['L'])<tol,(pt2_coor[1]*scale['L']-Joint.y)<tol,
+                      (Joint.z-pt2_coor[2]*scale['L'])<tol,(pt2_coor[2]*scale['L']-Joint.z)<tol)).first()
 
-            pt3=self.session.query(Point).filter(and_(
-                        (Point.x-pt3_coor[0]*scale['L'])<tol,(pt3_coor[0]*scale['L']-Point.x)<tol,
-                         (Point.y-pt3_coor[1]*scale['L'])<tol,(pt3_coor[1]*scale['L']-Point.y)<tol,
-                          (Point.z-pt3_coor[2]*scale['L'])<tol,(pt3_coor[2]*scale['L']-Point.z)<tol)).first()
+            pt3=self.session.query(Joint).filter(and_(
+                        (Joint.x-pt3_coor[0]*scale['L'])<tol,(pt3_coor[0]*scale['L']-Joint.x)<tol,
+                         (Joint.y-pt3_coor[1]*scale['L'])<tol,(pt3_coor[1]*scale['L']-Joint.y)<tol,
+                          (Joint.z-pt3_coor[2]*scale['L'])<tol,(pt3_coor[2]*scale['L']-Joint.z)<tol)).first()
             if pt3==None:
-                pt3_name=self._add_point(pt0_coor[0],pt0_coor[1],pt0_coor[2])
+                pt3_name=self._add_joint(pt0_coor[0],pt0_coor[1],pt0_coor[2])
             else:
                 pt3_name=pt0.name
         
@@ -101,7 +101,7 @@ def add_area(self,pt0_coor,pt1_coor,pt2_coor,pt3_coor,section,name=None):
         self.session.add(area)
         return area.name
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
@@ -121,16 +121,16 @@ def add_area_batch(self,pt_coors,section):
         area_ends=[]
         scale=self.scale()
         for pt0,pt1,pt2,pt3 in pt_coors:
-            pt0_name=self._add_point(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
-            pt1_name=self._add_point(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
-            pt2_name=self._add_point(pt2[0]*scale['L'],pt2[1]*scale['L'],pt2[2]*scale['L'])
+            pt0_name=self._add_joint(pt0[0]*scale['L'],pt0[1]*scale['L'],pt0[2]*scale['L'])
+            pt1_name=self._add_joint(pt1[0]*scale['L'],pt1[1]*scale['L'],pt1[2]*scale['L'])
+            pt2_name=self._add_joint(pt2[0]*scale['L'],pt2[1]*scale['L'],pt2[2]*scale['L'])
             if pt3 is not None:
-                pt3_name=self._add_point(pt2[0]*scale['L'],pt2[1]*scale['L'],pt2[2]*scale['L'])
+                pt3_name=self._add_joint(pt2[0]*scale['L'],pt2[1]*scale['L'],pt2[2]*scale['L'])
                 area_ends.append((pt0_name,pt1_name,pt2_name,pt3_name))
             else:
                 area_ends.append((pt0_name,pt1_name,pt2_name,None))
         tol=self.session.query(Config).first().tolerance
-        pts=self.session.query(Point).order_by(Point.x,Point.y,Point.z).all()
+        pts=self.session.query(Joint).order_by(Joint.x,Joint.y,Joint.z).all()
         pt_map=dict([(pt.name,pt.name) for pt in pts])
         pts_to_rmv=[]
         for pti,ptj in zip(pts[:-1],pts[1:]):
@@ -163,13 +163,13 @@ def add_area_batch(self,pt_coors,section):
         self.session.commit()
         return True, names
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
         
 def get_area_names(self):
     """
-    Get all the name of points in the database
+    Get all the name of joints in the database
     
     returns:
         frame name list.
@@ -178,7 +178,7 @@ def get_area_names(self):
         areas=self.session.query(Area).all()
         return [area.name for area in areas]
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         self.session.rollback()
         return False
     

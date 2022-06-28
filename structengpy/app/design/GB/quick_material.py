@@ -6,7 +6,7 @@ Created on Sun Mar 11 13:14:15 2018
 @author: hzj
 """
 
-from .material import Metal,Concrete
+from structengpy.app.general.material import Metal,Concrete
 
 def quick_material(name):
     """

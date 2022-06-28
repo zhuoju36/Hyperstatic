@@ -8,7 +8,7 @@ import os
 
 import ezdxf
 
-import logger
+import logging
 
 def import_dxf(self,dxf_file,layers=[],types='fa',frm_sec=None,area_sec=None):
     """
@@ -49,15 +49,15 @@ def import_dxf(self,dxf_file,layers=[],types='fa',frm_sec=None,area_sec=None):
         result={}
         if len(frame_pts)!=0:
             res,frames=self.add_frame_batch(frame_pts,frm_sec)
-            logger.info("Imported %d frames from file %s"%(len(frames),dxf_file))
+            logging.info("Imported %d frames from file %s"%(len(frames),dxf_file))
             result['frames']=frames
         if len(area_pts)!=0:
             res,areas=self.add_area_batch(area_pts,area_sec)
-            logger.info("Imported %d areas from file %s"%(len(areas),dxf_file))
+            logging.info("Imported %d areas from file %s"%(len(areas),dxf_file))
             result['areas']=areas
         return True, result
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return False
     
 def export_dxf(self,path,filename,overwrite=False):
@@ -86,5 +86,5 @@ def export_dxf(self,path,filename,overwrite=False):
         dwg.saveas(os.path.join(path,dxf_file))
         return True
     except Exception as e:
-        logger.info(str(e))
+        logging.info(str(e))
         return False 

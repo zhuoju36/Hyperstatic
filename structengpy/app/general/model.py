@@ -8,31 +8,31 @@ Created on Mon Mar 12 19:52:26 2018
 
 from types import MethodType
 
-from .orm import Config,LoadCase,Point,Frame,Area,\
-PointLoad,PointRestraint,\
+from .orm import Config,LoadCase,Joint,Frame,Area,\
+JointLoad,JointRestraint,\
 FrameLoadDistributed,FrameLoadConcentrated,FrameLoadTemperature,FrameLoadStrain,\
 AreaLoadToFrame,\
-ResultModalPeriod,ResultPointDisplacement,ResultPointReaction,ResultFrameForce,ResultModalDisplacement
+ResultModalPeriod,ResultJointDisplacement,ResultJointReaction,ResultFrameForce,ResultModalDisplacement
 
-from fe_model import Model as FEModel
+from structengpy.core.fe_model.model import Model as FEModel
 
-from fe_solver.static import solve_linear
-from fe_solver.dynamic import solve_modal
-from model_io import dxf
-from . import db
-from . import project
-from . import material
-from . import frame_section
-from . import area_section
-from . import loadcase
-from . import combination
-from . import point
-from . import frame
-from . import area
-from . import curve
-from . import result
+from structengpy.core.fe_solver.static import solve_linear
+from structengpy.core.fe_solver.dynamic import solve_modal
+from structengpy.app.general.io import dxf
+from structengpy.app.general import db
+from structengpy.app.general.environment import project
+from structengpy.app.general.property import material
+from structengpy.app.general.property import frame_section
+from structengpy.app.general.property import area_section
+from StructEngPy.structengpy.app.general.load import loadcase
+from structengpy.app.general.post import combination
+from structengpy.app.general.object import joint
+from structengpy.app.general.object import frame
+from structengpy.app.general.object import area
+from structengpy.app.general.environment import curve
+from structengpy.app.general import result
 
-import logger
+import logging
 
 class Model():
     def __init__(self):
@@ -67,19 +67,19 @@ class Model():
         self.set_material_isotropic_elastic=MethodType(material.set_material_isotropic_elastic,self)
         self.delete_material=MethodType(material.delete_material,self)
         
-        #point
-        self.add_point=MethodType(point.add_point,self)
-        self.get_point_coordinate=MethodType(point.get_point_coordinate,self)
-        self.get_point_name_by_coor=MethodType(point.get_point_name_by_coor,self)
-        self.get_point_names=MethodType(point.get_point_names,self)
-        self.set_point_name=MethodType(point.set_point_name,self)
-        self.set_point_coordinate=MethodType(point.set_point_coordinate,self)
-        self.set_mass_sources=MethodType(point.set_mass_sources,self)
-        self.set_point_load=MethodType(point.set_point_load,self)
-        self.set_point_mass=MethodType(point.set_point_mass,self)
-        self.set_point_restraint=MethodType(point.set_point_restraint,self)
-        self.set_point_restraint_batch=MethodType(point.set_point_restraint_batch,self)
-        self.delete_point=MethodType(point.delete_point,self)
+        #joint
+        self.add_joint=MethodType(joint.add_joint,self)
+        self.get_joint_coordinate=MethodType(joint.get_joint_coordinate,self)
+        self.get_joint_name_by_coor=MethodType(joint.get_joint_name_by_coor,self)
+        self.get_joint_names=MethodType(joint.get_joint_names,self)
+        self.set_joint_name=MethodType(joint.set_joint_name,self)
+        self.set_joint_coordinate=MethodType(joint.set_joint_coordinate,self)
+        self.set_mass_sources=MethodType(joint.set_mass_sources,self)
+        self.set_joint_load=MethodType(joint.set_joint_load,self)
+        self.set_joint_mass=MethodType(joint.set_joint_mass,self)
+        self.set_joint_restraint=MethodType(joint.set_joint_restraint,self)
+        self.set_joint_restraint_batch=MethodType(joint.set_joint_restraint_batch,self)
+        self.delete_joint=MethodType(joint.delete_joint,self)
         
         #frame section
         self.add_frame_section=MethodType(frame_section.add_frame_section,self)
@@ -141,16 +141,16 @@ class Model():
         self.get_frame_end_coors=MethodType(frame.get_frame_end_coors,self)
         self.get_frame_end_names=MethodType(frame.get_frame_end_names,self)
         self.get_frame_names=MethodType(frame.get_frame_names,self)
-        self.get_frame_names_by_points=MethodType(frame.get_frame_names_by_points,self)
+        self.get_frame_names_by_joints=MethodType(frame.get_frame_names_by_joints,self)
         self.get_frame_section_attribute=MethodType(frame.get_frame_section_attribute,self)
         self.get_frame_dir_by_rotation=None
         self.get_frame_dir_by_vector=None
-        self.get_frame_dir_by_point=None
+        self.get_frame_dir_by_joint=None
         self.set_frame_name=None
         self.set_frame_section_attribute=None
         self.set_frame_dir_by_rotation=None
         self.set_frame_dir_by_vector=None
-        self.set_frame_dir_by_point=None
+        self.set_frame_dir_by_joint=None
         self.set_frame_mesh=None
         self.delete_frame=MethodType(frame.delete_frame,self)
         
@@ -160,18 +160,18 @@ class Model():
         self.delete_area=MethodType(area.delete_area,self)
         
         #result
-        self.add_result_point_displacement=None
-        self.add_result_point_reaction=None
+        self.add_result_joint_displacement=None
+        self.add_result_joint_reaction=None
         self.add_result_frame_force=None
         self.add_result_period=None
         self.add_result_modal_mass=None
         self.add_result_modal_participate_factor=None
-        self.get_result_point_displacement=MethodType(result.get_result_point_displacement,self)
-        self.get_result_point_reaction=MethodType(result.get_result_point_reaction,self)
+        self.get_result_joint_displacement=MethodType(result.get_result_joint_displacement,self)
+        self.get_result_joint_reaction=MethodType(result.get_result_joint_reaction,self)
         self.get_result_frame_force=MethodType(result.get_result_frame_force,self)
         self.get_result_area_stress=None
         self.get_result_period=MethodType(result.get_result_period,self)
-        self.combine_result_point_displacement=None
+        self.combine_result_joint_displacement=None
         self.combine_result_frame_force=None
         self.combine_result_area_stress=None
         self.clear_all_result=None
@@ -218,16 +218,16 @@ class Model():
 
     def mesh(self):
         femodel=self.fe_model
-        points=self.session.query(Point).all()
+        joints=self.session.query(Joint).all()
         frames=self.session.query(Frame).all()
         areas=self.session.query(Area).all()
-        pn_map={} #item-item map, one point to one node
+        pn_map={} #item-item map, one joint to one node
         fb_map={} #item-list map, one frame can be meshed to many beams
         am_map={} #item-list map, one area can be meshed to many membranes
         ap_map={} #item-list map, one area can be meshed to many plates
         as_map={} #item-list map, one area can be meshed to many shells
         
-        for pt in points:
+        for pt in joints:
             res=femodel.add_node(pt.x,pt.y,pt.z)
             pn_map[pt.name]=res
             
@@ -264,7 +264,7 @@ class Model():
                 res=femodel.add_membrane4(nodes[eval(order[0])], nodes[eval(order[1])], nodes[eval(order[2])],nodes[eval(order[3])], t, E, mu, rho,)
                 am_map[_area.name]=[res]
         
-        restraints=self.session.query(PointRestraint).all()
+        restraints=self.session.query(JointRestraint).all()
         for res in restraints:
             disp=[0 if res.u1 else None,
                   0 if res.u2 else None,
@@ -272,7 +272,7 @@ class Model():
                   0 if res.r1 else None,
                   0 if res.r2 else None,
                   0 if res.r3 else None]
-            femodel.set_node_displacement(pn_map[res.point_name],disp)
+            femodel.set_node_displacement(pn_map[res.joint_name],disp)
                 
         self.pn_map=pn_map
         self.fb_map=fb_map
@@ -289,15 +289,15 @@ class Model():
 
         loadcase=self.session.query(LoadCase).filter_by(name=lc).first()
         
-        point_loads=self.session.query(PointLoad).filter_by(loadcase_name=lc).all()
+        joint_loads=self.session.query(JointLoad).filter_by(loadcase_name=lc).all()
         frame_load_distributeds=self.session.query(FrameLoadDistributed).filter_by(loadcase_name=lc).all()
         frame_load_concentrateds=self.session.query(FrameLoadConcentrated).filter_by(loadcase_name=lc).all()
         frame_load_strains=self.session.query(FrameLoadStrain).filter_by(loadcase_name=lc).all()
         frame_load_temperatures=self.session.query(FrameLoadTemperature).filter_by(loadcase_name=lc).all()  
         area_load_to_frames=self.session.query(AreaLoadToFrame).filter_by(loadcase_name=lc).all()
         
-        for load in point_loads:
-            self.fe_model.set_node_force(pn_map[load.point_name],
+        for load in joint_loads:
+            self.fe_model.set_node_force(pn_map[load.joint_name],
                                          [load.u1 if load.u1!=None else 0,
                                           load.u2 if load.u2!=None else 0,
                                           load.u3 if load.u3!=None else 0,
@@ -336,7 +336,7 @@ class Model():
             None.
         """
         if not self.fe_model.is_assembled:
-            logger.info('Mesh model...')
+            logging.info('Mesh model...')
             self.mesh()
             self.fe_model.assemble_KM()
             self.fe_model.assemble_boundary(mode='KM')
@@ -346,25 +346,25 @@ class Model():
                 if loadcase is None:
                     raise Exception("Loadcase doen't exist!")
                 if loadcase.case_type=='static-linear':
-                    logger.info('Solving static linear case %s...'%lc)
+                    logging.info('Solving static linear case %s...'%lc)
                     self.apply_load(lc)
                     self.fe_model.assemble_f()
                     self.fe_model.assemble_boundary(mode='f')
                     solve_linear(self.fe_model)
                     #write disp
-                    for pt in self.session.query(Point).all():
+                    for pt in self.session.query(Joint).all():
                         hid=self.pn_map[pt.name]
-                        rst=ResultPointDisplacement()
-                        rst.point_name=pt.name
+                        rst=ResultJointDisplacement()
+                        rst.joint_name=pt.name
                         rst.loadcase_name=lc
                         disp=self.fe_model.resolve_node_disp(hid)
                         (rst.u1,rst.u2,rst.u3,rst.r1,rst.r2,rst.r3)=tuple(disp)
                         self.session.add(rst)
                     #write reaction
-                    for res in self.session.query(PointRestraint).all():
-                        hid=self.pn_map[res.point_name]
-                        rst=ResultPointReaction()
-                        rst.point_name=res.point_name
+                    for res in self.session.query(JointRestraint).all():
+                        hid=self.pn_map[res.joint_name]
+                        rst=ResultJointReaction()
+                        rst.joint_name=res.joint_name
                         rst.loadcase_name=lc
                         reac=self.fe_model.resolve_node_reaction(hid)
                         (rst.p1,rst.p2,rst.p3,rst.m1,rst.m2,rst.m3)=tuple(reac)
@@ -383,9 +383,9 @@ class Model():
                             (rst.p11,rst.p12,rst.p13,rst.m11,rst.m12,rst.m13)=tuple(f[6:])
                             self.session.add(rst)
                     self.session.commit()
-                    logger.info('Finished case %s.'%lc)
+                    logging.info('Finished case %s.'%lc)
                 elif loadcase.case_type=='modal':
-                    logger.info('Solving modal case %s...'%lc)
+                    logging.info('Solving modal case %s...'%lc)
                     solve_modal(self.fe_model,k=loadcase.loadcase_modal_setting.modal_num)
                     #write period
                     _order=1
@@ -400,11 +400,11 @@ class Model():
                         _order+=1
 
                     #write disp
-                    for pt in self.session.query(Point).all():
+                    for pt in self.session.query(Joint).all():
                         for od in range(1,_order):
                             hid=self.pn_map[pt.name]
                             rst=ResultModalDisplacement()
-                            rst.point_name=pt.name
+                            rst.joint_name=pt.name
                             rst.loadcase_name=lc
                             rst.order=od
                             disp=self.fe_model.resolve_modal_displacement(hid,od)
@@ -412,11 +412,11 @@ class Model():
                             self.session.add(rst)
                         
                     self.session.commit()
-                    logger.info('Finished case %s.'%lc)
+                    logging.info('Finished case %s.'%lc)
                 else:
                     pass
         except Exception as e:
-            logger.info(str(e))
+            logging.info(str(e))
             self.session.rollback()
             self.session.close()
 
