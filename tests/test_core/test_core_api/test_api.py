@@ -77,5 +77,4 @@ class TestApi():
 
         api.solve_static("case1")
         d=api.result_get_nodal_displacement("case1","B")
-
         assert d[2]==approx(0.0018,rel=5e-2)
