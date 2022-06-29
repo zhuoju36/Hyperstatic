@@ -321,7 +321,7 @@ class Api(object):
             workpath=self.__workpath
             hid=self.__model.get_node_hid(node)
             resolver=NodeResultResolver(workpath)
-            res=resolver.get_nodal_displacement(case,hid)
+            res=resolver.resolve_nodal_displacement(case,hid=hid)
             return res
         except Exception as e:
             logging.warning(str(e)+" when getting nodal displacement of "+str(case))

@@ -37,9 +37,9 @@ class ModalSolver(Solver):
         mode_= modes/np.sum(modes,axis=0)
         omega_=np.sqrt(omega2s).reshape((k,1))
         logging.info('Done!')
-        path=os.path.join(self.workpath,casename+'.m')
+        path=os.path.join(self.workpath,casename+'.d') #vibration mode, ad nodal displacement
         np.save(path,mode_)
-        path=os.path.join(self.workpath,casename+'.o')
+        path=os.path.join(self.workpath,casename+'.o') #omega
         np.save(path,omega_)
         
     def solve_ritz(model:Model,n,F):

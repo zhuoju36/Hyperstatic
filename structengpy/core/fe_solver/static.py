@@ -36,7 +36,8 @@ class StaticSolver(Solver):
 
         delta,info=sl.lgmres(K_,f_.toarray())
         logger.info('Done!')
-        d_=delta.reshape((assembly.node_count*6,1))
+        d_=delta.reshape((assembly.node_count*6,1)) #d_ contains all the displacements including the restraint DOFs
+
         path=os.path.join(self.workpath,casename+'.d')
         np.save(path,d_)
    
