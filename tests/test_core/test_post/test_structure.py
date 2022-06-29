@@ -38,4 +38,6 @@ class TestStructureResult():
         solver.solve_eigen("eigen",3)
 
         resolver=StructureResultResolver(path)
-        resolver.resolve_modal_frequency("eigen")
+        f=resolver.resolve_modal_frequency("eigen")
+
+        pass

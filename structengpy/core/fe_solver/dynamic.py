@@ -35,10 +35,10 @@ class ModalSolver(Solver):
             k=assembly.DOF
         omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
         mode_= modes/np.sum(modes,axis=0)
-        omega_=np.sqrt(omega2s).reshape((k,1))
+        omega_=np.sqrt(omega2s).reshape(k)
         logging.info('Done!')
         path=os.path.join(self.workpath,casename+'.d') #vibration mode, ad nodal displacement
-        np.save(path,mode_)
+        np.save(path,mode_.T)
         path=os.path.join(self.workpath,casename+'.o') #omega
         np.save(path,omega_)
         

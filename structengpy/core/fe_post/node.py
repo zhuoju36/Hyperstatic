@@ -20,7 +20,7 @@ class NodeResultResolver(object):
             np.array: 
         """
         path=self.__path
-        d=np.load(os.path.join(path,casename+".d.npy"))[:,step-1] #TODO: should be row-first
+        d=np.load(os.path.join(path,casename+".d.npy"))[step-1,:] # row-first
         if hid==None:
             return d.reshape(d.size//6,6)
         else:
