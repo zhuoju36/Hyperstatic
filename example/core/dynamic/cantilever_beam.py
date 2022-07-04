@@ -37,8 +37,8 @@ api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
 # 集成求解数据
 api.assemble()
 
-# 求解静力工况
-api.solve_static("case1")
+# 求解模态工况
+api.solve_modal("case1")
 
 # 解析位移结果
 d=api.result_get_nodal_displacement("B","case1")
