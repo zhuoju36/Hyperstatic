@@ -303,19 +303,32 @@ class Assembly(object):
             C=matrixC.copy()
         if vectorF is not None:
             f=vectorF.copy()
-        alpha=1e10
         rest=loadcase.get_nodal_restraint_dict()
+        fixed=[]
         for node in rest.keys():
             i=self.__model.get_node_hid(node)
             for j in range(6):
                 if rest[node][j]:
-                    if matrixM is not None:
-                        M[i*6+j,:]=M[:,i*6+j]=0
-                    if matrixC is not None:
-                        C[i*6+j,i*6+j]*=alpha
-                    if vectorF is not None:
-                        f[i*6+j]=0
+                    fixed.append(i*6+j)
                     self.__dof-=1
+        K=self.__drop_matrix_dof(K,fixed)
+        if matrixM is not None:
+            M=self.__drop_matrix_dof(M,fixed)
+        if matrixC is not None:
+            C=self.__drop_matrix_dof(C,fixed)
+        if vectorF is not None:
+            f=self.__drop_vector_dof(f,fixed)
+        res=[K]
+        if matrixM is not None:
+            res.append(M)
+        if matrixC is not None:
+            res.append(C)
+        if vectorF is not None:
+            res.append(f)
+        if len(res)==1:
+            return K
+        else:
+            return tuple(res)
  
     def __drop_matrix_dof(self,M:spr.spmatrix, indices:list):
         C = M.tocoo()
@@ -332,7 +345,7 @@ class Assembly(object):
         return B
 
     def __drop_vector_dof(self,V:np.array, indices:list):
-        keep = ~np.in1d(np.arange(len(V)), indices)
+        keep = ~np.in1d(np.arange(V.shape[0]), indices)
         return V[keep].copy()
 
     # def assemble_boundary(self,casename:str,matrixK:spr.spmatrix,matrixM:spr.spmatrix=None,matrixC:spr.spmatrix=None,vectorF:spr.spmatrix=None):
@@ -369,17 +382,17 @@ class Assembly(object):
         #             if vectorF!=None:
         #                 f[i*6+j]=K[i*6+j,i*6+j]*disp[node][j]
         #             self.__dof-=1
-        res=[K]
-        if matrixM is not None:
-            res.append(M)
-        if matrixC is not None:
-            res.append(C)
-        if vectorF is not None:
-            res.append(f)
-        if len(res)==1:
-            return K
-        else:
-            return tuple(res)
+        # res=[K]
+        # if matrixM is not None:
+        #     res.append(M)
+        # if matrixC is not None:
+        #     res.append(C)
+        # if vectorF is not None:
+        #     res.append(f)
+        # if len(res)==1:
+        #     return K
+        # else:
+        #     return tuple(res)
 
     def restraintDOF(self,casename:str):
         loadcase=self.__loadcase[casename]
@@ -400,23 +413,11 @@ class Assembly(object):
 
 
 if __name__ == '__main__':
-    def drop_dof(M:spr.spmatrix, indices):
-        C = M.tocoo()
-        keep = ~np.in1d(C.row, indices)
-        data, row, col = C.data[keep], C.row[keep], C.col[keep]
-        for i in reversed(sorted(indices)):
-            row=[k-1 if k>i else k for k in row ]
-        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]))
-        keep = ~np.in1d(A.col, indices)
-        data, row, col = A.data[keep], A.row[keep], A.col[keep]
-        for i in reversed(sorted(indices)):
-            col=[k-1 if k>i else k for k in col ]
-        B=spr.csr_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
-        return B
+    def drop_vector_dof(V:np.array, indices:list):
+        keep = ~np.in1d(np.arange(V.shape[0]), indices)
+        return V[keep].copy()
 
-    A=np.arange(25).reshape((5,5))
-    A[2,4]=A[4,2]=A[1,3]=A[3,1]=0
-    A=spr.csr_matrix(A)
-    B=drop_dof(A,[1,3])
-    print(A.todense())
-    print(B.todense())
+    A=np.arange(10)
+    B=drop_vector_dof(A,[1,3])
+    print(A)
+    print(B)

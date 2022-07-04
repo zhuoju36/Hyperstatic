@@ -22,7 +22,7 @@ class TestModalSolver():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_beam("A","1","2",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
         # model.set_nodal_mass("2",1,1,1,1,1,1)
 
         lc=ModalCase("eigen")
@@ -32,8 +32,11 @@ class TestModalSolver():
         asb.save(path,"test.asb")
         solver=ModalSolver(path,"test.asb")
         solver.solve_eigen("eigen",3)
-        d=np.load(os.path.join(path,"eigen.o.npy"))
-        assert d==approx(-0.00764,rel=5e-2)
+        o2=np.load(os.path.join(path,"eigen.o.npy"))
+        T=2*np.pi/np.sqrt(o2)
+        assert T[0]==approx(1.790,rel=5e-2)
+        assert T[1]==approx(0.678,rel=5e-2)
+
         # assert d[10]==approx(0.00189,rel=5e-2)
 
    

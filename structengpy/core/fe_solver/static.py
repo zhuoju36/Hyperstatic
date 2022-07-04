@@ -44,6 +44,9 @@ class StaticSolver(Solver):
 
         delta,info=sl.lgmres(K_,f_.toarray())
         logging.info('Done!')
+        for i in assembly.restraintDOF(casename):
+            delta=np.insert(delta,i,0,0)
+
         d_=delta.reshape((1,assembly.node_count*6)) #row-first, d_ contains all the displacements including the restraint DOFs
 
         path=os.path.join(self.workpath,casename+'.d')
@@ -83,7 +86,7 @@ if __name__=='__main__':
     lc.add_pattern(patt1,1.0)
     lc.set_nodal_restraint("1",True,True,True,True,True,True,)
     
-    asb=Assembly(model,lc)
+    asb=Assembly(model,[lc])
     asb.save(path,"test.asb")
 
     solver=StaticSolver(path,"test.asb")

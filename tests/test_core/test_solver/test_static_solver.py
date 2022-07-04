@@ -180,7 +180,7 @@ class TestStaticSolver():
             asb=Assembly(model,[lc])
             asb.save(path,"test.asb")
             solver=StaticSolver(path,"test.asb")
-            solver.solve_linear("case1")
+            solver.solve_linear("case1")                
             d=np.load(os.path.join(path,"case1.d.npy")).reshape(18)
             assert d[o[0]]==approx(o[1],rel=5e-2)
 

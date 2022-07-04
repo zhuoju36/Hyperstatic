@@ -53,7 +53,6 @@ class ModalSolver(Solver):
         # omega2s,modes =linalg.eig(K_.todense()[6:,6:],M_.todense()[6:,6:])
         mode_= modes/np.sum(modes,axis=0)
         omega2s=omega2s.reshape(k)
-        print("T=",2*np.pi/np.sqrt(omega2s))
         logging.info('Done!')
         path=os.path.join(self.workpath,casename+'.d') #vibration mode, ad nodal displacement
         np.save(path,mode_.T)
