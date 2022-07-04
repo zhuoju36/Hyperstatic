@@ -55,11 +55,14 @@ api.add_case_pattern("case1","pat1",1.0)
 api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
 api.set_nodal_restraint("case1","C",True,True,True,True,True,True)
 
+# 集成求解数据
+api.assemble()
+
 # 求解静力工况
 api.solve_static("case1")
 
 # 解析位移结果，应与支座约束简支一致
-d=api.result_get_nodal_displacement("case1","B")
+d=api.result_get_nodal_displacement("B","case1")
 print("Deflection at node B is %4.6f m"%d[2])
 
 
