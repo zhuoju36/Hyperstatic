@@ -309,14 +309,56 @@ class Assembly(object):
             i=self.__model.get_node_hid(node)
             for j in range(6):
                 if rest[node][j]:
-                    K[i*6+j,i*6+j]*=alpha
                     if matrixM is not None:
-                        M[i*6+j,i*6+j]*=alpha
+                        M[i*6+j,:]=M[:,i*6+j]=0
                     if matrixC is not None:
                         C[i*6+j,i*6+j]*=alpha
                     if vectorF is not None:
                         f[i*6+j]=0
                     self.__dof-=1
+ 
+    def __drop_matrix_dof(self,M:spr.spmatrix, indices:list):
+        C = M.tocoo()
+        keep = ~np.in1d(C.row, indices)
+        data, row, col = C.data[keep], C.row[keep], C.col[keep]
+        for i in reversed(sorted(indices)):
+            row=[k-1 if k>i else k for k in row ]
+        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]))
+        keep = ~np.in1d(A.col, indices)
+        data, row, col = A.data[keep], A.row[keep], A.col[keep]
+        for i in reversed(sorted(indices)):
+            col=[k-1 if k>i else k for k in col ]
+        B=spr.csr_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
+        return B
+
+    def __drop_vector_dof(self,V:np.array, indices:list):
+        keep = ~np.in1d(np.arange(len(V)), indices)
+        return V[keep].copy()
+
+    # def assemble_boundary(self,casename:str,matrixK:spr.spmatrix,matrixM:spr.spmatrix=None,matrixC:spr.spmatrix=None,vectorF:spr.spmatrix=None):
+    #     logging.info('Assembling boundary condition..')
+    #     loadcase=self.__loadcase[casename]
+    #     K=matrixK.copy()
+    #     if matrixM is not None:
+    #         M=matrixM.copy()
+    #     if matrixC is not None:
+    #         C=matrixC.copy()
+    #     if vectorF is not None:
+    #         f=vectorF.copy()
+    #     alpha=1e10
+    #     rest=loadcase.get_nodal_restraint_dict()
+    #     for node in rest.keys():
+    #         i=self.__model.get_node_hid(node)
+    #         for j in range(6):
+    #             if rest[node][j]:
+    #                 K[i*6+j,i*6+j]*=alpha
+    #                 if matrixM is not None:
+    #                     M[i*6+j,i*6+j]*=alpha
+    #                 if matrixC is not None:
+    #                     C[i*6+j,i*6+j]*=alpha
+    #                 if vectorF is not None:
+    #                     f[i*6+j]=0
+    #                 self.__dof-=1
 
         # disp=self.__loadcase.get_nodal_disp_dict()
         # for node in disp.keys():
@@ -358,29 +400,23 @@ class Assembly(object):
 
 
 if __name__ == '__main__':
-    import sys
-    from structengpy.core.fe_model.model import Model
-    from structengpy.core.fe_model.load.pattern import LoadPattern
-    from structengpy.core.fe_model.load.loadcase import StaticCase
+    def drop_dof(M:spr.spmatrix, indices):
+        C = M.tocoo()
+        keep = ~np.in1d(C.row, indices)
+        data, row, col = C.data[keep], C.row[keep], C.col[keep]
+        for i in reversed(sorted(indices)):
+            row=[k-1 if k>i else k for k in row ]
+        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]))
+        keep = ~np.in1d(A.col, indices)
+        data, row, col = A.data[keep], A.row[keep], A.col[keep]
+        for i in reversed(sorted(indices)):
+            col=[k-1 if k>i else k for k in col ]
+        B=spr.csr_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
+        return B
 
-    model=Model()
-    model.add_node("1",0,0,0)
-    model.add_node("2",6,0,0)
-    model.add_node("3",12,0,0)
-    model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-    model.add_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-
-    patt1=LoadPattern("pat1")
-    patt1.set_beam_load_dist("A",qi3=-1e4,qj3=-1e4)
-    patt1.set_beam_load_dist("B",qi3=-1e4,qj3=-1e4)
-
-    lc=StaticCase("case1")
-    lc.add_pattern(patt1,1.0)
-    lc.set_nodal_restraint("1",True,True,True,True,True,True)
-    lc.set_nodal_restraint("3",True,True,True,True,True,True)
-    
-    asb=Assembly(model,lc)
-    K=asb.assemble_K()
-    f=asb.assemble_f("case1")
-    K_,f_ =asb.assemble_boundary("case1",K,f)
-    print(f)
+    A=np.arange(25).reshape((5,5))
+    A[2,4]=A[4,2]=A[1,3]=A[3,1]=0
+    A=spr.csr_matrix(A)
+    B=drop_dof(A,[1,3])
+    print(A.todense())
+    print(B.todense())
