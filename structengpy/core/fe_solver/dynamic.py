@@ -24,46 +24,47 @@ class ModalSolver(Solver):
     def workpath(self):
         return super().workpath
 
-    def solve_eigen(self,casename:str,k:int,precase:str=None):
+    def solve_eigen(self,casename:str,k:int,precase:str=None)->bool:
         assembly=super().assembly
         logging.info('solving problem with %d DOFs...'%assembly.DOF)
-        path=os.path.join(self.workpath,casename+'.k') #path of the stiff matrix
+
+        if precase==None:
+            base_case="0"
+        
+        path=os.path.join(self.workpath,base_case+'.k') #path of the stiff matrix
         if os.path.exists(path):
             K=np.load(path)
         else:
             K=assembly.assemble_K()
             np.save(path,K)
-        path=os.path.join(self.workpath,casename+'.m') #path of the mass matrix
+        path=os.path.join(self.workpath,base_case+'.m') #path of the mass matrix
         if os.path.exists(path):
             M=np.load(path)
         else:
-            M=assembly.assemble_K()
-            np.save(path,K)
+            M=assembly.assemble_M()
+            np.save(path,M)
+    
         K_,M_=assembly.assemble_boundary(casename,K,M)
 
         if k>assembly.DOF:
             logging.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%assembly.DOF)
             k=assembly.DOF
         omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
+        # omega2s,modes =linalg.eig(K_.todense()[6:,6:],M_.todense()[6:,6:])
         mode_= modes/np.sum(modes,axis=0)
-        omega_=np.sqrt(omega2s).reshape(k)
+        omega2s=omega2s.reshape(k)
+        print("T=",2*np.pi/np.sqrt(omega2s))
         logging.info('Done!')
         path=os.path.join(self.workpath,casename+'.d') #vibration mode, ad nodal displacement
         np.save(path,mode_.T)
         path=os.path.join(self.workpath,casename+'.o') #omega
-        np.save(path,omega_)
+        np.save(path,omega2s)
+        return True
         
     def solve_ritz(model:Model,n,F):
         pass
 
-    def solve_spectrum(model,n,spec):
-        """
-        spectrum analysis
-        
-        params:
-            n: number of modes to use\n
-            spec: a list of tuples (period,acceleration response)
-        """
+    def solve_spectrum(self,casename:str,modalcase:str,n:str,spec):
         freq,mode=eigen_mode(model,n)
         M_=np.dot(mode.T,model.M)
         M_=np.dot(M_,mode)
@@ -273,3 +274,29 @@ class ModalSolver(Solver):
             tt.append(t)
         df=pd.DataFrame({'t':tt,'u':u,'v':v,'a':a})
         return df
+
+if __name__=='__main__':
+    import sys
+    from structengpy.core.fe_model.assembly import Assembly
+    from structengpy.core.fe_model.model import Model
+    from structengpy.core.fe_model.load.pattern import LoadPattern
+    from structengpy.core.fe_model.load.loadcase import ModalCase
+
+    path="./test"
+    if sys.platform=="win32":
+        path="c:\\test"
+
+    model=Model()
+    model.add_node("1",0,0,0)
+    model.add_node("2",6,0,0)
+    model.add_beam("A","1","2",E=2e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
+    # model.set_nodal_mass("2",1,1,1,1,1,1)
+
+    lc=ModalCase("eigen")
+    lc.use_load_as_mass=False
+    lc.set_nodal_restraint("1",True,True,True,True,True,True)
+    asb=Assembly(model,[lc])
+    asb.save(path,"test.asb")
+    solver=ModalSolver(path,"test.asb")
+    solver.solve_eigen("eigen",6)
+    d=np.load(os.path.join(path,"eigen.o.npy"))

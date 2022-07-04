@@ -33,11 +33,11 @@ class TestStructureResult():
         lc.set_nodal_restraint("1",True,True,True,True,True,True)
         asb=Assembly(model,[lc])
         
-        asb.save(path,"test.sep")
-        solver=ModalSolver(path,"test.sep")
+        asb.save(path,"test.asb")
+        solver=ModalSolver(path,"test.asb")
         solver.solve_eigen("eigen",3)
 
-        resolver=StructureResultResolver(path,"test.sep")
+        resolver=StructureResultResolver(path,"test.asb")
         f=resolver.resolve_modal_frequency("eigen")
 
         pass

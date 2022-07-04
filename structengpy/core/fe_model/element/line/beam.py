@@ -142,12 +142,7 @@ class Beam(Line):
 
     def integrate_M(self,is_coordinated=False):
         #Initialize local matrices
-        #form the stiffness matrix:
-        E=self.__E
-        mu=self.__mu
         A=self.__A
-        I2=self.__I2
-        I3=self.__I3
         J=self.__J
         rho=self.__rho
         l=self.length

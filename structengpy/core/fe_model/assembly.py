@@ -84,14 +84,14 @@ class Assembly(object):
         __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
         return __K
 
-    def assemble_M(self,casename:str):
+    def assemble_M(self,casename:str=None):
         n_nodes=self.__model.node_count
         __M = spr.csr_matrix((n_nodes*6, n_nodes*6))
         row_m=[] 
         col_m=[]
         data_m=[]
 
-        if self.__loadcase.use_load_as_mass:
+        if casename!=None and self.__loadcase[casename].use_load_as_mass:
             return spr.diags(self.assemble_f(casename),format="csr")/9.81
         
         for node in self.__model.get_node_names():

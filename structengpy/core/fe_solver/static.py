@@ -16,7 +16,7 @@ from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load.loadcase import StaticCase
 from structengpy.core.fe_solver import Solver
 
-from structengpy.common import logger
+import logging
 
 class StaticSolver(Solver):
     def __init__(self,workpath:str,filename:str):
@@ -26,26 +26,29 @@ class StaticSolver(Solver):
     def workpath(self):
         return super().workpath
 
-    def solve_linear(self,casename):
+    def solve_linear(self,casename,precase=None)->bool:
         assembly=super().assembly
-        logger.info('solving problem with %d DOFs...'%assembly.DOF)
+        logging.info('solving problem with %d DOFs...'%assembly.DOF)
         
-        path=os.path.join(self.workpath,casename+'.k') #path of the stiff matrix
-        if os.path.exists(path):
-            K=np.load(path)
-        else:
-            K=assembly.assemble_K()
-            np.save(path,K)
-        
+        if precase==None:
+            base_case="0"
+            path=os.path.join(self.workpath,base_case+'.k') #path of the stiff matrix
+            if os.path.exists(path):
+                K=np.load(path)
+            else:
+                K=assembly.assemble_K()
+                np.save(path,K)
+            
         f=assembly.assemble_f(casename)
         K_,f_ =assembly.assemble_boundary(casename,K,vectorF=f)
 
         delta,info=sl.lgmres(K_,f_.toarray())
-        logger.info('Done!')
+        logging.info('Done!')
         d_=delta.reshape((1,assembly.node_count*6)) #row-first, d_ contains all the displacements including the restraint DOFs
 
         path=os.path.join(self.workpath,casename+'.d')
         np.save(path,d_)
+        return True
    
     def solve_2nd(self):
         pass
@@ -81,9 +84,9 @@ if __name__=='__main__':
     lc.set_nodal_restraint("1",True,True,True,True,True,True,)
     
     asb=Assembly(model,lc)
-    asb.save(path,"test.sep")
+    asb.save(path,"test.asb")
 
-    solver=StaticSolver(path,"test.sep")
+    solver=StaticSolver(path,"test.asb")
     solver.solve_linear("case1")
     d=np.load(os.path.join(path,"case1.d.npy")).reshape(18)
     print(d)
