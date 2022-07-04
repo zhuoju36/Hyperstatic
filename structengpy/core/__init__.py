@@ -9,7 +9,9 @@ from structengpy.core.fe_model.assembly import Assembly
 from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load.pattern import LoadPattern
 from structengpy.core.fe_model.load import LoadCase
-from structengpy.core.fe_model.load.loadcase import StaticCase
+from structengpy.core.fe_model.load.loadcase import ModalCase, StaticCase
+from structengpy.core.fe_post.beam import BeamResultResolver
+from structengpy.core.fe_solver.dynamic import ModalSolver
 from structengpy.core.fe_solver.static import StaticSolver
 from structengpy.common.csys import Cartesian
 from structengpy.core.fe_post.node import NodeResultResolver
@@ -17,6 +19,7 @@ from structengpy.core.fe_post.node import NodeResultResolver
 
 class Api(object):
     def __init__(self,workpath:str):
+        self.__filename=".asb"
         self.__csys=Cartesian((0,0,0),(1,0,0),(0,1,0),"Global")
         self.__model=Model()
         self.__loadcases:Dict[str,LoadCase]={}
@@ -26,11 +29,23 @@ class Api(object):
         if not os.path.exists(workpath):
             try:
                 os.mkdir(workpath)
-            except:
-                logging.info("Error creating workpath "+ workpath)
+            except Exception as e :
+                logging.info("Error creating workpath "+ workpath +'. Exception: '+str(e))
+                self=None
+
+
+    def clear_workspace(self):
+        workpath=self.__workpath
+        if not os.path.exists(workpath):
+            logging.info("Work path"+ workpath+" does not exist!")
+        else:
+            try:
+                os.remove(workpath)
+                os.mkdir(workpath)
+            except Exception as e :
+                logging.info("Error creating workpath "+ workpath +'. Exception: '+str(e))
                 self=None
         
-
     def add_node(self,name:str,x:float,y:float,z:float)->bool:
         """向模型中添加三维结点
 
@@ -48,31 +63,6 @@ class Api(object):
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding node")
-            return False
-
-    def set_nodal_restraint(self,case:str,node:str,
-            u1:bool=False,u2:bool=False,u3:bool=False,
-            r1:bool=False,r2:bool=False,r3:bool=False,)->bool:
-        """设置结点约束
-
-        Args:
-            case (str): 工况名
-            node (str): 结点名
-            u1 (bool, optional): 自由度. 默认为False.
-            u2 (bool, optional): 自由度. 默认为False.
-            u3 (bool, optional): 自由度. 默认为False.
-            r1 (bool, optional): 自由度. 默认为False.
-            r2 (bool, optional): 自由度. 默认为False.
-            r3 (bool, optional): 自由度. 默认为False.
-
-        Returns:
-            bool: 成功操作返回True，反之为False
-        """
-        try:
-            self.__loadcases[case].set_nodal_restraint(node,u1,u2,u3,r1,r2,r3)
-            return True
-        except Exception as e:
-            logging.warning(str(e)+" when setting nodal restraints")
             return False
 
     def set_nodal_mass(self,name:str,
@@ -126,6 +116,36 @@ class Api(object):
             logging.warning(str(e)+" when adding beam")
             return False
 
+    def set_beam_release(self,name,
+        u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
+        u1j=False,u2j=False,u3j=False,r1j=False,r2j=False,r3j=False)->bool:
+        """设置梁端自由度释放
+
+        Args:
+            name (_type_): 梁名
+            u1i (bool, optional): 起始端自由度. 默认为False.
+            u2i (bool, optional): 起始端自由度. 默认为False.
+            u3i (bool, optional): 起始端自由度. 默认为False.
+            r1i (bool, optional): 起始端自由度. 默认为False.
+            r2i (bool, optional): 起始端自由度. 默认为False.
+            r3i (bool, optional): 起始端自由度. 默认为False.
+            u1j (bool, optional): 终结端自由度. 默认为False.
+            u2j (bool, optional): 终结端自由度. 默认为False.
+            u3j (bool, optional): 终结端自由度. 默认为False.
+            r1j (bool, optional): 终结端自由度. 默认为False.
+            r2j (bool, optional): 终结端自由度. 默认为False.
+            r3j (bool, optional): 终结端自由度. 默认为False.
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.set_beam_releases(name,u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when settring beam releases")
+            return False
+
     def add_loadpattern(self,name:str)->bool:
         """向模型中添加荷载样式
 
@@ -140,6 +160,31 @@ class Api(object):
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding load pattern")
+            return False
+
+    def set_nodal_restraint(self,case:str,node:str,
+            u1:bool=False,u2:bool=False,u3:bool=False,
+            r1:bool=False,r2:bool=False,r3:bool=False,)->bool:
+        """设置结点约束
+
+        Args:
+            case (str): 工况名
+            node (str): 结点名
+            u1 (bool, optional): 自由度. 默认为False.
+            u2 (bool, optional): 自由度. 默认为False.
+            u3 (bool, optional): 自由度. 默认为False.
+            r1 (bool, optional): 自由度. 默认为False.
+            r2 (bool, optional): 自由度. 默认为False.
+            r3 (bool, optional): 自由度. 默认为False.
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__loadcases[case].set_nodal_restraint(node,u1,u2,u3,r1,r2,r3)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal restraints")
             return False
 
     def set_nodal_load(self,pattern:str,node:str,
@@ -234,6 +279,23 @@ class Api(object):
             logging.warning(str(e)+" when adding static case")
             return False
 
+    def add_modal_case(self,name:str)->bool:
+        """向模型中添加模态工况
+
+        Args:
+            name (str): 工况名
+            isRitz (bool): 计算Ritz模态
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__loadcases[name]=ModalCase(name)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding modal case")
+            return False
+
     def add_case_pattern(self,case:str,pattern:str,factor:float)->bool:
         """_summary_
 
@@ -254,34 +316,21 @@ class Api(object):
             logging.warning(str(e)+" when adding load pattern to static case")
             return False
 
-    def set_beam_release(self,name,
-        u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
-        u1j=False,u2j=False,u3j=False,r1j=False,r2j=False,r3j=False)->bool:
-        """设置梁端自由度释放
-
-        Args:
-            name (_type_): 梁名
-            u1i (bool, optional): 起始端自由度. 默认为False.
-            u2i (bool, optional): 起始端自由度. 默认为False.
-            u3i (bool, optional): 起始端自由度. 默认为False.
-            r1i (bool, optional): 起始端自由度. 默认为False.
-            r2i (bool, optional): 起始端自由度. 默认为False.
-            r3i (bool, optional): 起始端自由度. 默认为False.
-            u1j (bool, optional): 终结端自由度. 默认为False.
-            u2j (bool, optional): 终结端自由度. 默认为False.
-            u3j (bool, optional): 终结端自由度. 默认为False.
-            r1j (bool, optional): 终结端自由度. 默认为False.
-            r2j (bool, optional): 终结端自由度. 默认为False.
-            r3j (bool, optional): 终结端自由度. 默认为False.
+    def assemble(self)->bool:
+        """集成分析数据
 
         Returns:
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.set_beam_releases(name,u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j)
+            workpath=self.__workpath
+            model=self.__model
+            lc=self.__loadcases.values()
+            asb=Assembly(model,lc)
+            asb.save(workpath,self.__filename)
             return True
         except Exception as e:
-            logging.warning(str(e)+" when settring beam releases")
+            logging.warning("Error when assembling model and cases. Exception: "+str(e))
             return False
 
     def solve_static(self,casename:str)->bool:
@@ -295,35 +344,141 @@ class Api(object):
         """
         try:
             workpath=self.__workpath
-            model=self.__model
-            lc=self.__loadcases[casename]
-            asb=Assembly(model,lc)
-            asb.save(workpath,".asb")
-            solver=StaticSolver(workpath,".asb")
+            solver=StaticSolver(workpath,self.__filename)
             solver.solve_linear(casename)
             logging.info("solution finished")
             return True
         except Exception as e:
-            logging.warning(str(e)+" when solving case"+str(casename))
+            logging.warning("Error when solving case "+str(casename)+". Exception: "+str(e))
             return False
 
-    def result_get_nodal_displacement(self,case:str,node:str)->np.array:
+    def solve_modal(self,casename:str,num:int)->bool:
+        """求解模态工况
+
+        Args:
+            casename (str): 工况名
+            num (int): 提取模态数
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            workpath=self.__workpath
+            solver=ModalSolver(workpath,self.__filename)
+            solver.solve_eigen(casename,num)
+            logging.info("solution finished")
+            return True
+        except Exception as e:
+            logging.warning("Error when solving case "+str(casename)+". Exception: "+str(e))
+            return False
+
+    def result_get_structural_reaction(self,case:str)->np.array:
+        try:
+            workpath=self.__workpath
+
+            pass
+
+        except Exception as e:
+            logging.warning("Error when getting structural reaction of "+str(case)+". Exception: "+str(e))
+            return False
+
+    def result_get_structural_period(self,case:str)->np.array:
+        try:
+            workpath=self.__workpath
+
+            pass
+        
+        except Exception as e:
+            logging.warning("Error when getting structural period of "+str(case)+". Exception: "+str(e))
+            return False
+
+    def result_get_structural_vibration_mode(self,case:str)->np.array:
+        try:
+            workpath=self.__workpath
+
+            pass
+        
+        except Exception as e:
+            logging.warning("Error when getting structural vibration mode of "+str(case)+". Exception: "+str(e))
+            return False
+
+    def result_get_nodal_reaction(self,node:str,case:str)->np.array:
+        """获取结点反力结果
+
+        Args:
+            node (str): 结点名
+            case (str): 工况名
+
+        Returns:
+            np.array: 成功则返回局部坐标系下的反力array，否则返回None
+        """
+        try:
+            workpath=self.__workpath
+            resolver=NodeResultResolver(workpath)
+            res=resolver.resolve_nodal_reaction(node,case,step=1)
+            return res
+        except Exception as e:
+            logging.warning("Error when getting nodal reaction of "+str(case)+". Exception: "+str(e))
+            return False
+
+    def result_get_nodal_displacement(self,node:str,case:str)->np.array:
         """获取结点位移结果
 
         Args:
-            case (str): 工况名
             node (str): 结点名
+            case (str): 工况名
 
         Returns:
             np.array: 成功则返回局部坐标系下的位移array，否则返回None
         """
         try:
             workpath=self.__workpath
-            hid=self.__model.get_node_hid(node)
-            resolver=NodeResultResolver(workpath)
-            res=resolver.resolve_nodal_displacement(case,hid=hid)
+            resolver=NodeResultResolver(workpath,self.__filename)
+            res=resolver.resolve_nodal_displacement(node,case,step=1)
             return res
         except Exception as e:
             logging.warning(str(e)+" when getting nodal displacement of "+str(case))
+
+    def result_get_beam_end_force(self,beam:str,case:str)->np.array:
+        """获取梁端力结果
+
+        Args:
+            beam (str): 梁名
+            case (str): 工况名
+
+        Returns:
+            np.array: 成功则返回局部坐标系下的梁端力array，否则返回None
+        """
+        try:
+            workpath=self.__workpath
+            resolver=BeamResultResolver(workpath)
+            res=resolver.resolve_beam_end_force(beam,case,step=1)
+            return res 
+        except Exception as e:
+            logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
             return False
+
+    # def result_get_beam_force(self,beam:str,loc:float,case:str)->np.array:
+    #     try:
+    #         workpath=self.__workpath
+    #         hid=self.__model.get_beam_hid(beam)
+
+    #         pass
+
+        
+    #     except Exception as e:
+    #         logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
+    #         return False
+
+    # def result_get_beam_stress(self,beam:str,loc:float,case:str)->np.array:
+    #     try:
+    #         workpath=self.__workpath
+    #         hid=self.__model.get_beam_hid(beam)
+
+    #         pass
+
+        
+        # except Exception as e:
+        #     logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
+        #     return False
         

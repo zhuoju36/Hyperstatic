@@ -4,15 +4,17 @@ import pickle
 import numpy as np
 from typing import Dict
 import scipy.sparse as spr
-from structengpy.common import logger
+import logging
+from structengpy.core.fe_model.load.loadcase import ModalCase
 from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load import LoadCase
 
-
 class Assembly(object):
-    def __init__(self,model:Model,loadcase:LoadCase):
+    def __init__(self,model:Model,loadcases:list):
         self.__model:Model=model
-        self.__loadcase:LoadCase=loadcase
+        self.__loadcase={}
+        for lc in loadcases:
+            self.__loadcase[lc.name]=lc
         self.__dof:int=self.node_count*6
 
     @property
@@ -23,9 +25,42 @@ class Assembly(object):
     def node_count(self):
         return self.__model.node_count
 
+    def get_node_hid(self,node:str):
+        return self.__model.get_node_hid(node)
+
+    def get_node_transform_matrix(self,node:str):
+        return self.__model.get_node_hid(node)
+
+    def get_beam_hid(self,elm:str):
+        return self.__model.get_beam_hid(elm)
+
+    def get_beam_node_hids(self,beam:str):
+        return self.__model.get_beam_node_hids(beam)
+
+    def get_beam_transform_matrix(self,elm:str):
+        return self.__model.get_beam_transform_matrix(elm)
+
+    def get_beam_K(self,elm:str):
+        return self.__model.get_beam_K(elm)
+
+    # def get_static_case_setting(self,case:str):
+    #     if not type(self.__loadcase) is StaticCase:
+    #         raise Exception("Loadcase %s not static case"%case)
+    #     setting={}
+    #     lc:StaticCase=self.__loadcase
+    #     return setting
+
+    # def get_modal_case_setting(self,case:str):
+    #     if not type(self.__loadcase) is ModalCase:
+    #         raise Exception("Loadcase %s not modal case"%case)
+    #     setting={}
+    #     lc:ModalCase=self.__loadcase
+    #     setting["num"]=lc.num
+    #     setting["isRitz"]=lc.isRitz
+    #     return setting
 
     def assemble_K(self):
-        # logger.info('Assembling K and M..')
+        # logging.info('Assembling K and M..')
         n_nodes=self.__model.node_count
         __K = spr.csr_matrix((n_nodes*6, n_nodes*6))
         #Beam load and displacement, and reset the index 
@@ -91,7 +126,7 @@ class Assembly(object):
         Assemble integrated stiffness matrix and mass matrix.
         Meanwhile, The force vector will be initialized.
         """
-        logger.info('Assembling K and M..')
+        logging.info('Assembling K and M..')
         n_nodes=self.node_count
         __K = spr.csr_matrix((n_nodes*6, n_nodes*6))
         __M = spr.csr_matrix((n_nodes*6, n_nodes*6))
@@ -205,22 +240,23 @@ class Assembly(object):
         #### other elements
         return __K,__M
 
-    def assemble_f(self,casename):
+    def assemble_f(self,casename:str):
         """
         Assemble load vector and displacement vector.
         """
-        logger.info('Assembling f..')
+        logging.info('Assembling f..')
         n_nodes=self.__model.node_count
 #        self.__f = spr.coo_matrix((n_nodes*6,1))
         #Beam load and displacement, and reset the index
         data_f=[]
         row_f=[]
         col_f=[]
+        loadcase=self.__loadcase[casename]
         for node in self.__model.get_node_names():
             T=self.__model.get_node_transform_matrix(node)
             Tt=T.transpose()
 #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
-            fn=self.__loadcase.get_nodal_f(node)
+            fn=loadcase.get_nodal_f(node)
             fn_=np.dot(Tt,fn)
             k=0
             for f in fn_.reshape(6):
@@ -237,7 +273,7 @@ class Assembly(object):
             #Transform matrix
             V=self.__model.get_beam_transform_matrix(beam)
             Vt = V.transpose()
-            re=self.__loadcase.get_beam_f(beam,l)
+            re=loadcase.get_beam_f(beam,l)
             re=self.__model.get_beam_condensated_f(beam,re)
             re_=Vt.dot(re)
             k=0
@@ -258,7 +294,8 @@ class Assembly(object):
         return __f
 
     def assemble_boundary(self,casename:str,matrixK:spr.spmatrix,matrixM:spr.spmatrix=None,matrixC:spr.spmatrix=None,vectorF:spr.spmatrix=None):
-        logger.info('Assembling boundary condition..')
+        logging.info('Assembling boundary condition..')
+        loadcase=self.__loadcase[casename]
         K=matrixK.copy()
         if matrixM is not None:
             M=matrixM.copy()
@@ -267,7 +304,7 @@ class Assembly(object):
         if vectorF is not None:
             f=vectorF.copy()
         alpha=1e10
-        rest=self.__loadcase.get_nodal_restraint_dict()
+        rest=loadcase.get_nodal_restraint_dict()
         for node in rest.keys():
             i=self.__model.get_node_hid(node)
             for j in range(6):
@@ -301,6 +338,17 @@ class Assembly(object):
             return K
         else:
             return tuple(res)
+
+    def restraintDOF(self,casename:str):
+        loadcase=self.__loadcase[casename]
+        rest=loadcase.get_nodal_restraint_dict()
+        dof=[]
+        for node in rest.keys():
+            i=self.__model.get_node_hid(node)
+            for j in range(6):
+                if rest[node][j]:
+                    dof.append(i*6+j)
+        return dof
 
     def save(self,path,filename):
         if not os.path.exists(path):

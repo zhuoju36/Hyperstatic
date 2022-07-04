@@ -34,16 +34,16 @@ class TestNodeResult():
         lc=StaticCase("case1")
         lc.add_pattern(patt1,1.0)
         lc.set_nodal_restraint("1",True,True,True,True,True,True)
-        asb=Assembly(model,lc)
+        asb=Assembly(model,[lc])
         asb.save(path,"test.sep")
         solver=StaticSolver(path,"test.sep")
         solver.solve_linear("case1")
         
-        resolver=NodeResultResolver(path)
-        d=resolver.resolve_nodal_displacement("case1")
+        resolver=NodeResultResolver(path,"test.sep")
+        d=resolver.resolve_nodal_displacement("2","case1")
 
-        assert d[1][2]==approx(-0.00764,rel=5e-2)
-        assert d[1][4]==approx(0.00189,rel=5e-2)
+        assert d[2]==approx(-0.00764,rel=5e-2)
+        assert d[4]==approx(0.00189,rel=5e-2)
 
     def test_mode(self):
         path="./test"
@@ -59,13 +59,13 @@ class TestNodeResult():
         lc=ModalCase("eigen")
         lc.use_load_as_mass=False
         lc.set_nodal_restraint("1",True,True,True,True,True,True)
-        asb=Assembly(model,lc)
+        asb=Assembly(model,[lc])
         
         asb.save(path,"test.sep")
         solver=ModalSolver(path,"test.sep")
         solver.solve_eigen("eigen",3)
 
-        resolver=NodeResultResolver(path)
-        resolver.resolve_nodal_displacement("eigen",1)
+        resolver=NodeResultResolver(path,"test.sep")
+        resolver.resolve_nodal_displacement("2","eigen",1)
 
    

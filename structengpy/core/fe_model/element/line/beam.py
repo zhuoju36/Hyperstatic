@@ -192,7 +192,7 @@ class Beam(Line):
             _Me[11, 11]=4 * l*l
     
             _Me*= (rho*A*l / 420)
-            _Me = spr.csc_matrix(_Me)
+            _Me = spr.csr_matrix(_Me)
         
         else:#Concentrated mass matrix
             _Me=spr.eye(12).tocsr()*rho*A*l/2

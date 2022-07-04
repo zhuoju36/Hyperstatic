@@ -25,25 +25,7 @@ class Model:
                 
         self.__index=[]
         self.__dof=None
-        # #without restraint
-        # self.__K=None
-        # self.__M=None
-        # self.__C=None
-        # self.__f=None
-        # self.__d=None
-        # #with restraint
-        # self.__K_=None
-        # self.__M_=None
-        # self.__C_=None
-        # self.__f_=None
-        
-        # #results
-        # self.__d_=None
-        # self.__r_=None
-        # self.__omega_=None
-        # self.__mode_=None
-        
-        # self.is_solved=False
+
         self.__pattern={}
         self.__loadcase={}
         
@@ -70,88 +52,10 @@ class Model:
     @property
     def membrane4s(self):
         return self.__membrane4s
-
-    # @property
-    # def is_assembled(self):
-    #     return self.__dof != None
         
     @property 
     def index(self):
         return self.__index
-
-    # @property
-    # def DOF(self):
-    #     return self.__dof
-    
-    # @property
-    # def K(self):
-    #     return self.__K
-    # @property
-    # def M(self):
-    #     return self.__M 
-    # @property
-    # def C(self):
-    #     return self.__C   
-    # @property
-    # def f(self):
-    #     return self.__f
-    # @property
-    # def d(self):
-    #     return self.__d
-    # @property
-    # def K_(self):
-    #     if not self.is_assembled:
-    #         raise Exception('The model has to be assembled first.')
-    #     return self.__K_
-    # @property
-    # def M_(self):
-    #     if not self.is_assembled:
-    #         raise Exception('The model has to be assembled first.')
-    #     return self.__M_
-    # @property
-    # def C_(self):
-    #     if not self.is_assembled:
-    #         raise Exception('The model has to be assembled first.')
-    #     return self.__C_
-    # @property
-    # def f_(self):
-    #     if not self.is_assembled:
-    #         raise Exception('The model has to be assembled first.')
-    #     return self.__f_
-    
-    # @property
-    # def d_(self):
-    #     return self.__d_
-    # @d_.setter
-    # def d_(self,d):
-    #     assert(d.shape==(self.node_count*6,1))
-    #     self.__d_=d
-        
-    # @property
-    # def r_(self):
-    #     return self.__r_
-    # @r_.setter
-    # def r_(self,r):
-    #     assert(r.shape==(self.node_count*6,1))
-    #     self.__r_=r
-        
-    # @property
-    # def omega_(self):
-    #     return self.__omega_
-    # @omega_.setter
-    # def omega_(self,omega):
-    #     self.__omega_=omega
-    
-    # @property    
-    # def mode_(self):
-    #     return self.__mode_
-    # @mode_.setter
-    # def mode_(self,mode):
-    #     self.__mode_=mode
-    
-    # @property
-    # def period(self):
-    #     return 2*np.pi/(self.omega_)
         
     def add_node(self,name:str,x:float,y:float,z:float,check_dup=False)->int:
         node=Node(name,x,y,z)
@@ -173,15 +77,6 @@ class Model:
         self.__nodes[name].mass=np.array([u1,u2,u3,r1,r2,r3])
             
     # def set_node_restraint(self,node,restraint):
-    #     """
-    #     set node restraint to model.
-    #     params:
-    #         node: int, hid of node
-    #         force: list of 6 of nodal force
-    #         append: bool, if True, the input force will be additional on current force.
-    #     return:
-    #         bool, status of success
-    #     """
     #     assert(len(restraint)==6)
     #     disp=[]
     #     for i in range(6):
@@ -225,6 +120,12 @@ class Model:
         u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
         u1j=False,u2j=False,u3j=False,r1j=False,r2j=False,r3j=False):
         self.beams[name].releases=np.array([u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j])
+
+    def get_beam_reaction(self,name:str,
+        u1i:float,u2i:float,u3i:float,r1i:float,r2i:float,r3i:float,
+        u1j:float,u2j:float,u3j:float,r1j:float,r2j:float,r3j:float):
+        d=np.array([u1i,u2i,u3i,r1i,r2i,r3i,u1j,u2j,u3j,r1j,r2j,r3j])
+        return self.beams[name].f(d)
 
     def get_node_names(self):
         return list(self.__nodes.keys())
@@ -277,37 +178,6 @@ class Model:
         beam=self.__beams[name]
         K=beam.integrate_K()
         return beam.static_condensate_f(re,K)
-
-
-        
-    # def set_beam_force_by_frame_distributed(self,beam,q_i,q_j):
-    #     """
-    #     set beam force to model
-        
-    #     params:
-    #         beam: int, hid of node
-    #         q_i: list-like, 6 floats of frame's i-end distributed
-    #         q_j: list-like, 6 floats of frame's j-end distributed
-    #     return:
-    #         bool, status of success
-    #     """
-    #     pass
-    
-    # def set_beam_force_by_frame_concentrated(self,beam,force,loc):
-    #     """
-    #     set beam force to model
-        
-    #     params:
-    #         beam: int, hid of node
-    #         force: list-like, 6 floats of frame's concentrated
-    #         loc: location of load
-    #     return:
-    #         bool, status of success
-    #     """
-    #     pass
-    
-    # def set_beam_force_by_area_to_frame(self,area,pressure):
-    #     pass
         
     def add_membrane3(self,node0, node1, node2, t, E, mu, rho, name=None):
         """
@@ -338,10 +208,7 @@ class Model:
         res=len(self.__membrane4s)
         elm.hid=res
         self.__membrane4s[res]=elm
-        return res
-
-
-                    
+        return res             
 
     def find(self,nodes,target,tol=1e-6):
         """

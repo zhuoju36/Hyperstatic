@@ -30,7 +30,13 @@ class StaticSolver(Solver):
         assembly=super().assembly
         logger.info('solving problem with %d DOFs...'%assembly.DOF)
         
-        K=assembly.assemble_K()
+        path=os.path.join(self.workpath,casename+'.k') #path of the stiff matrix
+        if os.path.exists(path):
+            K=np.load(path)
+        else:
+            K=assembly.assemble_K()
+            np.save(path,K)
+        
         f=assembly.assemble_f(casename)
         K_,f_ =assembly.assemble_boundary(casename,K,vectorF=f)
 

@@ -24,12 +24,23 @@ class ModalSolver(Solver):
     def workpath(self):
         return super().workpath
 
-    def solve_eigen(self,casename:str, k:int):
+    def solve_eigen(self,casename:str,k:int,precase:str=None):
         assembly=super().assembly
         logging.info('solving problem with %d DOFs...'%assembly.DOF)
-        K=assembly.assemble_K()        
-        M=assembly.assemble_M(casename)
+        path=os.path.join(self.workpath,casename+'.k') #path of the stiff matrix
+        if os.path.exists(path):
+            K=np.load(path)
+        else:
+            K=assembly.assemble_K()
+            np.save(path,K)
+        path=os.path.join(self.workpath,casename+'.m') #path of the mass matrix
+        if os.path.exists(path):
+            M=np.load(path)
+        else:
+            M=assembly.assemble_K()
+            np.save(path,K)
         K_,M_=assembly.assemble_boundary(casename,K,M)
+
         if k>assembly.DOF:
             logging.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%assembly.DOF)
             k=assembly.DOF

@@ -31,13 +31,13 @@ class TestStructureResult():
         lc=ModalCase("eigen")
         lc.use_load_as_mass=False
         lc.set_nodal_restraint("1",True,True,True,True,True,True)
-        asb=Assembly(model,lc)
+        asb=Assembly(model,[lc])
         
         asb.save(path,"test.sep")
         solver=ModalSolver(path,"test.sep")
         solver.solve_eigen("eigen",3)
 
-        resolver=StructureResultResolver(path)
+        resolver=StructureResultResolver(path,"test.sep")
         f=resolver.resolve_modal_frequency("eigen")
 
         pass

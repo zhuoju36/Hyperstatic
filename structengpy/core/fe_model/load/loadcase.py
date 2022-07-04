@@ -56,6 +56,10 @@ class ModalCase(LoadCase):
     def use_load_as_mass(self):
         return self.__use_load_as_mass
 
+    @property
+    def isRitz(self):
+        return self.__isRitz
+
     @use_load_as_mass.setter
     def use_load_as_mass(self,val:bool):
         self.__use_load_as_mass=val
@@ -71,9 +75,9 @@ class ModalCase(LoadCase):
 
     def get_nodal_restraint_dict(self):
         return super().get_nodal_restraint_dict()
-    
-    
 
+
+    
 class SpectrumCase(LoadCase):
     pass
 

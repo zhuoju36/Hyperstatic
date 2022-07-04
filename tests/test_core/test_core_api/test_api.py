@@ -8,6 +8,7 @@ import numpy as np
 import numpy.linalg as nl
 
 from structengpy.core import Api
+import logging
 
 class TestApi():
     def test_cantilever_beam(self):
@@ -28,8 +29,10 @@ class TestApi():
 
         api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
 
+        api.assemble()
+
         api.solve_static("case1")
-        d=api.result_get_nodal_displacement("case1","B")
+        d=api.result_get_nodal_displacement("B","case1")
 
         assert d[2]==approx(-0.00764,rel=5e-2)
         assert d[4]==approx(0.00189,rel=5e-2)
@@ -52,8 +55,9 @@ class TestApi():
 
         api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
 
+        api.assemble()
         api.solve_static("case1")
-        d=api.result_get_nodal_displacement("case1","B")
+        d=api.result_get_nodal_displacement("B","case1")
 
         assert d[2]==approx(-0.0046,rel=5e-2)
 
@@ -75,6 +79,8 @@ class TestApi():
 
         api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
 
+        api.assemble()
+
         api.solve_static("case1")
-        d=api.result_get_nodal_displacement("case1","B")
+        d=api.result_get_nodal_displacement("B","case1")
         assert d[2]==approx(0.0018,rel=5e-2)
