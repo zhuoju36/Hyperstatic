@@ -140,13 +140,13 @@ class Beam(Line):
         _Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
         return _Ke
 
-    def integrate_M(self,is_coordinated=False):
+    def integrate_M(self,consistent=False):
         #Initialize local matrices
         A=self.__A
         J=self.__J
         rho=self.__rho
         l=self.length
-        if is_coordinated:#Coordinated mass matrix
+        if consistent:#Coordinated mass matrix
             _Me=np.zeros((12,12))
             _Me[0, 0]=140
             _Me[0, 6]=70
@@ -189,25 +189,11 @@ class Beam(Line):
             _Me*= (rho*A*l / 420)
             _Me = spr.csr_matrix(_Me)
         
-        else:#Concentrated mass matrix
+        else:#Lumped mass matrix
             _Me=spr.eye(12).tocsr()*rho*A*l/2
-        
+            for i in [3,4,5,9,10,11]:
+                _Me[i,i]=1e-12 #will be singular if zero
         return _Me
-        
-    def _N(self,s):
-        """
-        params:
-            Hermite's interpolate function
-            s:natural position of evalue point.
-        returns:
-            3x(3x4) shape function matrix.
-        """
-        N1=1-3*s**2+2*s**3
-        N2=  3*s**2-2*s**3
-        N3=s-2*s**2+s**3
-        N4=   -s**2+s**3
-        N=np.hstack([np.eye(3)*N1,np.eye(3)*N2,np.eye(3)*N3,np.eye(3)*N4])
-        return N
         
     # def static_condensation(self,Ke,Me,re:np.array):
     #     """

@@ -34,8 +34,8 @@ class TestModalSolver():
         solver.solve_eigen("eigen",3)
         o2=np.load(os.path.join(path,"eigen.o.npy"))
         T=2*np.pi/np.sqrt(o2)
-        assert T[0]==approx(1.790,rel=5e-2)
-        assert T[1]==approx(0.678,rel=5e-2)
+        assert T[0]==approx(0.65770,rel=5e-2)
+        assert T[1]==approx(0.14792,rel=5e-2)
 
         # assert d[10]==approx(0.00189,rel=5e-2)
 
