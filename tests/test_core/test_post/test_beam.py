@@ -18,7 +18,7 @@ from structengpy.core.fe_solver.static import StaticSolver
 
 
 class TestBeamResult():
-    def test_static(self):
+    def test_cantilever(self):
         path="./test"
         if sys.platform=="win32":
             path="c:\\test"
@@ -26,7 +26,7 @@ class TestBeamResult():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_beam("A","1","2",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
 
         patt1=LoadPattern("pat1")
         patt1.set_nodal_load("2",0,0,-1e4,0,0,0)
@@ -40,9 +40,13 @@ class TestBeamResult():
         solver.solve_linear("case1")
         
         resolver=BeamResultResolver(path,"test.asb")
-        d=resolver.resolve_beam_displacement("A",0.5,"case1")
-        print(d)
-        assert d==1
+        d=resolver.resolve_beam_deformation("A",1,"case1")
+        assert d[1]==approx(-0.05519,rel=2e-2)
+        assert d[4]==approx(-0.0137,rel=2e-2)
+        d=resolver.resolve_beam_deformation("A",0.5,"case1")
+        assert d[1]==approx(-0.0173,rel=2e-2)
+        assert d[4]==approx(-0.01027,rel=2e-2)
+
 
 
 

@@ -19,7 +19,7 @@ class TestApi():
         api=Api(path)
         api.add_node("A",0,0,0)
         api.add_node("B",6,0,0)
-        api.add_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        api.add_beam("b","A","B",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
 
         api.add_loadpattern("pat1")
         api.set_nodal_load("pat1","B",f3=-1e4)
@@ -34,8 +34,15 @@ class TestApi():
         api.solve_static("case1")
         d=api.result_get_nodal_displacement("B","case1")
 
-        assert d[2]==approx(-0.00764,rel=5e-2)
-        assert d[4]==approx(0.00189,rel=5e-2)
+        assert d[2]==approx(-0.05519,rel=5e-2)
+        assert d[4]==approx(0.0137,rel=5e-2)
+        
+        d=api.result_get_beam_deformation("b",1,"case1")
+        assert d[1]==approx(-0.05519,rel=2e-2)
+        assert d[4]==approx(-0.0137,rel=2e-2)
+        d=api.result_get_beam_deformation("b",0.5,"case1")
+        assert d[1]==approx(-0.0173,rel=2e-2)
+        assert d[4]==approx(-0.01027,rel=2e-2)
 
     def test_cantilever_beam_with_distributed_load(self):
         path="./test"

@@ -176,7 +176,11 @@ class Model:
 
     def get_beam_interpolate(self,name:str,loc:float):
         beam=self.__beams[name]
-        return beam.interpolate(loc)
+        return beam.interpolate(loc)\
+
+    def get_beam_interpolate1(self,name:str,loc:float):
+        beam=self.__beams[name]
+        return beam.interpolate1(loc)
 
     def get_beam_condensated_matrix(self,name:str,KMC):
         beam=self.__beams[name]

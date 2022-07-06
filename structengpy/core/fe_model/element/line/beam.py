@@ -218,6 +218,18 @@ class Beam(Line):
         Nt1=0.5*(1-xi)
         Nt2=0.5*(1+xi)
         return np.array([Na1,Na2,Nb1,Nb2,Nb3,Nb4,-Nb1,Nb2,-Nb3,Nb4,Nt1,Nt2])
+
+    def interpolate1(self,loc):
+        xi=loc
+        Na1=-0.5
+        Na2=0.5
+        Nb1=-6*xi+6*xi**2
+        Nb2=(1-4*xi+3*xi**2)*self.length
+        Nb3=6*xi-6*xi**2
+        Nb4=(3*xi**2-2*xi)*self.length
+        Nt1=-0.5*xi
+        Nt2=0.5*xi
+        return np.array([Na1,Na2,Nb1,Nb2,Nb3,Nb4,-Nb1,Nb2,-Nb3,Nb4,Nt1,Nt2])*(1/self.length) #dxi/dx
         
     # def static_condensation(self,Ke,Me,re:np.array):
     #     """

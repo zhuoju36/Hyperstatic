@@ -3,7 +3,7 @@
 ![GitHub](https://img.shields.io/github/license/zhuoju36/structengpy) [![codecov](https://codecov.io/gh/zhuoju36/StructEngPy/branch/master/graph/badge.svg?token=4C6a6QwvKA)](https://codecov.io/gh/zhuoju36/StructEngPy) ![PyPI](https://img.shields.io/pypi/v/structengpy) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/structengpy)
 [![Documentation Status](https://readthedocs.org/projects/structengpy/badge/?version=latest)](https://structengpy.readthedocs.io/zh_CN/latest/?badge=latest)
 ## 简介
-采用面向对象方式开发，针对建筑领域特点开发的结构分析包，提供基础的结构数值分析，可供及高校师生、研究院所参考，也可自由用于相关结构工程设计。
+采用面向对象方式开发，针对建筑领域特点开发的结构分析包，提供基础的结构数值分析，可供高校师生、研究院所参考，也可自由用于相关结构工程设计。
 
 ## 快速开始
 ### 安装

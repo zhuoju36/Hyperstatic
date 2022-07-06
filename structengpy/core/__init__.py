@@ -419,7 +419,7 @@ class Api(object):
             return res
         except Exception as e:
             logging.warning("Error when getting nodal reaction of "+str(case)+". Exception: "+str(e))
-            return False
+            return None
 
     def result_get_nodal_displacement(self,node:str,case:str)->np.array:
         """获取结点位移结果
@@ -438,6 +438,7 @@ class Api(object):
             return res
         except Exception as e:
             logging.warning(str(e)+" when getting nodal displacement of "+str(case))
+            return None
 
     def result_get_beam_end_force(self,beam:str,case:str)->np.array:
         """获取梁端力结果
@@ -451,12 +452,32 @@ class Api(object):
         """
         try:
             workpath=self.__workpath
-            resolver=BeamResultResolver(workpath)
+            resolver=BeamResultResolver(workpath,self.__filename)
             res=resolver.resolve_beam_end_force(beam,case,step=1)
             return res 
         except Exception as e:
             logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
-            return False
+            return None
+
+    def result_get_beam_deformation(self,beam:str,loc:float,case:str)->np.array:
+        """获取梁位移结果
+
+        Args:
+            beam (str): 梁名
+            loc (float): 相对位置，0~1之间
+            case (str): 工况名
+
+        Returns:
+            np.array: 成功则返回局部坐标系下的包含6个梁位移的array，否则返回None
+        """
+        try:
+            workpath=self.__workpath
+            resolver=BeamResultResolver(workpath,self.__filename)
+            res=resolver.resolve_beam_deformation(beam,loc,case,step=1)
+            return res 
+        except Exception as e:
+            logging.warning("Error when getting beam deformation of "+str(case)+". Exception: "+str(e))
+            return None
 
     # def result_get_beam_force(self,beam:str,loc:float,case:str)->np.array:
     #     try:
