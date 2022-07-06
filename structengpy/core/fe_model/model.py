@@ -170,6 +170,14 @@ class Model:
         beam=self.__beams[name]
         return beam.integrate_M()
 
+    def get_beam_shape_function(self,name:str):
+        beam=self.__beams[name]
+        return beam.get_shape_function()
+
+    def get_beam_interpolate(self,name:str,loc:float):
+        beam=self.__beams[name]
+        return beam.interpolate(loc)
+
     def get_beam_condensated_matrix(self,name:str,KMC):
         beam=self.__beams[name]
         return beam.static_condensate(KMC)

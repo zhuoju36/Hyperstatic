@@ -49,30 +49,6 @@ class Element(object):
     @property
     def dim(self):
         return self.__dim
-    
-    # @property  
-    # def Ke(self):
-    #     """
-    #     integrate to get stiffness matrix.
-    #     """
-    #     return self._Ke
-        
-    # @property  
-    # def Me(self):
-    #     """
-    #     integrate to get stiffness matrix.
-    #     """
-    #     return self._Me
-        
-    # @property
-    # def re(self):
-    #     return self._re
-    
-    # @re.setter
-    # def re(self,force):
-    #     if len(force)!=self._dof:
-    #         raise ValueError('element nodal force must be a 12 array')
-    #     self.__re=np.array(force).reshape((self._dof,1))
 
     @property
     def local_csys(self):
@@ -89,6 +65,18 @@ class Element(object):
     def get_node_names(self):
         names=[node.name for node in self.__nodes]
         return names
+
+    def integrate_K(self):
+        raise NotImplementedError()
+
+    def integrate_M(self):
+        raise NotImplementedError()
+
+    def get_shape_function(self):
+        raise NotImplementedError()
+
+    def interpolate(self,loc):
+        raise NotImplementedError()
 
 if __name__=="__main__":
     csys=Cartesian((0,0,0),(1,0,0),(0,1,0))

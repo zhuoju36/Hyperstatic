@@ -194,6 +194,30 @@ class Beam(Line):
             for i in [3,4,5,9,10,11]:
                 _Me[i,i]=1e-12 #will be singular if zero
         return _Me
+
+    def get_shape_function(self):
+        Na1=lambda xi: 0.5*(1-xi)
+        Na2=lambda xi: 0.5*(1+xi)
+        Nb1=lambda xi: 1-3*xi**2+2*xi**3
+        Nb2=lambda xi: (xi-2*xi**2+xi**3)*self.length
+        Nb3=lambda xi: 3*xi**2-2*xi**3
+        Nb4=lambda xi: (xi**3-xi**2)*self.length
+        Nt1=lambda xi: 0.5*(1-xi)
+        Nt2=lambda xi: 0.5*(1+xi)
+        return [Na1,Na2,Nb1,Nb2,Nb3,Nb4,-Nb1,Nb2,-Nb3,Nb4,Nt1,Nt2]
+
+    
+    def interpolate(self,loc):
+        xi=loc
+        Na1=0.5*(1-xi)
+        Na2=0.5*(1+xi)
+        Nb1=1-3*xi**2+2*xi**3
+        Nb2=(xi-2*xi**2+xi**3)*self.length
+        Nb3=3*xi**2-2*xi**3
+        Nb4=(xi**3-xi**2)*self.length
+        Nt1=0.5*(1-xi)
+        Nt2=0.5*(1+xi)
+        return np.array([Na1,Na2,Nb1,Nb2,Nb3,Nb4,-Nb1,Nb2,-Nb3,Nb4,Nt1,Nt2])
         
     # def static_condensation(self,Ke,Me,re:np.array):
     #     """

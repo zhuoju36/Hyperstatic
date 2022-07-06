@@ -43,6 +43,12 @@ class Assembly(object):
     def get_beam_K(self,elm:str):
         return self.__model.get_beam_K(elm)
 
+    def get_beam_shape_function(self,elm:str):
+        return self.__model.get_beam_shape_function(elm)
+
+    def get_beam_interpolate(self,elm:str,loc:float):
+        return self.__model.get_beam_interpolate(elm,loc)
+
     # def get_static_case_setting(self,case:str):
     #     if not type(self.__loadcase) is StaticCase:
     #         raise Exception("Loadcase %s not static case"%case)

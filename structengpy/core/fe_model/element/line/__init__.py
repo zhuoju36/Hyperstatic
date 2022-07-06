@@ -40,6 +40,18 @@ class Line(Element):
         T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]= V
         return spr.csr_matrix(T)
 
+    def integrate_K(self):
+        raise NotImplementedError()
+
+    def integrate_M(self):
+        raise NotImplementedError()
+
+    def get_shape_function(self):
+        raise NotImplementedError()
+
+    def interpolate(self,loc):
+        raise NotImplementedError()
+
 if __name__=="__main__":
     n1=Node(0,1,0)
     n2=Node(1,1,0)
