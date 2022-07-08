@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+from copyreg import pickle
 import os
 import logging
 from typing import Dict
 import numpy as np
+import pickle
 
 from typing import Pattern
 from structengpy.core.fe_model.assembly import Assembly
@@ -32,7 +34,18 @@ class Api(object):
             except Exception as e :
                 logging.info("Error creating workpath "+ workpath +'. Exception: '+str(e))
                 self=None
+    
 
+    def save(self,filename):
+        with open(os.path.join(self.__workpath,filename+'.sep'),'wb+') as f:
+            pickle.dump(self,f)
+        
+
+    @staticmethod
+    def load(workpath,filename):
+        with open(os.path.join(workpath,filename+'.sep'),'rb') as f:
+            api=pickle.load(f)
+        return api
 
     def clear_workspace(self):
         workpath=self.__workpath
@@ -64,6 +77,20 @@ class Api(object):
         except Exception as e:
             logging.warning(str(e)+" when adding node")
             return False
+
+    def get_node_names(self)->list:
+        try:
+            return self.__model.nodes.keys()
+        except Exception as e:
+            logging.warning("Error when getting node names. Exception: "+str(e))
+            return None
+
+    def get_node_location(self,name:str)->tuple:
+        try:
+            return self.__model.nodes[name].loc
+        except Exception as e:
+            logging.warning("Error when getting node location of %s"%name+" Exception: "+str(e))
+            return None
 
     def set_nodal_mass(self,name:str,
             u1:float=0,u2:float=0,u3:float=0,
@@ -115,6 +142,27 @@ class Api(object):
         except Exception as e:
             logging.warning(str(e)+" when adding beam")
             return False
+
+    def get_beam_names(self)->list:
+        try:
+            return self.__model.beams.keys()
+        except Exception as e:
+            logging.warning("Error when getting beam names. Exception: "+str(e))
+            return None
+
+    def get_beam_node_names(self,beam_name:str)->tuple:
+        try:
+            return tuple(self.__model.beams[beam_name].get_node_names())
+        except Exception as e:
+            logging.warning("Error when getting beam node names. Exception: "+str(e))
+            return None
+
+    def get_beam_location(self,beam_name:str)->tuple:
+        try:
+            return tuple(self.__model.beams[beam_name].start),tuple(self.__model.beams[beam_name].end)
+        except Exception as e:
+            logging.warning("Error when getting beam node names. Exception: "+str(e))
+            return None
 
     def set_beam_release(self,name,
         u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
@@ -435,6 +483,26 @@ class Api(object):
             workpath=self.__workpath
             resolver=NodeResultResolver(workpath,self.__filename)
             res=resolver.resolve_nodal_displacement(node,case,step=1)
+            return res
+        except Exception as e:
+            logging.warning(str(e)+" when getting nodal displacement of "+str(case))
+            return None
+
+    def result_get_all_nodal_displacement(self,case:str)->dict:
+        """一次获取所有结点位移结果
+
+        Args:
+            case (str): 工况名
+
+        Returns:
+            dict: 成功则返回局部坐标系下的位移array字典，否则返回None
+        """
+        try:
+            workpath=self.__workpath
+            resolver=NodeResultResolver(workpath,self.__filename)
+            res={}
+            for node in self.get_node_names():
+                res[node]=resolver.resolve_nodal_displacement(node,case,step=1)
             return res
         except Exception as e:
             logging.warning(str(e)+" when getting nodal displacement of "+str(case))
