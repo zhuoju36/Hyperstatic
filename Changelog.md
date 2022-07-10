@@ -2,6 +2,8 @@
 2022-07-06 v0.1.15
 增加后处理内核接口:
 - 梁单元变形解析 core.api.result_get_beam_deformation
+增加应用
+- 内核层可视化 app.viz.viz_core
 
 2022-07-05 v0.1.14 
 - 修复错误

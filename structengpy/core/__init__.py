@@ -92,6 +92,13 @@ class Api(object):
             logging.warning("Error when getting node location of %s"%name+" Exception: "+str(e))
             return None
 
+    def get_node_restraints(self,casename)->dict:
+        try:
+            return self.__loadcases[casename].get_nodal_restraint_dict()
+        except Exception as e:
+            logging.warning("Error when getting node restraints of loadcase%s"%casename+" Exception: "+str(e))
+            return None
+
     def set_nodal_mass(self,name:str,
             u1:float=0,u2:float=0,u3:float=0,
             r1:float=0,r2:float=0,r3:float=0,)->bool:
