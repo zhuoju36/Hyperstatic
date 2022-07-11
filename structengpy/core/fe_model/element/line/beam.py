@@ -81,7 +81,7 @@ class Beam(Line):
         l=self.length
         G=E/2/(1+mu)
 
-        K_data=(
+        K_data=np.array((
         (E*A / l,(0, 0)),
         (-E*A / l,(0, 6)),
         (-E*A / l,(6, 0)),
@@ -133,12 +133,13 @@ class Beam(Line):
         (4 * E*I2 / l,(10, 10)),
 
         (4 * E*I3 / l,(11, 11)),
-        )
-        data=[k[0] for k in K_data]
-        row=[k[1][0] for k in K_data]
-        col=[k[1][1] for k in K_data]
-        _Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
-        return _Ke
+        ))
+        data=K_data[:,0].tolist()
+        rc=np.array([*K_data[:,1]])
+        row=rc[:,0].tolist()
+        col=rc[:,1].tolist()
+        Ke = spr.csr_matrix((data,(row,col)),shape=(12, 12))
+        return Ke
 
     def integrate_M(self,consistent=False):
         #Initialize local matrices
