@@ -267,6 +267,43 @@ class Api(object):
             logging.warning(str(e)+" when setting nodal load")
             return False
 
+    def get_nodal_load(self,pattern:str,node:str)->list:
+        """获取荷载样式中的结点荷载
+
+        Args:
+            pattern (str): 样式名
+            node (str): 结点名
+
+        Returns:
+            f1 (float): 结点力. 
+            f2 (float): 结点力. 
+            f3 (float): 结点力. 
+            m1 (float): 结点弯矩. 
+            m2 (float): 结点弯矩. 
+            m3 (float): 结点弯矩. 
+        """
+        try:
+            return tuple(self.__loadpatterns[pattern].get_nodal_f(node))
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal load")
+            return None
+
+    def get_all_nodal_load(self,pattern:str)->dict:
+        """获取荷载样式中的结点荷载
+
+        Args:
+            pattern (str): 样式名
+            node (str): 结点名
+
+        Returns:
+            load (dict): 包含六个结点荷载荷载的字典.
+        """
+        try:
+            return self.__loadpatterns[pattern].get_nodal_f_dict()
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal load")
+            return None
+
     def set_beam_load_distributed(self,pattern:str,beam:str,
         pi:float=0,pj:float=0,qi2:float=0,qj2:float=0,qi3:float=0,qj3:float=0,ti:float=0,tj:float=0)->bool:
         """向荷载样式中添加梁分布荷载

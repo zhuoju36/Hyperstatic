@@ -28,7 +28,6 @@ class Viewer():
         self.__pts={}
         self.__lines={}
         self.__vnodes:Points=None
-        self.__vnodeload:Arrows=None
         self.__vnodeNames=None
         self.__vnode_restraints=[]
         self.__vbeams={}
@@ -36,138 +35,166 @@ class Viewer():
         self.__vbeamReleases=None
         self.__plt=Plotter()
 
+        self.__scale=1
         self.setup_gui()
         self.init_nodes()
-        self.__scale=self.__scene_radius()
-        self.init_nodal_load()
         self.init_beams()
 
     def setup_gui(self):
         plt=self.__plt
-        self.__btn_node=plt.addButton(
-            self.toggle_node,
+        self.__btn_deform_x=plt.addButton(
+            self.show_result_deformation_X,
             bc=("b6","r6"),
-            pos=(0.6,0.05),
-            states=("show_node","hide_node"),
+            states=("deformX","reset"),
             font="san-serif",
             size=12,
         )
-        self.__btn_nodal_load=plt.addButton(
-            self.toggle_nodal_load,
+        self.__btn_deform_y=plt.addButton(
+            self.show_result_deformation_Y,
             bc=("b6","r6"),
-            pos=(0.85,0.05),
-            states=("show_nodal_load","hide_nodal_load"),
+            pos=(0.8,0.05),
+            states=("deformY","reset"),
             font="san-serif",
             size=12,
         )
-        
-        # self.__scale_slider=plt.addSlider2D(
-        #     self.slide_scale,
-        #     # pos="bottom-left",
-        #     pos=[(0.65,0.15),(0.95,0.15)],
-        #     # titleSize=0.5,
-        #     xmin=0,
-        #     xmax=100,
-        #     title="label scale"
-        # )
+        self.__btn_deform_z=plt.addButton(
+            self.show_result_deformation_Z,
+            bc=("b6","r6"),
+            pos=(0.9,0.05),
+            states=("deformZ","reset"),
+            font="san-serif",
+            size=12,
+        )
+        self.__scale_slider=plt.addSlider2D(
+            self.slide_scale,
+            # pos="bottom-left",
+            pos=[(0.65,0.15),(0.95,0.15)],
+            # titleSize=0.5,
+            xmin=0,
+            xmax=100,
+            title="scale"
+        )
 
     def slide_scale(self,widget,event):
         self.__scale=widget.GetRepresentation().GetValue()
 
-    def toggle_node(self):
-        if self.__btn_node.status()=="hide_node":
-            self.__vnodes.off()
+    def show_result_deformation_X(self):
+        api=self.__api
+        pts=self.__pts.copy()
+        if "deform" in self.__btn_deform_x.status(): 
+            self.show_result_deformation(pts,dir="x")
         else:
-            self.__vnodes.on()
-        self.__btn_node.switch()    
-
-
-    def toggle_node_name(self):
+            self.__plt.remove(self.__vnodes)
+            self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        for b in api.get_beam_names():
+            s,e=api.get_beam_node_names(b)
+            # lines[b]=([pts[s],pts[e]])
+            b:Line=self.__vbeams[b]
+            b.points((pts[s],pts[e]))
+        self.__btn_deform_x.switch()
+        for btn in [self.__btn_deform_z,self.__btn_deform_y]:
+            if "reset" in btn.status():
+                btn.switch()
         self.reset()
 
-    def toggle_node_csys(self):
-        self.reset()
-
-    def toggle_nodal_load(self):
-        if self.__btn_nodal_load.status()=="hide_nodal_load":
-            self.__vnodeload.off()
-            self.__vnodeload.scalarbar.VisibilityOff()
+    def show_result_deformation_Y(self):
+        api=self.__api
+        pts=self.__pts.copy()
+        if "deform" in self.__btn_deform_y.status(): 
+            self.show_result_deformation(pts,dir="y")
         else:
-            self.__vnodeload.on()
-            self.__vnodeload.scalarbar.VisibilityOn()
-        self.__btn_nodal_load.switch() 
-
-    def toggle_beam_name(self):
+            self.__plt.remove(self.__vnodes)
+            self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        for b in api.get_beam_names():
+            s,e=api.get_beam_node_names(b)
+            # lines[b]=([pts[s],pts[e]])
+            b:Line=self.__vbeams[b]
+            b.points((pts[s],pts[e]))
+        self.__btn_deform_y.switch()
+        for btn in [self.__btn_deform_x,self.__btn_deform_z]:
+            if "reset" in btn.status():
+                btn.switch()
         self.reset()
 
-    def toggle_beam_release(self):
+    def show_result_deformation_Z(self):
+        api=self.__api
+        pts=self.__pts.copy()
+        if "deform" in self.__btn_deform_z.status(): 
+            self.show_result_deformation(pts,dir="z")
+        else:
+            self.__plt.remove(self.__vnodes)
+            self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        for b in api.get_beam_names():
+            s,e=api.get_beam_node_names(b)
+            # lines[b]=([pts[s],pts[e]])
+            b:Line=self.__vbeams[b]
+            b.points((pts[s],pts[e]))
+        self.__btn_deform_z.switch()
+        for btn in [self.__btn_deform_x,self.__btn_deform_y]:
+            if "reset" in btn.status():
+                btn.switch()
         self.reset()
 
-    def toggle_beam_section(self):
-        self.reset()
 
-    def toggle_beam_csys(self):
-        self.reset()
+    def show_result_deformation(self,pts,casename="case1",dir="z"):
+        scale=self.__scale
+        api=self.__api
+        disp=[]
+        #scale bar
+        scals = np.zeros(len(pts))
+        d=api.result_get_all_nodal_displacement(casename)
+        for k,v in d.items():
+            o=pts[k]
+            pts[k]=(o[0]+v[0]*scale,o[1]+v[1]*scale,o[2]+v[2]*scale)
+            if dir=="x":
+                disp.append(v[0])
+            elif dir=="y":
+                disp.append(v[1])
+            elif dir=="z":
+                disp.append(v[2])
+        #scale bar
+        scals = np.array(disp) #use z test
+        self.__plt.remove(self.__vnodes)
+        self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        self.__vnodes.cmap('PuOr', scals) #"jet", "PuOr", "viridis"
+        self.__vnodes.addScalarBar(title="Deformation(m)",pos=(0.8,0.4))
 
-    def toggle_beam_load(self):
-        self.reset()
-
-    def init_nodes(self):
+    def init_nodes(self,casename="case1"):
         api=self.__api
         pts=self.__pts
         for n in api.get_node_names():
             x,y,z=api.get_node_location(n)
             pts[n]=(x,y,z)
-        
         self.__vnodes = Points(list(pts.values()), r=8, c="blue5")
-        self.__vnodes.off()
-        # self.__vnodeload=Arrows(arrow_starts,arrow_ends,s=0.5,res=3)
-        # #"jet", "PuOr", "viridis"
-        # self.__vnodeload.cmap('PuOr', f_value).addScalarBar(title="Nodal load(N)",pos=(0.8,0.5))
-        # self.__vnodeload.off()
-        # self.__vnodeload.scalarbar.VisibilityOff()
-
-    def init_nodal_load(self):
-       
-        api=self.__api
-        arrow_starts=[]
-        arrow_ends=[]
-        loads=[]
-        f_scals=[]
-        m_scals=[]
-        f_value=[]
-        m_value=[]
-        load_dict=api.get_all_nodal_load("pat1")
-        for n in api.get_node_names():
-            if n in api.get_all_nodal_load("pat1").keys():
-                x,y,z=api.get_node_location(n)
-                f1,f2,f3,m1,m2,m3=tuple(load_dict[n])
-                f=(f1**2+f2**2+f3**2)**0.5
-                [f_value.append(f) for i in range(16)]
-                m_value.append((m1**2+m2**2+m3**2)**0.5)
-                f_scals.append(f)
-                loads.append([f1,f2,f3,m1,m2,m3])
-                arrow_ends.append((x,y,z))
-        scale=self.__scale/max(f_scals)*0.1
-        for e,l in zip(arrow_ends,loads):
-            arrow_starts.append((e[0]-l[0]*scale,e[1]-l[1]*scale,e[2]-l[2]*scale))
-
-        self.__vnodeload=Arrows(arrow_starts,arrow_ends,s=0.5,res=3)
-        self.__vnodeload.cmap('PuOr', f_value).addScalarBar(title="Nodal load(N)",pos=(0.8,0.4)) #"jet", "PuOr", "viridis"
-        self.__vnodeload.off()
-        self.__vnodeload.scalarbar.VisibilityOff()
-
-    def __scene_radius(self):
-        xs=[i[0] for i in self.__pts.values()]
-        ys=[i[1] for i in self.__pts.values()]
-        zs=[i[2] for i in self.__pts.values()]
-        maxx,minx=max(xs),min(xs)
-        maxy,miny=max(ys),min(ys)
-        maxz,minz=max(zs),min(zs)
-        cx,cy,cz=maxx/2+minx/2,maxy/2+miny/2,maxz/2+minz/2
-        rx,ry,rz=maxx/2-minx/2,maxy/2-miny/2,maxz/2-minz/2
-        r=max(rx,ry,rz)
-        return r
+        # self.__vnodes.off()
+        #restraint
+        scale=0.1
+        for k,v in api.get_node_restraints(casename).items():
+            pt=self.__pts[k]
+            if v[0]:
+                c=Cone(pos=(pt[0]-1*scale,pt[1],pt[2]),r=1*scale,height=2*scale,res=4,axis=(1,0,0))
+                self.__vnode_restraints.append(c)
+            if v[1]:
+                c=Cone(pos=(pt[0],pt[1]-1*scale,pt[2]),r=1*scale,height=2*scale,res=4,axis=(0,1,0))
+                self.__vnode_restraints.append(c)
+            if v[2]:
+                c=Cone(pos=(pt[0],pt[1],pt[2]-1*scale),r=1*scale,height=2*scale,res=4,axis=(0,0,1))
+                self.__vnode_restraints.append(c)
+            if v[3]:
+                c1=Cone(pos=(pt[0]+1*scale,pt[1],pt[2]),c='r3',r=1*scale,height=2*scale,res=4,axis=(-1,0,0))
+                c2=Cone(pos=(pt[0]+2*scale,pt[1],pt[2]),c='r3',r=1*scale,height=2*scale,res=4,axis=(-1,0,0))
+                self.__vnode_restraints.append(c1)
+                self.__vnode_restraints.append(c2)
+            if v[4]:
+                c1=Cone(pos=(pt[0],pt[1]+1*scale,pt[2]),c='r3',r=1*scale,height=2*scale,res=4,axis=(0,-1,0))
+                c2=Cone(pos=(pt[0],pt[1]+2*scale,pt[2]),c='r3',r=1*scale,height=2*scale,res=4,axis=(0,-1,0))
+                self.__vnode_restraints.append(c1)
+                self.__vnode_restraints.append(c2)
+            if v[5]:
+                c1=Cone(pos=(pt[0],pt[1],pt[2]+1*scale),c='r3',r=1*scale,height=2*scale,res=4,axis=(0,0,-1))
+                c2=Cone(pos=(pt[0],pt[1],pt[2]+2*scale),c='r3',r=1*scale,height=2*scale,res=4,axis=(0,0,-1))
+                self.__vnode_restraints.append(c1)
+                self.__vnode_restraints.append(c2)
 
     def init_beams(self):
         api=self.__api
@@ -178,7 +205,7 @@ class Viewer():
             # lines[b]=([pts[s],pts[e]])
         # self.__vbeams=Lines(list(lines.values()))
             self.__vbeams[b]=Line(pts[s],pts[e])
-    
+            
     def reset_view(self):
         xs=[i[0] for i in self.__pts.values()]
         ys=[i[1] for i in self.__pts.values()]
@@ -189,7 +216,6 @@ class Viewer():
         cx,cy,cz=maxx/2+minx/2,maxy/2+miny/2,maxz/2+minz/2
         rx,ry,rz=maxx/2-minx/2,maxy/2-miny/2,maxz/2-minz/2
         r=max(rx,ry,rz)
-        self.__calculate_size()
         self.__plt.show(
             self.__vnodes, 
             *tuple(self.__vbeams.values()), 
@@ -227,7 +253,6 @@ class Viewer():
         plt=self.__plt     
         plt.show(
             self.__vnodes, 
-            self.__vnodeload,
             *tuple(self.__vbeams.values()), 
             *tuple(self.__vnode_restraints),
             logo,workpath,time,info,
