@@ -128,7 +128,6 @@ class Viewer():
         # self.__vnodeload.scalarbar.VisibilityOff()
 
     def init_nodal_load(self):
-       
         api=self.__api
         arrow_starts=[]
         arrow_ends=[]

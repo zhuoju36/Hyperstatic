@@ -28,11 +28,8 @@ class Viewer():
         self.__pts={}
         self.__lines={}
         self.__vnodes:Points=None
-        self.__vnodeNames=None
         self.__vnode_restraints=[]
         self.__vbeams={}
-        self.__vbeamNames=None
-        self.__vbeamReleases=None
         self.__plt=Plotter()
 
         self.__scale=1
@@ -42,11 +39,21 @@ class Viewer():
 
     def setup_gui(self):
         plt=self.__plt
+        self.__btn_node=plt.addButton(
+            self.toggle_node,
+            bc=("b6","r6"),
+            states=("show nodes","hide nodes"),
+            font="san-serif",
+            pos=(0.7,0.1),
+            size=12,
+        )
+
         self.__btn_deform_x=plt.addButton(
             self.show_result_deformation_X,
             bc=("b6","r6"),
             states=("deformX","reset"),
             font="san-serif",
+            pos=(0.7,0.05),
             size=12,
         )
         self.__btn_deform_y=plt.addButton(
@@ -68,7 +75,7 @@ class Viewer():
         self.__scale_slider=plt.addSlider2D(
             self.slide_scale,
             # pos="bottom-left",
-            pos=[(0.65,0.15),(0.95,0.15)],
+            pos=[(0.65,0.25),(0.95,0.25)],
             # titleSize=0.5,
             xmin=0,
             xmax=100,
@@ -78,19 +85,23 @@ class Viewer():
     def slide_scale(self,widget,event):
         self.__scale=widget.GetRepresentation().GetValue()
 
+    def toggle_node(self):
+        if self.__btn_node.status()=="hide nodes":
+            self.__vnodes.off()
+        else:
+            self.__vnodes.on()
+        self.__btn_node.switch() 
+
     def show_result_deformation_X(self):
-        api=self.__api
         pts=self.__pts.copy()
+        lines=self.__lines.copy()
         if "deform" in self.__btn_deform_x.status(): 
-            self.show_result_deformation(pts,dir="x")
+            self.show_result_deformation(pts,lines,dir="x")
         else:
             self.__plt.remove(self.__vnodes)
-            self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
-        for b in api.get_beam_names():
-            s,e=api.get_beam_node_names(b)
-            # lines[b]=([pts[s],pts[e]])
-            b:Line=self.__vbeams[b]
-            b.points((pts[s],pts[e]))
+            self.__plt.remove(self.__vbeams)
+            self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
+            self.__vbeams=Lines(list(lines.values()))
         self.__btn_deform_x.switch()
         for btn in [self.__btn_deform_z,self.__btn_deform_y]:
             if "reset" in btn.status():
@@ -98,18 +109,15 @@ class Viewer():
         self.reset()
 
     def show_result_deformation_Y(self):
-        api=self.__api
         pts=self.__pts.copy()
+        lines=self.__lines.copy()
         if "deform" in self.__btn_deform_y.status(): 
-            self.show_result_deformation(pts,dir="y")
+            self.show_result_deformation(pts,lines,dir="y")
         else:
             self.__plt.remove(self.__vnodes)
-            self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
-        for b in api.get_beam_names():
-            s,e=api.get_beam_node_names(b)
-            # lines[b]=([pts[s],pts[e]])
-            b:Line=self.__vbeams[b]
-            b.points((pts[s],pts[e]))
+            self.__plt.remove(self.__vbeams)
+            self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
+            self.__vbeams=Lines(list(lines.values()))
         self.__btn_deform_y.switch()
         for btn in [self.__btn_deform_x,self.__btn_deform_z]:
             if "reset" in btn.status():
@@ -117,18 +125,15 @@ class Viewer():
         self.reset()
 
     def show_result_deformation_Z(self):
-        api=self.__api
         pts=self.__pts.copy()
+        lines=self.__lines.copy()
         if "deform" in self.__btn_deform_z.status(): 
-            self.show_result_deformation(pts,dir="z")
+            self.show_result_deformation(pts,lines,dir="z")
         else:
             self.__plt.remove(self.__vnodes)
-            self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
-        for b in api.get_beam_names():
-            s,e=api.get_beam_node_names(b)
-            # lines[b]=([pts[s],pts[e]])
-            b:Line=self.__vbeams[b]
-            b.points((pts[s],pts[e]))
+            self.__plt.remove(self.__vbeams)
+            self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
+            self.__vbeams=Lines(list(lines.values()))
         self.__btn_deform_z.switch()
         for btn in [self.__btn_deform_x,self.__btn_deform_y]:
             if "reset" in btn.status():
@@ -136,10 +141,10 @@ class Viewer():
         self.reset()
 
 
-    def show_result_deformation(self,pts,casename="case1",dir="z"):
+    def show_result_deformation(self,pts,lines,casename="case1",dir="z"):
         scale=self.__scale
         api=self.__api
-        disp=[]
+        disp={}
         #scale bar
         scals = np.zeros(len(pts))
         d=api.result_get_all_nodal_displacement(casename)
@@ -147,17 +152,26 @@ class Viewer():
             o=pts[k]
             pts[k]=(o[0]+v[0]*scale,o[1]+v[1]*scale,o[2]+v[2]*scale)
             if dir=="x":
-                disp.append(v[0])
+                disp[k]=[v[0]]
             elif dir=="y":
-                disp.append(v[1])
+                disp[k]=[v[1]]
             elif dir=="z":
-                disp.append(v[2])
+                disp[k]=[v[2]]
         #scale bar
-        scals = np.array(disp) #use z test
+        scals = list(disp.values())
+        lscals=[]
         self.__plt.remove(self.__vnodes)
-        self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()#######Turn it off temperately
         self.__vnodes.cmap('PuOr', scals) #"jet", "PuOr", "viridis"
         self.__vnodes.addScalarBar(title="Deformation(m)",pos=(0.8,0.4))
+        self.__plt.remove(self.__vbeams)
+        for b in api.get_beam_names():
+            s,e=api.get_beam_node_names(b)
+            lines[b]=([pts[s],pts[e]])
+            lscals.append(disp[s])
+            lscals.append(disp[e])
+        self.__vbeams=Lines(list(lines.values()),c='k')
+        self.__vbeams.cmap('PuOr', lscals)
 
     def init_nodes(self,casename="case1"):
         api=self.__api
@@ -165,8 +179,7 @@ class Viewer():
         for n in api.get_node_names():
             x,y,z=api.get_node_location(n)
             pts[n]=(x,y,z)
-        self.__vnodes = Points(list(pts.values()), r=8, c="blue5")
-        # self.__vnodes.off()
+        self.__vnodes = Points(list(pts.values()), r=8, c="blue5").off()#######Turn it off temperately
         #restraint
         scale=0.1
         for k,v in api.get_node_restraints(casename).items():
@@ -202,9 +215,8 @@ class Viewer():
         pts=self.__pts
         for b in api.get_beam_names():
             s,e=api.get_beam_node_names(b)
-            # lines[b]=([pts[s],pts[e]])
-        # self.__vbeams=Lines(list(lines.values()))
-            self.__vbeams[b]=Line(pts[s],pts[e])
+            lines[b]=([pts[s],pts[e]])
+        self.__vbeams=Lines(list(lines.values()),c='k')
             
     def reset_view(self):
         xs=[i[0] for i in self.__pts.values()]
@@ -218,7 +230,7 @@ class Viewer():
         r=max(rx,ry,rz)
         self.__plt.show(
             self.__vnodes, 
-            *tuple(self.__vbeams.values()), 
+            self.__vbeams, 
             *tuple(self.__vnode_restraints),
             viewup="z", 
             axes=4,
@@ -228,11 +240,10 @@ class Viewer():
     def reset(self):
         self.__plt.show(
             self.__vnodes, 
-            *tuple(self.__vbeams.values()), 
+            self.__vbeams, 
             *tuple(self.__vnode_restraints),
             viewup="z", 
             axes=4,
-            # camera=self.__plt.camera,
             resetcam=False)
         
 
@@ -253,7 +264,8 @@ class Viewer():
         plt=self.__plt     
         plt.show(
             self.__vnodes, 
-            *tuple(self.__vbeams.values()), 
+            # *tuple(self.__vbeams.values()), 
+            self.__vbeams,
             *tuple(self.__vnode_restraints),
             logo,workpath,time,info,
             viewup="z", 
