@@ -44,7 +44,7 @@ class Viewer():
             bc=("b6","r6"),
             states=("show nodes","hide nodes"),
             font="san-serif",
-            pos=(0.7,0.1),
+            pos=(0.58,0.05),
             size=12,
         )
 
@@ -75,7 +75,7 @@ class Viewer():
         self.__scale_slider=plt.addSlider2D(
             self.slide_scale,
             # pos="bottom-left",
-            pos=[(0.65,0.25),(0.95,0.25)],
+            pos=[(0.65,0.15),(0.95,0.15)],
             # titleSize=0.5,
             xmin=0,
             xmax=100,
