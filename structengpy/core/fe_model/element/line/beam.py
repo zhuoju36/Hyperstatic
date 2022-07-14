@@ -133,7 +133,7 @@ class Beam(Line):
         (4 * E*I2 / l,(10, 10)),
 
         (4 * E*I3 / l,(11, 11)),
-        ))
+        ),dtype=object)
         data=K_data[:,0].tolist()
         rc=np.array([*K_data[:,1]])
         row=rc[:,0].tolist()

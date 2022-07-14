@@ -69,7 +69,7 @@ class Assembly(object):
     #     return setting
 
     def assemble_K(self):
-        # logging.info('Assembling K and M..')
+        logging.info('Assembling K..')
         n_nodes=self.__model.node_count
         __K = spr.csr_matrix((n_nodes*6, n_nodes*6))
         #Beam load and displacement, and reset the index 
@@ -90,10 +90,11 @@ class Assembly(object):
             row_k.extend([i*6+r if r<6 else j*6+r-6 for r in Ke_.row])
             col_k.extend([i*6+c if c<6 else j*6+c-6 for c in Ke_.col])
 
-        __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
+        __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6))
         return __K
 
     def assemble_M(self,casename:str=None):
+        logging.info('Assembling M..')
         n_nodes=self.__model.node_count
         __M = spr.csr_matrix((n_nodes*6, n_nodes*6))
         row_m=[] 
@@ -127,7 +128,7 @@ class Assembly(object):
             row_m.extend([i*6+r if r<6 else j*6+r-6 for r in Me_.row])
             col_m.extend([i*6+c if c<6 else j*6+c-6 for c in Me_.col])
 
-        __M=spr.coo_matrix((data_m,(row_m,col_m)),shape=(n_nodes*6, n_nodes*6)).tocsr()
+        __M=spr.coo_matrix((data_m,(row_m,col_m)),shape=(n_nodes*6, n_nodes*6))
         return __M
 
     def assemble_KM(self):
@@ -181,8 +182,8 @@ class Assembly(object):
 #            self.__K+=G.transpose()*Ke_*G #sparse matrix use * as dot.
 #            self.__M+=G.transpose()*Me_*G #sparse matrix use * as dot.
             
-        __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6)).tocsr()
-        __M=spr.coo_matrix((data_m,(row_m,col_m)),shape=(n_nodes*6, n_nodes*6)).tocsr()
+        __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6))
+        __M=spr.coo_matrix((data_m,(row_m,col_m)),shape=(n_nodes*6, n_nodes*6))
         
         for elm in self.__membrane3s.values():
             i = elm.nodes[0].hid
@@ -304,7 +305,7 @@ class Assembly(object):
 
     def assemble_boundary(self,casename:str,matrixK:spr.spmatrix,matrixM:spr.spmatrix=None,matrixC:spr.spmatrix=None,vectorF:spr.spmatrix=None):
         logging.info('Assembling boundary condition..')
-        loadcase=self.__loadcase[casename]
+        loadcase:LoadCase=self.__loadcase[casename]
         K=matrixK.copy()
         if matrixM is not None:
             M=matrixM.copy()
@@ -320,11 +321,11 @@ class Assembly(object):
                 if rest[node][j]:
                     fixed.append(i*6+j)
                     self.__dof-=1
-        K=self.__drop_matrix_dof(K,fixed)
+        K=self.__drop_matrix_dof(K,fixed).tocsr()
         if matrixM is not None:
-            M=self.__drop_matrix_dof(M,fixed)
+            M=self.__drop_matrix_dof(M,fixed).tocsr()
         if matrixC is not None:
-            C=self.__drop_matrix_dof(C,fixed)
+            C=self.__drop_matrix_dof(C,fixed).tocsr()
         if vectorF is not None:
             f=self.__drop_vector_dof(f,fixed)
         res=[K]
@@ -339,19 +340,29 @@ class Assembly(object):
         else:
             return tuple(res)
  
-    def __drop_matrix_dof(self,M:spr.spmatrix, indices:list):
-        C = M.tocoo()
-        keep = ~np.in1d(C.row, indices)
-        data, row, col = C.data[keep], C.row[keep], C.col[keep]
+    def __drop_matrix_dof(self,M:spr.coo_matrix, indices:list)->spr.coo_matrix:
+        # C = M
+        # keep = ~np.in1d(C.row, indices)
+        # data, row, col = C.data[keep], C.row[keep], C.col[keep]
+        # for i in reversed(sorted(indices)):
+        #     row=[k-1 if k>i else k for k in row ]
+        # A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]))
+        # keep = ~np.in1d(A.col, indices)
+        # data, row, col = A.data[keep], A.row[keep], A.col[keep]
+        # for i in reversed(sorted(indices)):
+        #     col=[k-1 if k>i else k for k in col ]
+        # B=spr.csr_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
+        # return B
+        C = M
+        keepr = ~np.in1d(C.row, indices)
+        keepc = ~np.in1d(C.col, indices)
+        keep=keepr*keepc
+        data, row, col = C.data[keep], C.row[keep], C.col[keep]        
         for i in reversed(sorted(indices)):
-            row=[k-1 if k>i else k for k in row ]
-        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]))
-        keep = ~np.in1d(A.col, indices)
-        data, row, col = A.data[keep], A.row[keep], A.col[keep]
-        for i in reversed(sorted(indices)):
-            col=[k-1 if k>i else k for k in col ]
-        B=spr.csr_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
-        return B
+            row[row>i]-=1
+            col[col>i]-=1          
+        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
+        return A
 
     def __drop_vector_dof(self,V:np.array, indices:list):
         keep = ~np.in1d(np.arange(V.shape[0]), indices)
@@ -426,7 +437,34 @@ if __name__ == '__main__':
         keep = ~np.in1d(np.arange(V.shape[0]), indices)
         return V[keep].copy()
 
-    A=np.arange(10)
-    B=drop_vector_dof(A,[1,3])
-    print(A)
-    print(B)
+    def __drop_matrix_dof(M:spr.coo_matrix, indices:list)->spr.coo_matrix:
+        C = M
+        keepr = ~np.in1d(C.row, indices)
+        keepc = ~np.in1d(C.col, indices)
+        keep=keepr*keepc
+        data, row, col = C.data[keep], C.row[keep], C.col[keep]
+        row2=row.copy()
+        col2=col.copy()
+        logging.info("start!")
+        for i in reversed(sorted(indices)):
+            row=[k-1 if k>i else k for k in row ]
+            col=[k-1 if k>i else k for k in col ]
+        logging.info("end!")
+
+        
+        logging.info("start!")
+        k=1
+        for i in reversed(sorted(indices)):
+            row2[row2>i]-=k
+            col2[col2>i]-=k
+            # k+=1
+        logging.info("end!")
+        print(sorted(indices),C.row[keep],row,row2)
+            
+        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
+        return A
+
+    A=np.array(range(25)).reshape(5,5)
+    A[1,1]=A[2,2]=0
+    A=spr.coo_matrix(A)
+    __drop_matrix_dof(A,[1,2])

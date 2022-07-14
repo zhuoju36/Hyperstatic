@@ -18,6 +18,8 @@ from structengpy.core.fe_solver import Solver
 
 import logging
 
+logging.basicConfig(format="%(asctime)s|%(levelname)s|:%(message)s",level=logging.INFO)
+
 class StaticSolver(Solver):
     def __init__(self,workpath:str,filename:str):
         super().__init__(workpath,filename)
@@ -28,7 +30,7 @@ class StaticSolver(Solver):
 
     def solve_linear(self,casename,precase=None)->bool:
         assembly=super().assembly
-        logging.info('solving problem with %d DOFs...'%assembly.DOF)
+        logging.info('Solving problem with %d DOFs...'%assembly.DOF)
         
         if precase==None:
             base_case="0"

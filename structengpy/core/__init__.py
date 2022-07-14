@@ -437,8 +437,9 @@ class Api(object):
         try:
             workpath=self.__workpath
             solver=StaticSolver(workpath,self.__filename)
+            logging.info("Solution for loadcase %s starts."%casename)
             solver.solve_linear(casename)
-            logging.info("solution finished")
+            logging.info("Solution for loadcase %s is finished."%casename)
             return True
         except Exception as e:
             logging.warning("Error when solving case "+str(casename)+". Exception: "+str(e))
