@@ -96,12 +96,9 @@ class Viewer():
         pts=self.__pts.copy()
         lines=self.__lines.copy()
         if "deform" in self.__btn_deform_x.status(): 
-            self.show_result_deformation(pts,lines,dir="x")
+            self.__show_result_deformation(pts,lines,dir="x")
         else:
-            self.__plt.remove(self.__vnodes)
-            self.__plt.remove(self.__vbeams)
-            self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
-            self.__vbeams=Lines(list(lines.values()))
+            self.__reset_deformation(pts,lines)
         self.__btn_deform_x.switch()
         for btn in [self.__btn_deform_z,self.__btn_deform_y]:
             if "reset" in btn.status():
@@ -112,12 +109,9 @@ class Viewer():
         pts=self.__pts.copy()
         lines=self.__lines.copy()
         if "deform" in self.__btn_deform_y.status(): 
-            self.show_result_deformation(pts,lines,dir="y")
+            self.__show_result_deformation(pts,lines,dir="y")
         else:
-            self.__plt.remove(self.__vnodes)
-            self.__plt.remove(self.__vbeams)
-            self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
-            self.__vbeams=Lines(list(lines.values()))
+            self.__reset_deformation(pts,lines)
         self.__btn_deform_y.switch()
         for btn in [self.__btn_deform_x,self.__btn_deform_z]:
             if "reset" in btn.status():
@@ -128,20 +122,24 @@ class Viewer():
         pts=self.__pts.copy()
         lines=self.__lines.copy()
         if "deform" in self.__btn_deform_z.status(): 
-            self.show_result_deformation(pts,lines,dir="z")
+            self.__show_result_deformation(pts,lines,dir="z")
         else:
-            self.__plt.remove(self.__vnodes)
-            self.__plt.remove(self.__vbeams)
-            self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
-            self.__vbeams=Lines(list(lines.values()))
+            self.__reset_deformation(pts,lines)
         self.__btn_deform_z.switch()
         for btn in [self.__btn_deform_x,self.__btn_deform_y]:
             if "reset" in btn.status():
                 btn.switch()
         self.reset()
 
+    def __reset_deformation(self,pts,lines):
+        self.__plt.remove(self.__vnodes)
+        self.__plt.remove(self.__vbeams)
+        self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()
+        self.__vbeams=Lines(list(lines.values()))
+        if self.__btn_node.status()=="show nodes":
+            self.__vnodes.off()
 
-    def show_result_deformation(self,pts,lines,casename="case1",dir="z"):
+    def __show_result_deformation(self,pts,lines,casename="case1",dir="z"):
         scale=self.__scale
         api=self.__api
         disp={}
@@ -161,7 +159,9 @@ class Viewer():
         scals = list(disp.values())
         lscals=[]
         self.__plt.remove(self.__vnodes)
-        self.__vnodes=Points(list(pts.values()), r=8, c="blue5").off()#######Turn it off temperately
+        self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        if self.__btn_node.status()=="show nodes":
+            self.__vnodes.off()
         self.__vnodes.cmap('PuOr', scals) #"jet", "PuOr", "viridis"
         self.__vnodes.addScalarBar(title="Deformation(m)",pos=(0.8,0.4))
         self.__plt.remove(self.__vbeams)
