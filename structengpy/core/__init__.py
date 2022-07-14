@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+from copyreg import pickle
 import os
 import logging
 from typing import Dict
 import numpy as np
+import pickle
 
 from typing import Pattern
 from structengpy.core.fe_model.assembly import Assembly
@@ -32,7 +34,18 @@ class Api(object):
             except Exception as e :
                 logging.info("Error creating workpath "+ workpath +'. Exception: '+str(e))
                 self=None
+    
 
+    def save(self,filename):
+        with open(os.path.join(self.__workpath,filename+'.sep'),'wb+') as f:
+            pickle.dump(self,f)
+        
+
+    @staticmethod
+    def load(workpath,filename):
+        with open(os.path.join(workpath,filename+'.sep'),'rb') as f:
+            api=pickle.load(f)
+        return api
 
     def clear_workspace(self):
         workpath=self.__workpath
@@ -64,6 +77,27 @@ class Api(object):
         except Exception as e:
             logging.warning(str(e)+" when adding node")
             return False
+
+    def get_node_names(self)->list:
+        try:
+            return self.__model.nodes.keys()
+        except Exception as e:
+            logging.warning("Error when getting node names. Exception: "+str(e))
+            return None
+
+    def get_node_location(self,name:str)->tuple:
+        try:
+            return self.__model.nodes[name].loc
+        except Exception as e:
+            logging.warning("Error when getting node location of %s"%name+" Exception: "+str(e))
+            return None
+
+    def get_node_restraints(self,casename)->dict:
+        try:
+            return self.__loadcases[casename].get_nodal_restraint_dict()
+        except Exception as e:
+            logging.warning("Error when getting node restraints of loadcase%s"%casename+" Exception: "+str(e))
+            return None
 
     def set_nodal_mass(self,name:str,
             u1:float=0,u2:float=0,u3:float=0,
@@ -115,6 +149,27 @@ class Api(object):
         except Exception as e:
             logging.warning(str(e)+" when adding beam")
             return False
+
+    def get_beam_names(self)->list:
+        try:
+            return self.__model.beams.keys()
+        except Exception as e:
+            logging.warning("Error when getting beam names. Exception: "+str(e))
+            return None
+
+    def get_beam_node_names(self,beam_name:str)->tuple:
+        try:
+            return tuple(self.__model.beams[beam_name].get_node_names())
+        except Exception as e:
+            logging.warning("Error when getting beam node names. Exception: "+str(e))
+            return None
+
+    def get_beam_location(self,beam_name:str)->tuple:
+        try:
+            return tuple(self.__model.beams[beam_name].start),tuple(self.__model.beams[beam_name].end)
+        except Exception as e:
+            logging.warning("Error when getting beam node names. Exception: "+str(e))
+            return None
 
     def set_beam_release(self,name,
         u1i=False,u2i=False,u3i=False,r1i=False,r2i=False,r3i=False,
@@ -211,6 +266,43 @@ class Api(object):
         except Exception as e:
             logging.warning(str(e)+" when setting nodal load")
             return False
+
+    def get_nodal_load(self,pattern:str,node:str)->list:
+        """获取荷载样式中的结点荷载
+
+        Args:
+            pattern (str): 样式名
+            node (str): 结点名
+
+        Returns:
+            f1 (float): 结点力. 
+            f2 (float): 结点力. 
+            f3 (float): 结点力. 
+            m1 (float): 结点弯矩. 
+            m2 (float): 结点弯矩. 
+            m3 (float): 结点弯矩. 
+        """
+        try:
+            return tuple(self.__loadpatterns[pattern].get_nodal_f(node))
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal load")
+            return None
+
+    def get_all_nodal_load(self,pattern:str)->dict:
+        """获取荷载样式中的结点荷载
+
+        Args:
+            pattern (str): 样式名
+            node (str): 结点名
+
+        Returns:
+            load (dict): 包含六个结点荷载荷载的字典.
+        """
+        try:
+            return self.__loadpatterns[pattern].get_nodal_f_dict()
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal load")
+            return None
 
     def set_beam_load_distributed(self,pattern:str,beam:str,
         pi:float=0,pj:float=0,qi2:float=0,qj2:float=0,qi3:float=0,qj3:float=0,ti:float=0,tj:float=0)->bool:
@@ -419,7 +511,7 @@ class Api(object):
             return res
         except Exception as e:
             logging.warning("Error when getting nodal reaction of "+str(case)+". Exception: "+str(e))
-            return False
+            return None
 
     def result_get_nodal_displacement(self,node:str,case:str)->np.array:
         """获取结点位移结果
@@ -438,6 +530,27 @@ class Api(object):
             return res
         except Exception as e:
             logging.warning(str(e)+" when getting nodal displacement of "+str(case))
+            return None
+
+    def result_get_all_nodal_displacement(self,case:str)->dict:
+        """一次获取所有结点位移结果
+
+        Args:
+            case (str): 工况名
+
+        Returns:
+            dict: 成功则返回局部坐标系下的位移array字典，否则返回None
+        """
+        try:
+            workpath=self.__workpath
+            resolver=NodeResultResolver(workpath,self.__filename)
+            res={}
+            for node in self.get_node_names():
+                res[node]=resolver.resolve_nodal_displacement(node,case,step=1)
+            return res
+        except Exception as e:
+            logging.warning(str(e)+" when getting nodal displacement of "+str(case))
+            return None
 
     def result_get_beam_end_force(self,beam:str,case:str)->np.array:
         """获取梁端力结果
@@ -451,12 +564,32 @@ class Api(object):
         """
         try:
             workpath=self.__workpath
-            resolver=BeamResultResolver(workpath)
+            resolver=BeamResultResolver(workpath,self.__filename)
             res=resolver.resolve_beam_end_force(beam,case,step=1)
             return res 
         except Exception as e:
             logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
-            return False
+            return None
+
+    def result_get_beam_deformation(self,beam:str,loc:float,case:str)->np.array:
+        """获取梁位移结果
+
+        Args:
+            beam (str): 梁名
+            loc (float): 相对位置，0~1之间
+            case (str): 工况名
+
+        Returns:
+            np.array: 成功则返回局部坐标系下的包含6个梁位移的array，否则返回None
+        """
+        try:
+            workpath=self.__workpath
+            resolver=BeamResultResolver(workpath,self.__filename)
+            res=resolver.resolve_beam_deformation(beam,loc,case,step=1)
+            return res 
+        except Exception as e:
+            logging.warning("Error when getting beam deformation of "+str(case)+". Exception: "+str(e))
+            return None
 
     # def result_get_beam_force(self,beam:str,loc:float,case:str)->np.array:
     #     try:

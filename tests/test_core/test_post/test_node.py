@@ -67,5 +67,4 @@ class TestNodeResult():
 
         resolver=NodeResultResolver(path,"test.asb")
         resolver.resolve_nodal_displacement("2","eigen",1)
-
    

@@ -2,7 +2,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-VERSION = '0.1.14'
+VERSION = '0.1.15'
 
 setup(
     name='StructEngPy', 
@@ -17,7 +17,8 @@ setup(
     install_requires=[
         'numpy>=1.21',
         'scipy>=1.7',
-        'quadpy>=0.16'
+        'quadpy>=0.16',
+        'vedo>=2022.2.3'
     ],
     classifiers=[
         # How mature is this project? Common values are
