@@ -31,7 +31,7 @@ class Viewer():
         self.__vnodeload:Arrows=None
         self.__vnodeNames=None
         self.__vnode_restraints=[]
-        self.__vbeams={}
+        self.__vbeams:Lines=None
         self.__vbeamNames=None
         self.__vbeamReleases=None
         self.__plt=Plotter()
@@ -152,7 +152,7 @@ class Viewer():
             arrow_starts.append((e[0]-l[0]*scale,e[1]-l[1]*scale,e[2]-l[2]*scale))
 
         self.__vnodeload=Arrows(arrow_starts,arrow_ends,s=0.5,res=3)
-        self.__vnodeload.cmap('PuOr', f_value).addScalarBar(title="Nodal load(N)",pos=(0.8,0.4)) #"jet", "PuOr", "viridis"
+        self.__vnodeload.cmap('viridis', f_value).addScalarBar(title="Nodal load(N)",pos=(0.8,0.4)) #"jet", "PuOr", "viridis"
         self.__vnodeload.off()
         self.__vnodeload.scalarbar.VisibilityOff()
 
@@ -174,9 +174,8 @@ class Viewer():
         pts=self.__pts
         for b in api.get_beam_names():
             s,e=api.get_beam_node_names(b)
-            # lines[b]=([pts[s],pts[e]])
-        # self.__vbeams=Lines(list(lines.values()))
-            self.__vbeams[b]=Line(pts[s],pts[e])
+            lines[b]=([pts[s],pts[e]])
+        self.__vbeams=Lines(list(lines.values()),c='k')
     
     def reset_view(self):
         xs=[i[0] for i in self.__pts.values()]
@@ -191,7 +190,7 @@ class Viewer():
         self.__calculate_size()
         self.__plt.show(
             self.__vnodes, 
-            *tuple(self.__vbeams.values()), 
+            self.__vbeams, 
             *tuple(self.__vnode_restraints),
             viewup="z", 
             axes=4,
@@ -201,7 +200,7 @@ class Viewer():
     def reset(self):
         self.__plt.show(
             self.__vnodes, 
-            *tuple(self.__vbeams.values()), 
+            self.__vbeams, 
             *tuple(self.__vnode_restraints),
             viewup="z", 
             axes=4,
@@ -227,7 +226,7 @@ class Viewer():
         plt.show(
             self.__vnodes, 
             self.__vnodeload,
-            *tuple(self.__vbeams.values()), 
+            self.__vbeams, 
             *tuple(self.__vnode_restraints),
             logo,workpath,time,info,
             viewup="z", 

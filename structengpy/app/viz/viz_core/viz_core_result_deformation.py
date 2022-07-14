@@ -150,19 +150,23 @@ class Viewer():
             o=pts[k]
             pts[k]=(o[0]+v[0]*scale,o[1]+v[1]*scale,o[2]+v[2]*scale)
             if dir=="x":
-                disp[k]=[v[0]]
+                disp[k]=v[0]
             elif dir=="y":
-                disp[k]=[v[1]]
+                disp[k]=v[1]
             elif dir=="z":
-                disp[k]=[v[2]]
+                disp[k]=v[2]
         #scale bar
-        scals = list(disp.values())
+        scals = tuple(disp.values())
+        vmax,vmin=max(scals),min(scals)
+        vmax=max(abs(vmax),abs(vmin))
+        vmin=-vmax
+        
         lscals=[]
         self.__plt.remove(self.__vnodes)
-        self.__vnodes=Points(list(pts.values()), r=8, c="blue5")
+        self.__vnodes=Points(tuple(pts.values()), r=8, c="blue5")
         if self.__btn_node.status()=="show nodes":
             self.__vnodes.off()
-        self.__vnodes.cmap('PuOr', scals) #"jet", "PuOr", "viridis"
+        self.__vnodes.cmap('PuOr', scals, vmax=vmax,vmin=vmin) #"jet", "PuOr", "viridis"
         self.__vnodes.addScalarBar(title="Deformation(m)",pos=(0.8,0.4))
         self.__plt.remove(self.__vbeams)
         for b in api.get_beam_names():
@@ -170,8 +174,8 @@ class Viewer():
             lines[b]=([pts[s],pts[e]])
             lscals.append(disp[s])
             lscals.append(disp[e])
-        self.__vbeams=Lines(list(lines.values()),c='k')
-        self.__vbeams.cmap('PuOr', lscals)
+        self.__vbeams=Lines(tuple(lines.values()),c='k')
+        self.__vbeams.cmap('PuOr', lscals, vmax=vmax,vmin=vmin)
 
     def init_nodes(self,casename="case1"):
         api=self.__api

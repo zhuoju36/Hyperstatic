@@ -303,7 +303,7 @@ class Assembly(object):
         __f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
         return __f
 
-    def assemble_boundary(self,casename:str,matrixK:spr.spmatrix,matrixM:spr.spmatrix=None,matrixC:spr.spmatrix=None,vectorF:spr.spmatrix=None):
+    def assemble_boundary(self,casename:str,matrixK:spr.csr_matrix,matrixM:spr.csr_matrix=None,matrixC:spr.csr_matrix=None,vectorF:spr.csr_matrix=None):
         logging.info('Assembling boundary condition..')
         loadcase:LoadCase=self.__loadcase[casename]
         K=matrixK.copy()
@@ -327,7 +327,7 @@ class Assembly(object):
         if matrixC is not None:
             C=self.__drop_matrix_dof(C,fixed).tocsr()
         if vectorF is not None:
-            f=self.__drop_vector_dof(f,fixed)
+            f=self.__drop_vector_dof(f,fixed).toarray()
         res=[K]
         if matrixM is not None:
             res.append(M)
@@ -341,30 +341,17 @@ class Assembly(object):
             return tuple(res)
  
     def __drop_matrix_dof(self,M:spr.coo_matrix, indices:list)->spr.coo_matrix:
-        # C = M
-        # keep = ~np.in1d(C.row, indices)
-        # data, row, col = C.data[keep], C.row[keep], C.col[keep]
-        # for i in reversed(sorted(indices)):
-        #     row=[k-1 if k>i else k for k in row ]
-        # A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]))
-        # keep = ~np.in1d(A.col, indices)
-        # data, row, col = A.data[keep], A.row[keep], A.col[keep]
-        # for i in reversed(sorted(indices)):
-        #     col=[k-1 if k>i else k for k in col ]
-        # B=spr.csr_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
-        # return B
-        C = M
-        keepr = ~np.in1d(C.row, indices)
-        keepc = ~np.in1d(C.col, indices)
+        keepr = ~np.in1d(M.row, indices)
+        keepc = ~np.in1d(M.col, indices)
         keep=keepr*keepc
-        data, row, col = C.data[keep], C.row[keep], C.col[keep]        
+        data, row, col = M.data[keep], M.row[keep], M.col[keep] 
         for i in reversed(sorted(indices)):
             row[row>i]-=1
-            col[col>i]-=1          
-        A=spr.coo_matrix((data,(row,col)),shape=(C.shape[0]-len(indices),C.shape[1]-len(indices)))
+            col[col>i]-=1      
+        A=spr.coo_matrix((data,(row,col)),shape=(M.shape[0]-len(indices),M.shape[1]-len(indices)))
         return A
 
-    def __drop_vector_dof(self,V:np.array, indices:list):
+    def __drop_vector_dof(self,V:spr.csr_matrix, indices:list)->np.array:
         keep = ~np.in1d(np.arange(V.shape[0]), indices)
         return V[keep].copy()
 
