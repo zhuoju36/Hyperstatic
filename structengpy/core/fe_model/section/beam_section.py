@@ -1,8 +1,8 @@
 import numpy as np
 from sympy import re     
-from structengpy.core.fe_model.material.isotropy import IsotropyMaterial
+from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
 class BeamSection(object):
-    def __init__(self,name:str,material:IsotropyMaterial,shape:str,sizes,A,As2,As3,J,I22,I33,W22,W33):
+    def __init__(self,name:str,material:IsotropicMaterial,shape:str,sizes,A,As2,As3,J,I22,I33,W22,W33):
         self.__name=name
         self.__material=material
         self.__shape=shape
@@ -25,6 +25,10 @@ class BeamSection(object):
     @property
     def material(self):
         return self.__material.name
+
+    @property
+    def rho(self):
+        return self.__material.rho
 
     @property
     def E(self):
@@ -99,7 +103,7 @@ class BeamSection(object):
         return (self.__I/self.__A)**0.5
 
 class BoxSection(BeamSection):
-    def __init__(self, name: str, material: IsotropyMaterial, h,b,tw,tf):
+    def __init__(self, name: str, material: IsotropicMaterial, h,b,tw,tf):
         A=h*b-(h-2*tf)*(b-2*tw)
         As2=2*tw*h
         As3=2*tf*b
@@ -116,7 +120,7 @@ class BoxSection(BeamSection):
         super().__init__(name, material, shape, sizes,A, As2, As3, J, I22, I33, W22, W33)
 
 class PipeSection(BeamSection):
-    def __init__(self, name: str, material: IsotropyMaterial, d,t):
+    def __init__(self, name: str, material: IsotropicMaterial, d,t):
         name=name
         material=material
         A=3.14159/4*(d**2-(d-2*t)**2)

@@ -162,7 +162,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam_section_general(name,material,A,As2,As3,I22,I33,J,W22,W33)
+            self.__model.add_beam_section_general(name,material,A,As2,As3,I22,I33,J,W22,W33)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding general beam section")
@@ -181,7 +181,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam_section_rectangle(name,material,h,b)
+            self.__model.add_beam_section_rectangle(name,material,h,b)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding rectangle beam section")
@@ -202,7 +202,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam_section_rectangle(name,material,h,b,tw,tf)
+            self.__model.add_beam_section_rectangle(name,material,h,b,tw,tf)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding I-section")
@@ -223,7 +223,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam_section_rectangle(name,material,h,b,tw,tf)
+            self.__model.add_beam_section_rectangle(name,material,h,b,tw,tf)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding box section")
@@ -241,7 +241,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam_section_rectangle(name,material,d)
+            self.__model.add_beam_section_rectangle(name,material,d)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding circle beam section")
@@ -260,7 +260,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam_section_rectangle(name,material,d,t)
+            self.__model.add_beam_section_rectangle(name,material,d,t)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding pipe beam section")
@@ -279,7 +279,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_simple_beam(name,start,end,section)
+            self.__model.add_beam(name,start,end,section)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding beam")

@@ -7,10 +7,10 @@ from structengpy.common.tolerance import Tolerance
 
 from structengpy.core.fe_model.node import Node
 from structengpy.core.fe_model.material import Material
-from structengpy.core.fe_model.material.isotropy import IsotropyMaterial
+from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
 from structengpy.core.fe_model.section.beam_section import *
-from structengpy.core.fe_model.element.line.beam import Beam as SimpleBeam
-from structengpy.core.fe_model.element.line.beam2 import Beam
+from structengpy.core.fe_model.element.line.simple_beam import SimpleBeam
+from structengpy.core.fe_model.element.line.beam import Beam
 
 from structengpy.core.fe_model.element.tri.membrane import Membrane3
 from structengpy.core.fe_model.element.quad.membrane import Membrane4
@@ -84,7 +84,7 @@ class Model:
         self.__nodes[name].mass=np.array([u1,u2,u3,r1,r2,r3])
 
     def add_isotropy_material(self,name:str,rho,E:float,mu:float,a:float)->bool:
-        mat=IsotropyMaterial(name,rho,E,mu,a)
+        mat=IsotropicMaterial(name,rho,E,mu,a)
         self.__material[name]=mat
 
     def add_beam_section_general(self,name:str,material:str,A,As2,As3,I22,I33,J,W22,W33):

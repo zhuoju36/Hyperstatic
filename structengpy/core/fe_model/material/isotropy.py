@@ -3,9 +3,9 @@ import numpy as np
 from structengpy.core.fe_model.material import Material
 
 
-class IsotropyMaterial(Material):
+class IsotropicMaterial(Material):
     def __init__(self,name,rho,E,mu,a):
-        super().__init__(self,name,rho,"isotropy")
+        super().__init__(name,rho,"isotropy")
         self.__E=E # Elastic modulus
         self.__mu=mu # Possion rato
         self.__a=a #thermo expansion factor
