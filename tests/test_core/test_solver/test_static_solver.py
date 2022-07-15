@@ -22,7 +22,7 @@ class TestStaticSolver():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         patt1=LoadPattern("pat1")
         patt1.set_nodal_load("2",0,0,-1e4,0,0,0)
@@ -59,7 +59,7 @@ class TestStaticSolver():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.0226667e-5,I3=4.771e-4,J=4.132867e-6,rho=7.85e10) #H400x200x20x30
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.0226667e-5,I3=4.771e-4,J=4.132867e-6,rho=7.85e10) #H400x200x20x30
         
         inp=[
             (1e4,1e4,0,0,0,0,0,0), #uniform axial
@@ -111,7 +111,7 @@ class TestStaticSolver():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,6,3)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.0226667e-5,I3=4.771e-4,J=4.132867e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.0226667e-5,I3=4.771e-4,J=4.132867e-6,rho=7.85e10)
         
         inp=[
             (0,0,1e4,2e4,1e4,1e4,0,0),
@@ -144,8 +144,8 @@ class TestStaticSolver():
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
         model.add_node("3",12,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-        model.add_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         inp=[
             (1e4,1e4,0,0,0,0,0,0), #uniform axial
@@ -193,8 +193,8 @@ class TestStaticSolver():
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
         model.add_node("3",12,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-        model.add_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("B","2","3",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         inp=[
             (1e6,0,0,0,0,0,0.75), #P
@@ -235,7 +235,7 @@ class TestStaticSolver():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         inp=[
             (1e6,0,0,0,0,0,0.75), #P

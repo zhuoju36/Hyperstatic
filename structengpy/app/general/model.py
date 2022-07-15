@@ -243,9 +243,9 @@ class Model():
             rho=frm.section.material.rho
             
             if frm.order=='01':
-                res=femodel.add_beam(node0,node1,E, mu, A, I2, I3, J, rho)
+                res=femodel.add_simple_beam(node0,node1,E, mu, A, I2, I3, J, rho)
             elif frm.order=='10':
-                res=femodel.add_beam(node1,node0,E, mu, A, I2, I3, J, rho)
+                res=femodel.add_simple_beam(node1,node0,E, mu, A, I2, I3, J, rho)
             fb_map[frm.name]=[res]
         for _area in areas:
             nodes={

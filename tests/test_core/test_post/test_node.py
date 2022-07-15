@@ -26,7 +26,7 @@ class TestNodeResult():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         patt1=LoadPattern("pat1")
         patt1.set_nodal_load("2",0,0,-1e4,0,0,0)
@@ -53,7 +53,7 @@ class TestNodeResult():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
         model.set_nodal_mass("2",1,1,1,1,1,1)
 
         lc=ModalCase("eigen")

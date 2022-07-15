@@ -22,7 +22,7 @@ class TestModalSolver():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
+        model.add_simple_beam("A","1","2",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
         # model.set_nodal_mass("2",1,1,1,1,1,1)
 
         lc=ModalCase("eigen")
