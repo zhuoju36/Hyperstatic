@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 from copyreg import pickle
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import logging
 from typing import Dict
 import numpy as np
 import pickle
 
-from typing import Pattern
 from structengpy.core.fe_model.assembly import Assembly
 from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load.pattern import LoadPattern
@@ -19,9 +18,13 @@ from structengpy.core.fe_solver.static import StaticSolver
 from structengpy.common.csys import Cartesian
 from structengpy.core.fe_post.node import NodeResultResolver
 
-
 class Api(object):
     def __init__(self,workpath:str):
+        """内核层接口
+
+        Args:
+            workpath (str): 工作路径
+        """
         self.__filename=".asb"
         self.__csys=Cartesian((0,0,0),(1,0,0),(0,1,0),"Global")
         self.__model=Model()
@@ -37,28 +40,57 @@ class Api(object):
                 self=None
     
 
-    def save(self,filename):
-        with open(os.path.join(self.__workpath,filename+'.sep'),'wb+') as f:
-            pickle.dump(self,f)
-        
+    def save(self,filename:str)->bool:
+        """保存接口
+
+        Args:
+            filename (str): 文件名，自动增加.sep后缀
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            with open(os.path.join(self.__workpath,filename+'.sep'),'wb+') as f:
+                pickle.dump(self,f)
+            return True
+        except Exception as e:
+            logging.info("Error saving to file "+ filename +'. Exception: '+str(e))
+            return False
 
     @staticmethod
-    def load(workpath,filename):
-        with open(os.path.join(workpath,filename+'.sep'),'rb') as f:
-            api=pickle.load(f)
-        return api
+    def load(workpath:str,filename:str):
+        """从文件读取已保存的接口
 
-    def clear_workspace(self):
+        Args:
+            workpath (str): 工作路径
+            filename (str): 文件名
+        """
+        try:
+            with open(os.path.join(workpath,filename+'.sep'),'rb') as f:
+                api=pickle.load(f)
+            return api
+        except Exception as e:
+            logging.info("Error loading api file "+ os.path.join(workpath,filename) +'. Exception: '+str(e))
+            return None
+
+    def clear_workspace(self)->bool:
+        """清理工作路径
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
         workpath=self.__workpath
         if not os.path.exists(workpath):
             logging.info("Work path"+ workpath+" does not exist!")
+            return False
         else:
             try:
                 os.remove(workpath)
                 os.mkdir(workpath)
+                return True
             except Exception as e :
-                logging.info("Error creating workpath "+ workpath +'. Exception: '+str(e))
-                self=None
+                logging.info("Error cleaning workpath "+ workpath +'. Exception: '+str(e))
+                return False
         
     def add_node(self,name:str,x:float,y:float,z:float)->bool:
         """向模型中添加三维结点
@@ -80,6 +112,11 @@ class Api(object):
             return False
 
     def get_node_names(self)->list:
+        """获取结点名列表
+
+        Returns:
+            list: 结点名列表
+        """
         try:
             return self.__model.nodes.keys()
         except Exception as e:
@@ -87,13 +124,29 @@ class Api(object):
             return None
 
     def get_node_location(self,name:str)->tuple:
+        """获取结点位置
+
+        Args:
+            name (str): 结点名
+
+        Returns:
+            tuple: 三维坐标
+        """
         try:
             return self.__model.nodes[name].loc
         except Exception as e:
             logging.warning("Error when getting node location of %s"%name+" Exception: "+str(e))
             return None
 
-    def get_node_restraints(self,casename)->dict:
+    def get_node_restraints(self,casename:str)->dict:
+        """获取结点约束
+
+        Args:
+            casename (str): 工况
+
+        Returns:
+            dict: 包含约束列表的字典
+        """
         try:
             return self.__loadcases[casename].get_nodal_restraint_dict()
         except Exception as e:
@@ -124,7 +177,7 @@ class Api(object):
             logging.warning(str(e)+" when setting nodal mass")
             return False
 
-    def add_isotropy_material(self,name:str,E:float,mu:float,a:float)->bool:
+    def add_isotropic_material(self,name:str,E:float,mu:float,a:float)->bool:
         """向模型中添加各向同性材料
 
         Args:
@@ -137,7 +190,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_isotropy_material(name,E,mu,a)
+            self.__model.add_isotropic_material(name,E,mu,a)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding isotropy material")
@@ -776,28 +829,4 @@ class Api(object):
         except Exception as e:
             logging.warning("Error when getting beam deformation of "+str(case)+". Exception: "+str(e))
             return None
-
-    # def result_get_beam_force(self,beam:str,loc:float,case:str)->np.array:
-    #     try:
-    #         workpath=self.__workpath
-    #         hid=self.__model.get_beam_hid(beam)
-
-    #         pass
-
-        
-    #     except Exception as e:
-    #         logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
-    #         return False
-
-    # def result_get_beam_stress(self,beam:str,loc:float,case:str)->np.array:
-    #     try:
-    #         workpath=self.__workpath
-    #         hid=self.__model.get_beam_hid(beam)
-
-    #         pass
-
-        
-        # except Exception as e:
-        #     logging.warning("Error when getting beam stress of "+str(case)+". Exception: "+str(e))
-        #     return False
         

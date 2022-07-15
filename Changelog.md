@@ -1,4 +1,19 @@
 ## 更新日志
+2022-07-15 v0.1.16
+调整内核层类型
+- 增加Material类型
+- 增加BeamSection类型
+- 调整Beam类为SimpleBeam类，原Beam类依赖于BeamSection类型
+增加前处理内核接口
+- 各向同性材料 core.api.add_isotropic_material
+- 一般梁截面 core.api.add_beam_section_general
+- 工字形截面 core.api.add_beam_section_I
+- 箱型截面 core.api.add_beam_section_box
+- 矩形截面 core.api.add_beam_section_rectangle
+- 圆形截面 core.api.add_beam_section_circle
+- 圆管截面 core.api.add_beam_section_pipe
+
+
 2022-07-06 v0.1.15
 增加后处理内核接口:
 - 梁单元变形解析 core.api.result_get_beam_deformation
