@@ -31,6 +31,10 @@ class BeamSection(object):
         return self.__material.E
 
     @property
+    def mu(self):
+        return self.__material.mu
+
+    @property
     def G(self):
         return self.__material.G
 
@@ -43,8 +47,8 @@ class BeamSection(object):
         return (self.__I33/self.A)**0.5
 
     @property
-    def lamb(self):
-        return self.__material.gamma*self.A
+    def lamda(self):
+        return self.__material.rho*self.A
 
     @property
     def sizes(self):

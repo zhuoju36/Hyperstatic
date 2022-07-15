@@ -19,6 +19,7 @@
         "toarray",
         "tocoo",
         "tocsr",
+        "tria",
         "vedo",
         "workpath"
     ]

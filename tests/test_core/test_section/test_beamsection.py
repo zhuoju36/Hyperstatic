@@ -6,7 +6,7 @@ import logging
 import sys
 import os
 
-from structengpy.core.fe_model.section.beamsection import *
+from structengpy.core.fe_model.section.beam_section import *
 
 class TestBeamSection():
     def test_box(self):

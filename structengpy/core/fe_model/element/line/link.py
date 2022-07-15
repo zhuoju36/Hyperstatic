@@ -9,15 +9,6 @@ from structengpy.core.fe_model.element.line import Line
 
 class Link(Line):
     def __init__(self,node_i, node_j, E, A, rho, name=None, mass='conc', tol=1e-6):
-        """
-        params:
-            node_i,node_j: ends of link.
-            E: elastic modulus
-            A: section area
-            rho: mass density
-            mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
-            tol: tolerance
-        """
         super(Link,self).__init__(node_i,node_j,A,rho,6,name,mass)
         l=self._length
         K_data=(

@@ -16,8 +16,8 @@ api.add_node("A",0,0,0)
 api.add_node("B",6,0,0)
 api.add_node("C",12,0,0)
 # 定义单元
-api.add_beam("b1","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-api.add_beam("b2","B","C",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+api.add_simple_beam("b1","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+api.add_simple_beam("b2","B","C",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 # 定义荷载样式
 api.add_loadpattern("pat1")
 # 指定结点荷载到样式
@@ -40,8 +40,8 @@ api=Api(path)
 api.add_node("A",0,0,0)
 api.add_node("B",6,0,0)
 api.add_node("C",12,0,0)
-api.add_beam("b1","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
-api.add_beam("b2","B","C",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+api.add_simple_beam("b1","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+api.add_simple_beam("b2","B","C",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
 ##通过释放梁端弯矩计算
 api.set_beam_release("b1",r2i=True,r3i=True) 

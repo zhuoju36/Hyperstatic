@@ -44,7 +44,7 @@ class StaticSolver(Solver):
         f=assembly.assemble_f(casename)
         K_,f_ =assembly.assemble_boundary(casename,K,vectorF=f)
         logging.info('Start solving linear equations!')
-        delta,info=sl.cg(K_,f_) #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
+        delta,info=sl.cg(K_,f_,atol='legacy') #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
         logging.info('Done!')
         for i in assembly.restraintDOF(casename):
             delta=np.insert(delta,i,0,0)

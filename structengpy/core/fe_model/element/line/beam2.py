@@ -7,32 +7,15 @@ import scipy.interpolate as interp
 
 from structengpy.core.fe_model.element.line import Line
 from structengpy.common.tolerance import Tolerance
+from structengpy.core.fe_model.section.beam_section import BeamSection
 
 class Beam(Line):
-    def __init__(self,name,node_i, node_j, E, mu, A, I2, I3, J, rho):
-        """
-        params:
-            node_i,node_j: ends of beam.
-            E: elastic modulus
-            mu: Possion ratio        
-            A: section area
-            I2: inertia about 2-2
-            I3: inertia about 3-3
-            J: torsianl constant
-            rho: mass density
-            mass: 'coor' as coordinate matrix or 'conc' for concentrated matrix
-        """
+    def __init__(self,name,node_i, node_j, section:BeamSection):
         tol=Tolerance.abs_tol()
         super(Beam,self).__init__(name,node_i,node_j,12)
         self.__releases=np.array([False,False,False,False,False,False,False,False,False,False,False,False])
-        self.__E=E
-        self.__mu=mu
-        self.__A=A
-        self.__I2=I2
-        self.__I3=I3
-        self.__J=J
-        self.__rho=rho
         self.__rotation=0
+        self.__section=section
         self.__offset=np.zeros(2)
 
     @property
@@ -53,18 +36,14 @@ class Beam(Line):
         super().local_csys.rotate_about_x(radian)
 
     def integrate_K(self):
-        #Initialize local matrices
-        #form the stiffness matrix:
-        E=self.__E
-        mu=self.__mu
-        A=self.__A
-        I2=self.__I2
-        I3=self.__I3
-        J=self.__J
-
+        E=self.__section.E
+        A=self.__section.A
+        I2=self.__section.I22
+        I3=self.__section.I33
+        J=self.__section.J
+        G=self.__section.G
         l=self.length
-        G=E/2/(1+mu)
-
+        
         K_data=np.array((
         (E*A / l,(0, 0)),
         (-E*A / l,(0, 6)),
@@ -126,12 +105,11 @@ class Beam(Line):
         return Ke
 
     def integrate_M(self,consistent=False):
-        #Initialize local matrices
-        A=self.__A
-        J=self.__J
-        rho=self.__rho
+        A=self.__section.__A
+        J=self.__section.__J
+        rho=self.__section.__rho
         l=self.length
-        if consistent:#Coordinated mass matrix
+        if consistent:#consistent mass matrix
             _Me=np.zeros((12,12))
             _Me[0, 0]=140
             _Me[0, 6]=70
@@ -175,7 +153,7 @@ class Beam(Line):
             _Me = spr.csr_matrix(_Me)
         
         else:#Lumped mass matrix
-            _Me=spr.eye(12).tocsr()*rho*A*l/2
+            _Me=spr.eye(12).tocoo()*rho*A*l/2
             for i in [3,4,5,9,10,11]:
                 _Me[i,i]=1e-12 #will be singular if zero
         return _Me
@@ -191,7 +169,6 @@ class Beam(Line):
         Nt2=lambda xi: 0.5*(1+xi)
         return [Na1,Na2,Nb1,Nb2,Nb3,Nb4,-Nb1,Nb2,-Nb3,Nb4,Nt1,Nt2]
 
-    
     def interpolate(self,loc):
         xi=loc
         Na1=0.5*(1-xi)
@@ -232,32 +209,3 @@ class Beam(Line):
             if self.__releases[n] == True:
                 r_ = r - r[n] * k[n, :].toarray() / k[n, n]
         return r_.reshape(12)
-
-#code here should be revised
-    def resolve_element_force(self,Ke,Me,re,ue):
-        """
-        compute beam forces with 
-        """
-        fe=np.zeros((12,1))
-        
-        releaseI=self.__releases[0]
-        releaseJ=self.__releases[1]
-        Ke_ = Ke.copy()
-        Me_ = Me.copy()
-        re_ = re.copy()
-        for n in range(0,6):
-            if releaseI[n] == True:
-                for i in range(12):
-                    for j in range(12):
-                        Ke_[i, j] = Ke[i, j] - Ke[i, n]* Ke[n, j] / Ke[n, n]
-                        Me_[i, j] = Me[i, j] - Me[i, n]* Me[n, j] / Me[n, n]
-                    re_[i] = re[i] - re[n] * Ke[n, i] / Ke[n, n]
-            if releaseJ[n] == True:
-                for i in range(12):
-                    for j in range(12):
-                        Ke_[i, j] = Ke[i, j] - Ke[i, n + 6]* Ke[n + 6, j] / Ke[n + 6, n + 6]
-                        Me_[i, j] = Me[i, j] - Me[i, n + 6]* Me[n + 6, j] / Me[n + 6, n + 6]
-                    re_[i] = re[i] - re[n + 6] * Ke[n + 6, i] / Ke[n + 6, n + 6]
-        Ke_,Me_,re_=self.static_condensation(Ke,Me,re)
-        fe=self._Ke_*ue+self._re_
-        return fe

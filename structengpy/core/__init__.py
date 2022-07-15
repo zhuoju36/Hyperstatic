@@ -124,10 +124,171 @@ class Api(object):
             logging.warning(str(e)+" when setting nodal mass")
             return False
 
-    def add_beam(self,name:str,start:str,end:str,
+    def add_isotropy_material(self,name:str,E:float,mu:float,a:float)->bool:
+        """向模型中添加各向同性材料
+
+        Args:
+            name (str): 材料名
+            E (float): 弹性模量
+            mu (float): 泊松比
+            a (float): 热膨胀系数
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_isotropy_material(name,E,mu,a)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding isotropy material")
+            return False
+
+    def add_beam_section_general(self,name:str,material:str,A:float,As2:float,As3:float,I22:float,I33:float,J:float,W22:float,W33:float)->bool:
+        """向模型中添加一般截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            A (float): 截面积
+            As2 (float): 2轴抗剪面积
+            As3 (float): 3轴抗剪面积
+            I22 (float): 绕2轴主惯性矩
+            I33 (float): 绕3轴主惯性矩
+            J (float): 扭转常数
+            W22 (float): 绕2轴抗弯模量
+            W33 (float): 绕3轴抗弯模量
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam_section_general(name,material,A,As2,As3,I22,I33,J,W22,W33)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding general beam section")
+            return False
+
+    def add_beam_section_rectangle(self,name:str,material:str,h:float,b:float)->bool:
+        """向模型中添加矩形截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            h (float): 高
+            b (float): 宽
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam_section_rectangle(name,material,h,b)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding rectangle beam section")
+            return False
+
+    def add_beam_section_I(self,name:str,material:str,h:float,b:float,tw:float,tf:float)->bool:
+        """向模型中添加工字形截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            h (float): 高
+            b (float): 宽
+            tw (float): 腹板厚
+            tf (float): 翼缘厚
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam_section_rectangle(name,material,h,b,tw,tf)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding I-section")
+            return False
+
+    def add_beam_section_box(self,name:str,material:str,h:float,b:float,tw:float,tf:float)->bool:
+        """向模型中添加箱型截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            h (float): 高
+            b (float): 宽
+            tw (float): 腹板厚
+            tf (float): 翼缘厚
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam_section_rectangle(name,material,h,b,tw,tf)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding box section")
+            return False
+
+    def add_beam_section_circle(self,name:str,material:str,d:float)->bool:
+        """向模型中添加圆截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            d (float): 直径
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam_section_rectangle(name,material,d)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding circle beam section")
+            return False
+
+    def add_beam_section_pipe(self,name:str,material:str,d:float,t:float)->bool:
+        """向模型中添加圆管截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            d (float): 直径
+            t (float): 壁厚
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam_section_rectangle(name,material,d,t)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding pipe beam section")
+            return False
+
+    def add_beam(self,name:str,start:str,end:str,section:str)->bool:
+        """向模型中添加梁
+
+        Args:
+            name (str): 梁名
+            start (str): 起始点
+            end (str): 终结点
+            section (str): 截面名
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_beam(name,start,end,section)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding beam")
+            return False
+
+    def add_simple_beam(self,name:str,start:str,end:str,
             E:float,mu:float,
             A:float,I2:float,I3:float,J:float,rho:float)->bool:
-        """向模型中添加梁
+        """向模型中添加简单梁
 
         Args:
             name (str): 梁名
@@ -145,13 +306,18 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_beam(name,start,end,E,mu,A,I2,I3,J,rho)
+            self.__model.add_beam_simple(name,start,end,E,mu,A,I2,I3,J,rho)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding beam")
             return False
 
     def get_beam_names(self)->list:
+        """获取梁名
+
+        Returns:
+            list: 梁名列表
+        """
         try:
             return self.__model.beams.keys()
         except Exception as e:
@@ -159,6 +325,14 @@ class Api(object):
             return None
 
     def get_beam_node_names(self,beam_name:str)->tuple:
+        """获取梁结点名
+
+        Args:
+            beam_name (str): 梁名
+
+        Returns:
+            tuple: 梁结点名
+        """
         try:
             return tuple(self.__model.beams[beam_name].get_node_names())
         except Exception as e:
@@ -166,6 +340,14 @@ class Api(object):
             return None
 
     def get_beam_location(self,beam_name:str)->tuple:
+        """获取梁位置
+
+        Args:
+            beam_name (str): 梁名
+
+        Returns:
+            tuple: 梁端三维位置
+        """
         try:
             return tuple(self.__model.beams[beam_name].start),tuple(self.__model.beams[beam_name].end)
         except Exception as e:

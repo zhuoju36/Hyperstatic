@@ -6,28 +6,35 @@ from scipy.sparse import linalg as sl
 from structengpy.common.tolerance import Tolerance
 
 from structengpy.core.fe_model.node import Node
-from structengpy.core.fe_model.element.line.beam import Beam
+from structengpy.core.fe_model.material import Material
+from structengpy.core.fe_model.material.isotropy import IsotropyMaterial
+from structengpy.core.fe_model.section.beam_section import *
+from structengpy.core.fe_model.element.line.beam import Beam as SimpleBeam
+from structengpy.core.fe_model.element.line.beam2 import Beam
+
 from structengpy.core.fe_model.element.tri.membrane import Membrane3
 from structengpy.core.fe_model.element.quad.membrane import Membrane4
 
 class Model:
     def __init__(self):
         self.__nodes:Dict[str,Node]={}
+        self.__material:Dict[str,Material]={}
+        self.__beam_section:Dict[str,BeamSection]={}
         self.__beams:Dict[str,Beam]={}
-        self.__membrane3s={}
-        self.__membrane4s={}
+        self.__tria={}
+        self.__quad={}
 
         self.__hid:Dict[str,Dict[str,int]]={}
         self.__hid['node']={}
         self.__hid['beam']={}
-        self.__hid['membrane3s']={}
-        self.__hid['membrane4s']={}
+        self.__hid['tria']={}
+        self.__hid['quad']={}
                 
-        self.__index=[]
-        self.__dof=None
+        # self.__index=[]
+        # self.__dof=None
 
-        self.__pattern={}
-        self.__loadcase={}
+        # self.__pattern={}
+        # self.__loadcase={}
         
     @property
     def node_count(self):
@@ -37,25 +44,25 @@ class Model:
     def beam_count(self):
         return len(self.__beams.items())
     
-    @property
-    def nodes(self):
-        return self.__nodes
+    # @property
+    # def nodes(self):
+    #     return self.__nodes
     
-    @property
-    def beams(self):
-        return self.__beams
+    # @property
+    # def beams(self):
+    #     return self.__beams
     
-    @property
-    def membrane3s(self):
-        return self.__membrane3s
+    # @property
+    # def membrane3s(self):
+    #     return self.__membrane3s
 
-    @property
-    def membrane4s(self):
-        return self.__membrane4s
+    # @property
+    # def membrane4s(self):
+    #     return self.__membrane4s
         
-    @property 
-    def index(self):
-        return self.__index
+    # @property 
+    # def index(self):
+    #     return self.__index
         
     def add_node(self,name:str,x:float,y:float,z:float,check_dup=False)->int:
         node=Node(name,x,y,z)
@@ -75,21 +82,65 @@ class Model:
 
     def set_nodal_mass(self,name:str,u1:float,u2:float,u3:float,r1:float,r2:float,r3:float):
         self.__nodes[name].mass=np.array([u1,u2,u3,r1,r2,r3])
-            
-    # def set_node_restraint(self,node,restraint):
-    #     assert(len(restraint)==6)
-    #     disp=[]
-    #     for i in range(6):
-    #         if restraint[i]:
-    #             disp.append(0)
-    #         else:
-    #             disp.append(self.__nodes[node].dn[i])
-    #     self.__nodes[node].dn=np.array(disp).reshape((6,1))
-        
-    def add_beam(self,name:str,start:str,end:str,E:float, mu:float, A:float, I2:float, I3:float, J:float, rho:float,check_dup=False):
+
+    def add_isotropy_material(self,name:str,rho,E:float,mu:float,a:float)->bool:
+        mat=IsotropyMaterial(name,rho,E,mu,a)
+        self.__material[name]=mat
+
+    def add_beam_section_general(self,name:str,material:str,A,As2,As3,I22,I33,J,W22,W33):
+        mat=self.__material[material]
+        sec=BeamSection(name,mat,'general',[],A,As2,As3,J,I22,I33,W22,W33)
+        self.__beam_section[name]=sec
+
+    def add_beam_section_rectangle(self,name:str,material:str,h,b):
+        mat=self.__material[material]
+        sec=RectangleSection(name,mat,h,b)
+        self.__beam_section[name]=sec
+
+    def add_beam_section_I(self,name:str,material:str,h,b,tw,tf):
+        mat=self.__material[material]
+        sec=ISection(name,mat,h,b,tw,tf)
+        self.__beam_section[name]=sec
+
+    def add_beam_section_box(self,name:str,material:str,h,b,tw,tf):
+        mat=self.__material[material]
+        sec=BoxSection(name,mat,h,b,tw,tf)
+        self.__beam_section[name]=sec
+
+    def add_beam_section_circle(self,name:str,material:str,d):
+        mat=self.__material[material]
+        sec=CircleSection(name,mat,d)
+        self.__beam_section[name]=sec
+
+    def add_beam_section_pipe(self,name:str,material:str,d,t):
+        mat=self.__material[material]
+        sec=PipeSection(name,mat,d,t)
+        self.__beam_section[name]=sec
+
+    def add_beam(self,name:str,start:str,end:str,section:str,check_dup=False):
         node0=self.__nodes[start]
         node1=self.__nodes[end]
-        beam=Beam(name,node0,node1,E, mu, A, I2, I3, J, rho)
+        section=self.__beam_section[section]
+        beam=Beam(name,node0,node1,section)
+        if check_dup:
+            tol=Tolerance.abs_tol()
+            res=[b for b in self.__beams.values() 
+                if (np.linalg.norm(b.start-node0.loc)<tol and np.linalg.norm(b.end-node1.loc)<tol)
+                or (np.linalg.norm(b.end-node0.loc)<tol and np.linalg.norm(b.start-node1.loc)<tol)]
+        else:
+            res=[]
+        if res==[]:
+            res=len(self.__beams)
+            self.__hid["beam"][name]=res
+            self.__beams[name]=beam
+        else:
+            res=self.__hid["beam"][res[0].name]
+        return res
+        
+    def add_simple_beam(self,name:str,start:str,end:str,E:float, mu:float, A:float, I2:float, I3:float, J:float, rho:float,check_dup=False):
+        node0=self.__nodes[start]
+        node1=self.__nodes[end]
+        beam=SimpleBeam(name,node0,node1,E, mu, A, I2, I3, J, rho)
         if check_dup:
             tol=Tolerance.abs_tol()
             res=[b for b in self.__beams.values() 
