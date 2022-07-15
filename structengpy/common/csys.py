@@ -29,7 +29,7 @@ class Cartesian(object):
         z = z / np.linalg.norm(z)
         y = np.cross(z, x)
         self.__T=np.array([x,y,z])
-        self.__name=uuid.uuid1() if name==None else name
+        self.__name=str(uuid.uuid1()) if name==None else name
         
     @property
     def name(self):
