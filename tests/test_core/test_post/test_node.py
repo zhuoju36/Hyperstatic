@@ -63,7 +63,7 @@ class TestNodeResult():
         
         asb.save(path,"test.asb")
         solver=ModalSolver(path,"test.asb")
-        solver.solve_eigen("eigen",3)
+        solver.solve_eigen("eigen")
 
         resolver=NodeResultResolver(path,"test.asb")
         resolver.resolve_nodal_displacement("2","eigen",1)

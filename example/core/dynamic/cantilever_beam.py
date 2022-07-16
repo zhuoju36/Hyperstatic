@@ -32,7 +32,7 @@ api.add_static_case("case1")
 api.add_case_pattern("case1","pat1",1.0)
 
 # 向工况添加结点约束
-api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
 # 集成求解数据
 api.assemble()

@@ -2,21 +2,27 @@
 import os
 import pickle
 import numpy as np
-from typing import Dict
+from typing import Dict,List
 import scipy.sparse as spr
 import logging
-from structengpy.core.fe_model.load.loadcase import ModalCase
+from structengpy.core.fe_model.load.loadcase import ModalCase, ResponseSpectrumCase
 from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load import LoadCase
-
+import logging
 class Assembly(object):
-    def __init__(self,model:Model,loadcases:list):
+    def __init__(self,model:Model,loadcases:List[LoadCase]):
         self.__model:Model=model
-        self.__loadcase={}
+        restraints=model.get_nodal_restraint_dict()
+        self.__loadcase:Dict[str,LoadCase]={}
         for lc in loadcases:
             self.__loadcase[lc.name]=lc
+            if lc.get_nodal_restraint_dict()!={}:
+                continue
+            for k,v in restraints.items():
+                lc.set_nodal_restraint(k,*tuple(v)) #set uniform restraints if no restraint is set. lc is the same object as self.__loadcase[lc.name]
+            
         self.__dof:int=self.node_count*6
-
+        
     @property
     def DOF(self):
         return self.__dof
@@ -51,6 +57,10 @@ class Assembly(object):
 
     def get_beam_interpolate1(self,elm:str,loc:float):
         return self.__model.get_beam_interpolate1(elm,loc)
+
+    def get_loadcase_setting(self,casename:str):
+        loadcase=self.__loadcase[casename]
+        return loadcase.get_settings()
 
     # def get_static_case_setting(self,case:str):
     #     if not type(self.__loadcase) is StaticCase:

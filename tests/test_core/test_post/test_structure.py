@@ -35,7 +35,7 @@ class TestStructureResult():
         
         asb.save(path,"test.asb")
         solver=ModalSolver(path,"test.asb")
-        solver.solve_eigen("eigen",3)
+        solver.solve_eigen("eigen")
 
         resolver=StructureResultResolver(path,"test.asb")
         f=resolver.resolve_modal_frequency("eigen")

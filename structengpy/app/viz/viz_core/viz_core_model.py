@@ -292,10 +292,10 @@ if __name__=="__main__":
 #     # api.add_static_case("case1")
 #     # api.add_case_pattern("case1","pat1",1.0)
 
-#     # api.set_nodal_restraint("case1","A1",True,True,True,True,True,True)
-#     # api.set_nodal_restraint("case1","B1",True,True,True,True,True,True)
-#     # api.set_nodal_restraint("case1","C1",True,True,True,True,True,True)
-#     # api.set_nodal_restraint("case1","D1",True,True,True,True,True,True)
+#     # api.set_loadcase_nodal_restraint("case1","A1",True,True,True,True,True,True)
+#     # api.set_loadcase_nodal_restraint("case1","B1",True,True,True,True,True,True)
+#     # api.set_loadcase_nodal_restraint("case1","C1",True,True,True,True,True,True)
+#     # api.set_loadcase_nodal_restraint("case1","D1",True,True,True,True,True,True)
 
 #     # api.assemble()
 

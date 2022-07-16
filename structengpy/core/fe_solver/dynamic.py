@@ -13,7 +13,7 @@ from scipy import sparse as sp
 import scipy.sparse.linalg as sl
 
 from structengpy.core.fe_model.model import Model
-from structengpy.core.fe_model.load.loadcase import StaticCase
+from structengpy.core.fe_model.load.loadcase import ModalCase,TimeHistoryCase
 from structengpy.core.fe_solver import Solver
 
 class ModalSolver(Solver):
@@ -24,10 +24,21 @@ class ModalSolver(Solver):
     def workpath(self):
         return super().workpath
 
-    def solve_eigen(self,casename:str,k:int,precase:str=None)->bool:
+    def solve(self,casename:str)->bool:
         assembly=super().assembly
         logging.info('solving problem with %d DOFs...'%assembly.DOF)
+        setting=assembly.get_loadcase_setting(casename)
+        if setting["algorithm"]=='eigen':
+            return self.solve_eigen(casename)
+        elif setting["algorithm"]=='ritz':
+            pass
 
+    def solve_eigen(self,casename:str)->bool:
+        assembly=super().assembly
+        logging.info('solving problem with %d DOFs...'%assembly.DOF)
+        setting=assembly.get_loadcase_setting(casename)
+        k=setting['n_modes']
+        precase=setting['base_case']
         if precase==None:
             base_case="0"
         
@@ -51,11 +62,11 @@ class ModalSolver(Solver):
             k=assembly.DOF
         omega2s,modes = sl.eigsh(K_,k,M_,sigma=0,which='LM')
         # omega2s,modes =linalg.eig(K_.todense()[6:,6:],M_.todense()[6:,6:])
-        mode_= modes/np.sum(modes,axis=0)
+        mode_= modes.T # row first
         omega2s=omega2s.reshape(k)
         logging.info('Done!')
         path=os.path.join(self.workpath,casename+'.d') #vibration mode, ad nodal displacement
-        np.save(path,mode_.T)
+        np.save(path,mode_)
         path=os.path.join(self.workpath,casename+'.o') #omega
         np.save(path,omega2s)
         return True
@@ -63,23 +74,136 @@ class ModalSolver(Solver):
     def solve_ritz(model:Model,n,F):
         pass
 
-    def solve_spectrum(self,casename:str,modalcase:str,n:str,spec):
-        freq,mode=eigen_mode(model,n)
-        M_=np.dot(mode.T,model.M)
-        M_=np.dot(M_,mode)
-        K_=np.dot(mode.T,model.K)
-        K_=np.dot(K_,mode)
-        C_=np.dot(mode.T,model.C)
-        C_=np.dot(C_,mode)
-        d_=[]
-        for (m_,k_,c_) in zip(M_.diag(),K_.diag(),C_.diag()):
-            sdof=SDOFSystem(m_,k_)
-            T=sdof.omega_d()
-            d_.append(np.interp(T,spec[0],spec[1]*m_))
-        d=np.dot(d_,mode)
-        #CQC
-        return d
+class ResponseSpectrumSolver(Solver):
+
+    def __init__(self,workpath:str,filename:str):
+        super().__init__(workpath,filename)
+
+    @property
+    def workpath(self):
+        return super().workpath
+
+    def solve(self,casename:str)->bool:
+        assembly=super().assembly
+
+        n=assembly.get_loadcase_setting(casename)['n']
+        modal_damp=assembly.get_loadcase_setting(casename)['modal_damp']
+        comb=assembly.get_loadcase_setting(casename)['combo']
+        modal_case=assembly.get_loadcase_setting(casename)['modal_case']
+        spectrum=modal_case=assembly.get_loadcase_setting(casename)['spectrum']
+
         
+        k_path=os.path.join(self.workpath,modal_case+'.k') #path of the stiff matrix
+        m_path=os.path.join(self.workpath,modal_case+'.m') #path of the mass matrix
+        if not(os.path.exists(k_path) and os.path.exists(m_path)):
+            self.solve_eigen(modal_case)
+        
+        K=np.load(k_path)
+        M=np.load(m_path)
+        DOF=assembly.DOF
+
+        path=os.path.join(self.workpath,casename+'.d') #vibration mode, ad nodal displacement
+        mode=np.load(path)
+        path=os.path.join(self.workpath,casename+'.o') #omega
+        omega2s=np.load(path)
+        omega=np.sqrt(omega2s)
+        T=2*np.pi/np.sqrt(omega)
+
+        mode[n:,:]=np.zeros((DOF-n,DOF))#use n modes only.
+        mode[:,n:]=np.zeros((DOF,DOF-n))
+        M_=np.dot(np.dot(mode.T,M),mode)#generalized mass
+        K_=np.dot(np.dot(mode.T,K),mode)#generalized stiffness
+        L_=np.dot(np.diag(M),mode)
+        px=[]
+        Vx=[]
+        Xm=[]
+        gamma=[]
+        mx=np.diag(M)
+        for i in range(len(mode)):
+            #mass participate factor
+            px.append(-np.dot(mode[:,i].T,mx))
+            Vx.append(px[-1]**2)
+            Xm.append(Vx[-1]/3/m)
+            #modal participate factor
+            gamma.append(L_[i]/M_[i,i])    
+        S=np.zeros((DOF,mode.shape[0]))
+        
+        for i in range(mode.shape[1]):        
+            xi=modal_damp[i]
+            y=np.interp(T[i],spectrum[0,:],spectrum[1,:])
+            y/=omega2s[i]
+            S[:,i]=gamma[i]*y*mode[:,i]
+
+        if comb=='CQC':
+            res=0    
+            rho=np.diag(np.ones(mode.shape[1]))
+            for i in range(mode.shape[1]):
+                for j in range(mode.shape[1]):
+                    if i!=j:
+                        r=T[i]/T[j]
+                        rho[i,j]=8*xi**2*(1+r)*r**1.5/((1-r**2)**2+4*xi**2*r*(1+r)**2)
+                    res+=rho[i,j]*S[:,i]*S[:,j]
+            res=np.sqrt(res)
+        elif comb=='SRSS':
+            res=0
+            for i in range(mode.shape[1]):
+                res+=S[:,i]**2
+            res=np.sqrt(res)
+        path=os.path.join(self.workpath,casename+'.d') #nodal displacement
+        np.save(path,res)
+        return True
+
+class TimeHistorySolver(Solver):
+    def __init__(self,workpath:str,filename:str):
+        super().__init__(workpath,filename)
+
+    @property
+    def workpath(self):
+        return super().workpath
+
+    def solve(self,casename:str):
+        assembly=super().assembly
+        algo=assembly.get_loadcase_setting(casename)['algorithm']
+        if algo=='direct_time_integration':
+            self.solve_direct_time_integration(casename)
+        elif algo=='modal_decomposition':
+            self.solve_modal_decomposition()
+
+    def solve_direct_time_integration(self,casename:str):
+        assembly=super().assembly
+        logging.info('Solving TIME-HISTORY case {} using DIRECT TIME INTEGRATION'.format(casename))
+        setting=assembly.get_loadcase_setting(casename)
+        dt=setting['step_size']
+        damping=setting['damping']
+        
+        precase=setting['base_case']
+        if precase==None:
+            base_case="0"
+        
+        path=os.path.join(self.workpath,base_case+'.k') #stiff matrix
+        if os.path.exists(path):
+            K=np.load(path)
+        else:
+            K=assembly.assemble_K()
+            np.save(path,K)
+        path=os.path.join(self.workpath,base_case+'.m') #mass matrix
+        if os.path.exists(path):
+            M=np.load(path)
+        else:
+            M=assembly.assemble_M()
+            np.save(path,M)
+
+        f=assembly.assemble_f(casename)        
+        C=np.ones(K_.shape)*damping
+        K_,M_,C_,f_=assembly.assemble_boundary(casename,K,M,C,f)
+
+        d=np.zeros()
+        path=os.path.join(self.workpath,casename+'.d')
+        np.save(path,d)
+        return True
+
+
+
     def solve_modal_decomposition(model:Model,n,T,F,u0,v0,a0,xi):
         """
         Solve time-history problems with modal decomposition method.\n
@@ -146,62 +270,7 @@ class ModalSolver(Solver):
         for i in range(len(T)):
             y_.append(A*R_)
 
-    def response_spectrum(model:Model,spec,mdd,n=60,comb='CQC'):
-        """
-        spec: a {'T':period,'a':acceleration} dictionary of spectrum\n
-        mdd: a list of modal damping ratio\n
-        comb: combination method, 'CQC' or 'SRSS'
-        """
-        K=model.K_
-        M=model.M_
-        DOF=model.DOF
-        w,f,T,mode=eigen_mode(model,DOF)
-        mode[n:,:]=np.zeros((DOF-n,DOF))#use n modes only.
-        mode[:,n:]=np.zeros((DOF,DOF-n))
-        M_=np.dot(np.dot(mode.T,M),mode)#generalized mass
-        K_=np.dot(np.dot(mode.T,K),mode)#generalized stiffness
-        L_=np.dot(np.diag(M),mode)
-        px=[]
-        Vx=[]
-        Xm=[]
-        gamma=[]
-        mx=np.diag(M)
-        for i in range(len(mode)):
-            #mass participate factor
-            px.append(-np.dot(mode[:,i].T,mx))
-            Vx.append(px[-1]**2)
-            Xm.append(Vx[-1]/3/m)
-            #modal participate factor
-            gamma.append(L_[i]/M_[i,i])    
-        S=np.zeros((DOF,mode.shape[0]))
-        
-
-        for i in range(mode.shape[1]):        
-            xi=mdd[i]
-            y=np.interp(T[i],spec['T'],spec['a'])
-            y/=w[i]**2
-            S[:,i]=gamma[i]*y*mode[:,i]
-
-        if comb=='CQC':
-            cqc=0    
-            rho=np.diag(np.ones(mode.shape[1]))
-            for i in range(mode.shape[1]):
-                for j in range(mode.shape[1]):
-                    if i!=j:
-                        r=T[i]/T[j]
-                        rho[i,j]=8*xi**2*(1+r)*r**1.5/((1-r**2)**2+4*xi**2*r*(1+r)**2)
-                    cqc+=rho[i,j]*S[:,i]*S[:,j]
-            cqc=np.sqrt(cqc)
-            print(cqc)
-        elif comb=='SRSS':
-            srss=0
-            for i in range(mode.shape[1]):
-                srss+=S[:,i]**2
-            srss=np.sqrt(srss)
-            print(srss)
-        
-        
-    def Newmark_beta(model:Model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
+    def solve_Newmark_beta(model:Model,T,F,u0,v0,a0,beta=0.25,gamma=0.5):
         """
         beta,gamma: parameters.\n
         u0,v0,a0: initial state.\n
@@ -232,7 +301,7 @@ class ModalSolver(Solver):
         df=pd.DataFrame({'t':tt,'u':u,'v':v,'a':a})
         return df
         
-    def Wilson_theta(model:Model,T,F,u0=0,v0=0,a0=0,beta=0.25,gamma=0.5,theta=1.4):
+    def solve_Wilson_theta(model:Model,T,F,u0=0,v0=0,a0=0,beta=0.25,gamma=0.5,theta=1.4):
         """
         beta,gamma,theta: parameters.\n
         u0,v0,a0: initial state.\n
@@ -280,6 +349,7 @@ if __name__=='__main__':
     from structengpy.core.fe_model.model import Model
     from structengpy.core.fe_model.load.pattern import LoadPattern
     from structengpy.core.fe_model.load.loadcase import ModalCase
+    from structengpy.common.curve import Curve
 
     path="./test"
     if sys.platform=="win32":
@@ -288,14 +358,30 @@ if __name__=='__main__':
     model=Model()
     model.add_node("1",0,0,0)
     model.add_node("2",6,0,0)
-    model.add_simple_beam("A","1","2",E=2e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
+    model.add_isotropic_material('steel',7849.0474,2e11,0.3,1.17e-5)
+    model.add_beam_section_I('H400x200x20x30','steel',0.4,0.2,0.02,0.03)
+    model.add_beam("A","1","2",'H400x200x20x30')
+    model.set_nodal_restraint("1",True,True,True,True,True,True)
     # model.set_nodal_mass("2",1,1,1,1,1,1)
 
-    lc=ModalCase("eigen")
-    lc.use_load_as_mass=False
-    lc.set_nodal_restraint("1",True,True,True,True,True,True)
-    asb=Assembly(model,[lc])
+    lc1=ModalCase("eigen",3)
+    lc1.use_load_as_mass=False
+
+    curve=Curve.sin('sine',10,1,1,0.1,100).to_array()
+
+    lc2=TimeHistoryCase("time_history",curve)
+    lc2.use_direct_time_integration(step_size=0.1)
+
+    asb=Assembly(model,[lc1,lc2])
     asb.save(path,"test.asb")
+
     solver=ModalSolver(path,"test.asb")
-    solver.solve_eigen("eigen",6)
-    d=np.load(os.path.join(path,"eigen.o.npy"))
+    solver.solve("eigen")
+    omega2=np.load(os.path.join(path,"eigen.o.npy"))
+    d=np.load(os.path.join(path,"eigen.d.npy"))
+    print(2*np.pi/np.sqrt(omega2))
+    print(d.T)
+
+    solver=TimeHistorySolver(path,"test.asb")
+    solver.solve("time_history")
+    d=np.load(os.path.join(path,"time_history.d.npy"))

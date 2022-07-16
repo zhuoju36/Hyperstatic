@@ -27,7 +27,7 @@ class TestApi():
         api.add_static_case("case1")
         api.add_case_pattern("case1","pat1",1.0)
 
-        api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
         api.assemble()
 
@@ -60,7 +60,7 @@ class TestApi():
         api.add_static_case("case1")
         api.add_case_pattern("case1","pat1",1.0)
 
-        api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
         api.assemble()
         api.solve_static("case1")
@@ -84,7 +84,7 @@ class TestApi():
         api.add_static_case("case1")
         api.add_case_pattern("case1","pat1",1.0)
 
-        api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
         api.assemble()
 

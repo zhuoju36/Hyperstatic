@@ -15,9 +15,12 @@ from structengpy.core.fe_model.element.line.beam import Beam
 from structengpy.core.fe_model.element.tri.membrane import Membrane3
 from structengpy.core.fe_model.element.quad.membrane import Membrane4
 
+import logging
+
 class Model:
     def __init__(self):
         self.__nodes:Dict[str,Node]={}
+        self.__nodal_restraints:Dict[str,list]={} 
         self.__material:Dict[str,Material]={}
         self.__beam_section:Dict[str,BeamSection]={}
         self.__beams:Dict[str,Beam]={}
@@ -78,6 +81,19 @@ class Model:
         else:
             dup_name=res[0].name
             res=self.__hid['node'][dup_name]
+        return res
+
+    def set_nodal_restraint(self,name,u1:bool,u2:bool,u3:bool,r1:bool,r2:bool,r3:bool)->bool:
+        if name not in self.__nodes.keys():
+            logging.warning("Node name %s is not defined, nodal restraint setting is aborted."%name)
+            return False
+        self.__nodal_restraints[name]=np.array([u1,u2,u3,r1,r2,r3])
+        return True
+
+    def get_nodal_restraint_dict(self):
+        res={}
+        for k,v in self.__nodal_restraints.items():
+            res[k]=np.array(v)
         return res
 
     def set_nodal_mass(self,name:str,u1:float,u2:float,u3:float,r1:float,r2:float,r3:float):

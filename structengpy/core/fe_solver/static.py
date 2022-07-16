@@ -30,7 +30,7 @@ class StaticSolver(Solver):
 
     def solve_linear(self,casename,precase=None)->bool:
         assembly=super().assembly
-        logging.info('Solving problem with %d DOFs...'%assembly.DOF)
+        logging.info('Solving STATIC case with %d DOFs...'%assembly.DOF)
         
         if precase==None:
             base_case="0"

@@ -453,10 +453,34 @@ class Api(object):
             logging.warning(str(e)+" when adding load pattern")
             return False
 
-    def set_nodal_restraint(self,case:str,node:str,
+    def set_nodal_restraint(self,node:str,
             u1:bool=False,u2:bool=False,u3:bool=False,
             r1:bool=False,r2:bool=False,r3:bool=False,)->bool:
-        """设置结点约束
+        """设置全局结点约束
+
+        Args:
+            node (str): 结点名
+            u1 (bool, optional): 自由度. 默认为False.
+            u2 (bool, optional): 自由度. 默认为False.
+            u3 (bool, optional): 自由度. 默认为False.
+            r1 (bool, optional): 自由度. 默认为False.
+            r2 (bool, optional): 自由度. 默认为False.
+            r3 (bool, optional): 自由度. 默认为False.
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.set_nodal_restraint(node,u1,u2,u3,r1,r2,r3)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when setting nodal restraints")
+            return False
+
+    def set_loadcase_nodal_restraint(self,case:str,node:str,
+            u1:bool=False,u2:bool=False,u3:bool=False,
+            r1:bool=False,r2:bool=False,r3:bool=False,)->bool:
+        """设置工况结点约束，覆盖全局约束设置
 
         Args:
             case (str): 工况名
@@ -475,7 +499,7 @@ class Api(object):
             self.__loadcases[case].set_nodal_restraint(node,u1,u2,u3,r1,r2,r3)
             return True
         except Exception as e:
-            logging.warning(str(e)+" when setting nodal restraints")
+            logging.warning(str(e)+" when setting loadcase nodal restraints")
             return False
 
     def set_nodal_load(self,pattern:str,node:str,

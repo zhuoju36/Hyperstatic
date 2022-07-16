@@ -1,11 +1,12 @@
 
+from os import curdir
 import numpy as np
 
 class Curve(object):
     def __init__(self,name:str,x:list,y:list):
         self.__name=name
-        self.__x=np.array(x)
-        self.__y=np.array(y)
+        self.__x=np.array(x,dtype=float)
+        self.__y=np.array(y,dtype=float)
 
     @property
     def name(self):
@@ -19,10 +20,17 @@ class Curve(object):
     def y(self):
         return self.__y
 
-    @classmethod
-    def from_file(cls,self):
-        pass
+    def to_array(self):
+        return np.vstack([self.__x,self.__y])
 
-    @classmethod
-    def from_function(cls,func):
-        pass
+    @staticmethod
+    def sin(name:str,A:float,w:float,phi:float,dt:float,n:int):
+        x=np.arange(0,n*dt,dt)
+        y=A*np.sin(w*x+phi)
+        return Curve(name,x,y)
+
+    @staticmethod
+    def cos(name:str,A:float,w:float,phi:float,dt:float,n:int):
+        x=np.arange(0,n*dt,dt)
+        y=A*np.cos(w*x+phi)
+        return Curve(name,x,y)

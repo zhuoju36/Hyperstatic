@@ -50,7 +50,7 @@ api.add_static_case("case1")
 api.add_case_pattern("case1","pat1",1.0)
 
 # 向工况添加结点约束
-api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
 # 集成求解数据
 api.assemble()
@@ -62,6 +62,9 @@ api.solve_static("case1")
 d=api.result_get_nodal_displacement("B","case1")
 print("Deflection at node B is %4.6f m"%d[2])
 ```
+
+### 可视化
+
 
 ## 留言讨论
 - [github](https://github.com/zhuoju36)
