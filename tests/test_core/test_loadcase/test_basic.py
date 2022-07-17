@@ -29,5 +29,5 @@ class TestBasic():
         lc.add_pattern_time_history(lp1,1,c1)
         lc.add_pattern_time_history(lp2,1,c2)
         f=lc.get_nodal_f_time_history("1")
-        assert f[10,2]==1.2142872898611885
+        assert f[10,2]==approx(1.2142872898611885,rel=1e-3)
     

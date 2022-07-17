@@ -16,12 +16,19 @@ class Assembly(object):
         self.__loadcase:Dict[str,LoadCase]={}
         for lc in loadcases:
             self.__loadcase[lc.name]=lc
-            if lc.get_nodal_restraint_dict()!={}:
-                continue
-            for k,v in restraints.items():
-                lc.set_nodal_restraint(k,*tuple(v)) #set uniform restraints if no restraint is set. lc is the same object as self.__loadcase[lc.name]
+            # if lc.get_nodal_restraint_dict()!={}:
+            #     continue
+            # for k,v in restraints.items():
+            #     lc.set_nodal_restraint(k,*tuple(v)) #set uniform restraints if no restraint is set. lc is the same object as self.__loadcase[lc.name]
             
         self.__dof:int=self.node_count*6
+        self.__fixed_dof=[]
+        for node in restraints.keys():
+            i=self.__model.get_node_hid(node)
+            for j in range(6):
+                if restraints[node][j]:
+                    self.__fixed_dof.append(i*6+j)
+                    self.__dof-=1
         
     @property
     def DOF(self):
@@ -61,6 +68,10 @@ class Assembly(object):
     def get_loadcase_setting(self,casename:str):
         loadcase=self.__loadcase[casename]
         return loadcase.get_settings()
+
+    def get_max_min_step(self,casename:str):
+        loadcase=self.__loadcase[casename]
+        return loadcase.get_max_min_step()
 
     # def get_static_case_setting(self,case:str):
     #     if not type(self.__loadcase) is StaticCase:
@@ -260,14 +271,61 @@ class Assembly(object):
         #### other elements
         return __K,__M
 
-    def assemble_f(self,casename:str):
-        """
-        Assemble load vector and displacement vector.
-        """
-        logging.info('Assembling f..')
+#     def assemble_f(self,casename:str):
+#         """
+#         Assemble load vector and displacement vector.
+#         """
+#         logging.info('Assembling f..')
+#         n_nodes=self.__model.node_count
+# #        self.__f = spr.coo_matrix((n_nodes*6,1))
+#         #Beam load and displacement, and reset the index
+#         data_f=[]
+#         row_f=[]
+#         col_f=[]
+#         loadcase=self.__loadcase[casename]
+#         for node in self.__model.get_node_names():
+#             T=self.__model.get_node_transform_matrix(node)
+#             Tt=T.transpose()
+# #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
+#             fn=loadcase.get_nodal_f(node)
+#             fn_=np.dot(Tt,fn)
+#             k=0
+#             for f in fn_.reshape(6):
+#                 if f!=0:
+#                     hid=self.__model.get_node_hid(node)
+#                     data_f.append(f)
+#                     row_f.append(hid*6+k)
+#                     col_f.append(0)
+#                 k+=1
+            
+#         for beam in self.__model.get_beam_names():
+#             i,j=self.__model.get_beam_node_hids(beam)
+#             l=self.__model.get_beam_length(beam)
+#             #Transform matrix
+#             V=self.__model.get_beam_transform_matrix(beam)
+#             Vt = V.transpose()
+#             re=loadcase.get_beam_f(beam,l)
+#             re=self.__model.get_beam_condensated_f(beam,re)
+#             re_=Vt.dot(re)
+#             k=0
+#             for r in re_.reshape(12):
+#                 if r!=0:
+#                     data_f.append(r)
+#                     row_f.append(i*6+k if k<6 else j*6+k-6)
+#                     col_f.append(0)
+#                 k+=1
+#             # row=[a for a in range(0*6,0*6+6)]+[a for a in range(1*6,1*6+6)]
+#             # col=[a for a in range(i*6,i*6+6)]+[a for a in range(j*6,j*6+6)]
+#             # data=[1]*(2*6)
+#             # G=spr.csr_matrix((data,(row,col)),shape=(2*6,n_nodes*6))
+#             # #Assemble nodal force vector
+#             # self.__f += G.transpose()*re_
+#         #### other elements
+#         __f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
+#         return __f
+
+    def assemble_f(self,casename:str,time_step=0):
         n_nodes=self.__model.node_count
-#        self.__f = spr.coo_matrix((n_nodes*6,1))
-        #Beam load and displacement, and reset the index
         data_f=[]
         row_f=[]
         col_f=[]
@@ -276,7 +334,7 @@ class Assembly(object):
             T=self.__model.get_node_transform_matrix(node)
             Tt=T.transpose()
 #            self.__f[node.hid*6:node.hid*6+6,0]=np.dot(Tt,node.fn) 
-            fn=loadcase.get_nodal_f(node)
+            fn=loadcase.get_nodal_f(node,time_step)
             fn_=np.dot(Tt,fn)
             k=0
             for f in fn_.reshape(6):
@@ -313,42 +371,62 @@ class Assembly(object):
         __f=spr.coo_matrix((data_f,(row_f,col_f)),shape=(n_nodes*6,1)).tocsr()
         return __f
 
-    def assemble_boundary(self,casename:str,matrixK:spr.csr_matrix,matrixM:spr.csr_matrix=None,matrixC:spr.csr_matrix=None,vectorF:spr.csr_matrix=None):
-        logging.info('Assembling boundary condition..')
+
+    # def assemble_boundary(self,casename:str,matrixK:spr.csr_matrix,matrixM:spr.csr_matrix=None,matrixC:spr.csr_matrix=None,vectorF:spr.csr_matrix=None):
+    #     logging.info('Assembling boundary condition..')
+    #     loadcase:LoadCase=self.__loadcase[casename]
+    #     K=matrixK.copy()
+    #     if matrixM is not None:
+    #         M=matrixM.copy()
+    #     if matrixC is not None:
+    #         C=matrixC.copy()
+    #     if vectorF is not None:
+    #         f=vectorF.copy()
+    #     rest=loadcase.get_nodal_restraint_dict()
+    #     fixed=[]
+    #     for node in rest.keys():
+    #         i=self.__model.get_node_hid(node)
+    #         for j in range(6):
+    #             if rest[node][j]:
+    #                 fixed.append(i*6+j)
+    #                 self.__dof-=1
+    #     K=self.__drop_matrix_dof(K,fixed).tocsr()
+    #     if matrixM is not None:
+    #         M=self.__drop_matrix_dof(M,fixed).tocsr()
+    #     if matrixC is not None:
+    #         C=self.__drop_matrix_dof(C,fixed).tocsr()
+    #     if vectorF is not None:
+    #         f=self.__drop_vector_dof(f,fixed).toarray()
+    #     res=[K]
+    #     if matrixM is not None:
+    #         res.append(M)
+    #     if matrixC is not None:
+    #         res.append(C)
+    #     if vectorF is not None:
+    #         res.append(f)
+    #     if len(res)==1:
+    #         return K
+    #     else:
+    #         return tuple(res)
+
+    def assemble_boundary(self,casename:str,array):
         loadcase:LoadCase=self.__loadcase[casename]
-        K=matrixK.copy()
-        if matrixM is not None:
-            M=matrixM.copy()
-        if matrixC is not None:
-            C=matrixC.copy()
-        if vectorF is not None:
-            f=vectorF.copy()
         rest=loadcase.get_nodal_restraint_dict()
         fixed=[]
-        for node in rest.keys():
-            i=self.__model.get_node_hid(node)
-            for j in range(6):
-                if rest[node][j]:
-                    fixed.append(i*6+j)
-                    self.__dof-=1
-        K=self.__drop_matrix_dof(K,fixed).tocsr()
-        if matrixM is not None:
-            M=self.__drop_matrix_dof(M,fixed).tocsr()
-        if matrixC is not None:
-            C=self.__drop_matrix_dof(C,fixed).tocsr()
-        if vectorF is not None:
-            f=self.__drop_vector_dof(f,fixed).toarray()
-        res=[K]
-        if matrixM is not None:
-            res.append(M)
-        if matrixC is not None:
-            res.append(C)
-        if vectorF is not None:
-            res.append(f)
-        if len(res)==1:
-            return K
+        if rest=={}:
+            fixed=self.__fixed_dof
         else:
-            return tuple(res)
+            for node in rest.keys():
+                i=self.__model.get_node_hid(node)
+                for j in range(6):
+                    if rest[node][j]:
+                        fixed.append(i*6+j)
+        A=array.copy()
+        if A.shape[0]==1 or A.shape[1]==1:
+            A=self.__drop_vector_dof(A,fixed).toarray()
+        else:
+            A=self.__drop_matrix_dof(A,fixed).tocsr()
+        return A
  
     def __drop_matrix_dof(self,M:spr.coo_matrix, indices:list)->spr.coo_matrix:
         keepr = ~np.in1d(M.row, indices)
@@ -361,7 +439,7 @@ class Assembly(object):
         A=spr.coo_matrix((data,(row,col)),shape=(M.shape[0]-len(indices),M.shape[1]-len(indices)))
         return A
 
-    def __drop_vector_dof(self,V:spr.csr_matrix, indices:list)->np.array:
+    def __drop_vector_dof(self,V:spr.coo_matrix, indices:list)->np.array:
         keep = ~np.in1d(np.arange(V.shape[0]), indices)
         return V[keep].copy()
 

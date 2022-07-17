@@ -16,9 +16,13 @@ class LoadCase(object):
     def name(self):
         return self.__name
 
-    def add_pattern(self,pattern:LoadPattern,factor:float):
+    def add_pattern(self,pattern:LoadPattern,factor:float,curve:np.array=None):
         self.__pattern[pattern.name]=pattern
         self.__load_factor[pattern.name]=factor
+        if curve is None:
+            self.__load_curve[pattern.name]=np.array([[0,1],[1,1]])
+        else:
+            self.__load_curve[pattern.name]=curve
 
     def add_pattern_time_history(self,pattern:LoadPattern,factor:float,curve:np.array):
         self.__pattern[pattern.name]=pattern
@@ -37,14 +41,33 @@ class LoadCase(object):
             res[k]=np.array(v)
         return res
 
-    def get_nodal_f(self,name):
+    def get_max_min_step(self):
+        ma=0
+        mi=1e20
+        for v in self.__load_curve.values():
+            ma=max(ma,v.shape[1])
+            mi=min(mi,v.shape[1])
+        return ma,mi
+        
+
+    # def get_nodal_f(self,name):
+    #     fn=np.zeros(6)
+    #     for patname,factor in self.__load_factor.items():
+    #         pat=self.__pattern[patname]
+    #         f=pat.get_nodal_f(name)
+    #         if f is None:
+    #             continue
+    #         fn+=f*factor   
+    #     return fn
+
+    def get_nodal_f(self,name,time_step=0):
         fn=np.zeros(6)
         for patname,factor in self.__load_factor.items():
             pat=self.__pattern[patname]
             f=pat.get_nodal_f(name)
             if f is None:
                 continue
-            fn+=f*factor   
+            fn+=f*factor*self.__load_curve[patname][1,time_step]
         return fn
 
     def get_nodal_f_time_history(self,name):

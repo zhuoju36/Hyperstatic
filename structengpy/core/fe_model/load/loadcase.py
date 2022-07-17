@@ -31,8 +31,8 @@ class StaticCase(LoadCase):
     def get_nodal_restraint_dict(self):
         return super().get_nodal_restraint_dict()
 
-    def get_nodal_f(self,name):
-        return super().get_nodal_f(name)
+    def get_nodal_f(self,name,time_step=0):
+        return super().get_nodal_f(name,time_step)
 
     def get_nodal_f_dict(self):
         return super().get_nodal_f_dict()
@@ -60,6 +60,7 @@ class ModalCase(LoadCase):
         self.__n_modes=n_modes
         self.__base_case=base_case
         self.__algorithm="eigen"
+        self.__params={}
 
     @property
     def use_load_as_mass(self):
@@ -121,24 +122,23 @@ class TimeHistoryCase(LoadCase):
         super().__init__(name)
         self.__base_case=base_case
         self.__algorithm=None
-        self.__param={}
+        self.__params={}
 
     def use_modal_decomposition(self,modal_case:str,):
         self.__algorithm="modal_decomposition"
-        self.__param={
+        self.__params={
             "modal_case":modal_case,
         }
 
-    def use_direct_time_integration(self,step_size:float):
+    def use_direct_time_integration(self,step_size:float,damping_ratio:float):
         self.__algorithm="direct_time_integration"
-        self.__param={
+        self.__params={
             "step_size":step_size,
+            "damping_ratio":damping_ratio,
         }
 
     def add_pattern(self,pattern:LoadPattern,factor:float,curve:np.array):
-        self.__load_factor[pattern.name]=curve
-        self.__load_curve[pattern.name]=curve
-        super().add_pattern(pattern,factor)
+        super().add_pattern(pattern,factor,curve)
 
     def set_pattern_factor(self,name,factor):
         super().set_pattern_factor(name,factor)
@@ -170,12 +170,14 @@ class TimeHistoryCase(LoadCase):
     def get_nodal_restraint_dict(self):
         return super().get_nodal_restraint_dict()
 
+    def get_max_min_step(self):
+        return super().get_max_min_step()
+
     def get_settings(self):
         return {
-            'curve':self.__curve,
-            'base_case':self.__base_case,
-            'algorithm':self.__algorithm,
-            'param':self.__param
-        }
+            "base_case":self.__base_case,
+            "algorithm":self.__algorithm,
+            "params":self.__params.copy()
+            }
 
         

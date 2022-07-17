@@ -9,7 +9,7 @@ import os
 import logging
 import numpy as np
 from scipy import linalg
-from scipy import sparse as sp
+from scipy import sparse as spr
 import scipy.sparse.linalg as sl
 
 from structengpy.core.fe_model.model import Model
@@ -55,7 +55,8 @@ class ModalSolver(Solver):
             M=assembly.assemble_M()
             np.save(path,M)
     
-        K_,M_=assembly.assemble_boundary(casename,K,M)
+        K_=assembly.assemble_boundary(casename,K)
+        M_=assembly.assemble_boundary(casename,M)
 
         if k>assembly.DOF:
             logging.info('Warning: the modal number to extract is larger than the system DOFs, only %d modes are available'%assembly.DOF)
@@ -173,11 +174,10 @@ class TimeHistorySolver(Solver):
         assembly=super().assembly
         logging.info('Solving TIME-HISTORY case {} using DIRECT TIME INTEGRATION'.format(casename))
         setting=assembly.get_loadcase_setting(casename)
-        dt=setting['step_size']
-        damping=setting['damping']
+        dt=setting["params"]['step_size']
+        damping=setting["params"]['damping_ratio']
         
-        precase=setting['base_case']
-        if precase==None:
+        if setting['base_case']==None:
             base_case="0"
         
         path=os.path.join(self.workpath,base_case+'.k') #stiff matrix
@@ -192,14 +192,48 @@ class TimeHistorySolver(Solver):
         else:
             M=assembly.assemble_M()
             np.save(path,M)
+        
+        ########Simple damping
 
-        f=assembly.assemble_f(casename)        
-        C=np.ones(K_.shape)*damping
-        K_,M_,C_,f_=assembly.assemble_boundary(casename,K,M,C,f)
+        ########Reileigh Damping
+        xi_i=0.05
+        xi_j=0.02
+        T_i=2.0
+        T_j=1.0
+        omega_i=2*np.pi/T_i
+        omega_j=2*np.pi/T_j
+        a0=2*omega_i*omega_j/(omega_j**2-omega_i**2)*(xi_i*omega_j-xi_j*omega_i)
+        a1=2*omega_i*omega_j/(omega_j**2-omega_i**2)*(-xi_i/omega_j+xi_j/omega_i)
+        C=(a0*M+a1*K).tocoo()
+        print(a0,a1)
 
-        d=np.zeros()
+        #########Cauchy Damping
+
+        K_=assembly.assemble_boundary(casename,K)
+        M_=assembly.assemble_boundary(casename,M)
+        C_=assembly.assemble_boundary(casename,C)
+
+        u=np.zeros((2,K_.shape[0])) #-dt,0, row-first.
+        v=np.zeros((2,K_.shape[0]))
+        a=np.zeros((2,K_.shape[0]))
+        c0=1/dt/dt
+        c1=1/2/dt
+        c2=2*c0
+        c3=1/c2
+        u[0,:]=u[1,:]-dt*v[1,:]+c3*a[1,:] #central diff
+        M_hat=c0*M_+c1*C_
+#         L,D,perm=linalg.ldl(M_hat)
+        tmax,tmin=assembly.get_max_min_step(casename)
+        for t in range(tmin):
+            f=assembly.assemble_f(casename,t)
+            f_=assembly.assemble_boundary(casename,f)
+            f_hat=(f_.reshape(1,6)-(K_-c2*M_).dot(u[t,:])-(c0*M_-c1*C_).dot(u[t-1,:])).reshape(6,1)
+            d,info=sl.cg(M_hat,f_hat)
+            u=np.vstack([u,d])
+            # v.append(c1*(-a[t-1]+a[t+1]))
+            # a.append(c0*(a[t-1]-2*a[t]+a[t+1]))
         path=os.path.join(self.workpath,casename+'.d')
-        np.save(path,d)
+        np.save(path,u[1:,:]) #neglect t=-1
         return True
 
 
@@ -344,6 +378,7 @@ class TimeHistorySolver(Solver):
         return df
 
 if __name__=='__main__':
+    spr.diags()
     import sys
     from structengpy.core.fe_model.assembly import Assembly
     from structengpy.core.fe_model.model import Model
@@ -367,7 +402,7 @@ if __name__=='__main__':
     lc1=ModalCase("eigen",3)
     lc1.use_load_as_mass=False
 
-    curve=Curve.sin('sine',10,1,1,0.1,100).to_array()
+    curve=Curve.sin('sine',A=10,w=1,phi=1,dt=0.1,n=100).to_array()
 
     lc2=TimeHistoryCase("time_history",curve)
     lc2.use_direct_time_integration(step_size=0.1)

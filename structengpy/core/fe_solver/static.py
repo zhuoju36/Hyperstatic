@@ -42,7 +42,8 @@ class StaticSolver(Solver):
                 np.save(path,K)
             
         f=assembly.assemble_f(casename)
-        K_,f_ =assembly.assemble_boundary(casename,K,vectorF=f)
+        K_ =assembly.assemble_boundary(casename,K)
+        f_ =assembly.assemble_boundary(casename,f)
         logging.info('Start solving linear equations!')
         delta,info=sl.cg(K_,f_,atol='legacy') #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
         logging.info('Done!')
