@@ -99,7 +99,7 @@ class Model:
     def set_nodal_mass(self,name:str,u1:float,u2:float,u3:float,r1:float,r2:float,r3:float):
         self.__nodes[name].mass=np.array([u1,u2,u3,r1,r2,r3])
 
-    def add_isotropic_material(self,name:str,rho,E:float,mu:float,a:float)->bool:
+    def add_isotropic_material(self,name:str,rho:float,E:float,mu:float,a:float)->bool:
         mat=IsotropicMaterial(name,rho,E,mu,a)
         self.__material[name]=mat
 

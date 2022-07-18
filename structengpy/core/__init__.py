@@ -177,11 +177,12 @@ class Api(object):
             logging.warning(str(e)+" when setting nodal mass")
             return False
 
-    def add_isotropic_material(self,name:str,E:float,mu:float,a:float)->bool:
+    def add_isotropic_material(self,name:str,rho:float,E:float,mu:float,a:float)->bool:
         """向模型中添加各向同性材料
 
         Args:
             name (str): 材料名
+            rho (float): 密度
             E (float): 弹性模量
             mu (float): 泊松比
             a (float): 热膨胀系数
@@ -190,7 +191,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_isotropic_material(name,E,mu,a)
+            self.__model.add_isotropic_material(name,rho,E,mu,a)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding isotropy material")

@@ -489,9 +489,14 @@ class Assembly(object):
         # else:
         #     return tuple(res)
 
-    def restraintDOF(self,casename:str):
-        loadcase=self.__loadcase[casename]
-        rest=loadcase.get_nodal_restraint_dict()
+    def restraintDOF(self,casename:str=None):
+        rest={}
+        if casename is None:
+            rest=self.__model.get_nodal_restraint_dict()
+        else:
+            loadcase=self.__loadcase[casename]
+            rest=loadcase.get_nodal_restraint_dict()
+            
         dof=[]
         for node in rest.keys():
             i=self.__model.get_node_hid(node)

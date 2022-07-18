@@ -91,3 +91,31 @@ class TestApi():
         api.solve_static("case1")
         d=api.result_get_nodal_displacement("B","case1")
         assert d[2]==approx(0.0018,rel=5e-2)
+
+    def test_cantilever_beam_with_concentrated_load(self):
+        path="./test"
+        if sys.platform=="win32":
+            path="c:\\test"
+
+        api=Api(path)
+        api.add_node("A",0,0,0)
+        api.add_node("B",6,0,0)
+
+        api.add_isotropic_material('steel',7.85e10,2e11,0.3,1e-7)
+        api.add_beam_section_I('H400x200x20x30','steel',0.400,0.200,0.020,0.030)
+        api.add_beam_section_general()
+        api.add_beam("b","A","B",'H400x200x20x30')
+
+        api.add_loadpattern("pat1")
+        api.set_beam_load_concentrated("pat1","b",M3=1e4,r=0.75)
+
+        api.add_static_case("case1")
+        api.add_case_pattern("case1","pat1",1.0)
+
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
+
+        api.assemble()
+
+        api.solve_static("case1")
+        d=api.result_get_nodal_displacement("B","case1")
+        # assert d[2]==approx(0.0018,rel=5e-2)
