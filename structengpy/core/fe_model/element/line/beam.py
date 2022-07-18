@@ -158,6 +158,9 @@ class Beam(Line):
                 _Me[i,i]=1e-12 #will be singular if zero
         return _Me.tocoo()
 
+    def integrate_f(self):
+        pass
+
     def get_shape_function(self):
         Na1=lambda xi: 0.5*(1-xi)
         Na2=lambda xi: 0.5*(1+xi)

@@ -4,7 +4,7 @@ from structengpy.common.csys import Cartesian
 from structengpy.core.fe_model.element import Element
 
 class Quad(Element):
-    def __init__(self,node_i,node_j,node_k,node_l,t,E,mu,rho,dof,name=None,tol=1e-6):
+    def __init__(self,name,node_i,node_j,node_k,node_l,dof):
 
         #Initialize local CSys,could be optimized by using a MSE plane
         o=[(node_i.x+node_j.x+node_k.x+node_l.x)/4,
@@ -28,20 +28,7 @@ class Quad(Element):
         area+=0.5*np.linalg.det(np.array([[1,1,1],
                             [node_l.x-node_i.x,node_l.y-node_i.y,node_l.z-node_i.z],
                             [node_j.x-node_i.x,node_j.y-node_i.y,node_j.z-node_i.z]]))
-        self._area=area/4
-        self._mass=rho*self._area*t
-
-        self._t=t
-        self._E=E
-        self._mu=mu
-
-        E=self._E
-        mu=self._mu
-        D0=E/(1-mu**2)
-        self._D=np.array([[1,mu,0],
-                    [mu,1,0],
-                    [0,0,(1-mu)/2]])*D0
-
+        self.__area=area/4
         #3D to local 2D
         V=csys.transform_matrix
         x3D=np.array([[node_i.x,node_i.y,node_i.z],
@@ -53,4 +40,4 @@ class Quad(Element):
 
     @property
     def area(self):
-        return self._area
+        return self.__area
