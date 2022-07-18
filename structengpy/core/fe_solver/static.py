@@ -47,7 +47,10 @@ class StaticSolver(Solver):
         logging.info('Start solving linear equations!')
         delta,info=sl.cg(K_,f_,atol='legacy') #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
         logging.info('Done!')
-        for i in assembly.restraintDOF():
+        restraintDOF=assembly.restraintDOF(casename) #case restraint first, then model
+        if len(restraintDOF)==0:
+            restraintDOF=assembly.restraintDOF()
+        for i in restraintDOF: 
             delta=np.insert(delta,i,0,0)
 
         d_=delta.reshape((1,assembly.node_count*6)) #row-first, d_ contains all the displacements including the restraint DOFs
