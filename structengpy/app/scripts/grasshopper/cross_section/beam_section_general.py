@@ -22,10 +22,10 @@ class MyComponent(component):
         
         __author__ = "Zhuoju Huang"
         __version__ = "2022.07.12"
-        
         class Section():
             def __init__(self,name,mat,A,As2,As3,J,I2,I3):
                 self.name=name
+                self.shape="general"
                 self.material=mat
                 self.rho=material.rho
                 self.E=material.E

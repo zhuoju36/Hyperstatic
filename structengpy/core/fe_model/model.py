@@ -197,11 +197,17 @@ class Model:
     def get_node_names(self):
         return list(self.__nodes.keys())
 
+    def get_node_location(self,name):
+        return self.__nodes[name].loc
+
     def get_nodal_mass(self,name:str):
         return self.__nodes[name].mass
 
     def get_beam_names(self):
         return list(self.__beams.keys())
+
+    def get_beam_connection(self,name:str):
+        return self.__beams[name].nodes[0].name,self.__beams[name].nodes[1].name
 
     def get_node_hid(self,name:str):
         return self.__hid['node'][name]

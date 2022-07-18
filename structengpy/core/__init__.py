@@ -118,7 +118,7 @@ class Api(object):
             list: 结点名列表
         """
         try:
-            return self.__model.nodes.keys()
+            return self.__model.get_node_names()
         except Exception as e:
             logging.warning("Error when getting node names. Exception: "+str(e))
             return None
@@ -133,7 +133,7 @@ class Api(object):
             tuple: 三维坐标
         """
         try:
-            return self.__model.nodes[name].loc
+            return self.__model.get_node_location(name)
         except Exception as e:
             logging.warning("Error when getting node location of %s"%name+" Exception: "+str(e))
             return None
@@ -373,7 +373,7 @@ class Api(object):
             list: 梁名列表
         """
         try:
-            return self.__model.beams.keys()
+            return self.__model.get_beam_names()
         except Exception as e:
             logging.warning("Error when getting beam names. Exception: "+str(e))
             return None
@@ -388,7 +388,7 @@ class Api(object):
             tuple: 梁结点名
         """
         try:
-            return tuple(self.__model.beams[beam_name].get_node_names())
+            return tuple(self.__model.get_beam_connection(beam_name))
         except Exception as e:
             logging.warning("Error when getting beam node names. Exception: "+str(e))
             return None

@@ -8,16 +8,17 @@ import subprocess
 
 class MyComponent(component):
     
-    def RunScript(self, path, py_path, force_unit, node_loads, node_restraints, beams, tol, run):
+    def RunScript(self, path, py_path, force_unit,tol, node_loads, node_restraints, beams, run):
         """Assemble the objects for StructEngPy.
             Inputs:
                 path: (str) working path.
                 py_path: (str) path of python executable.
-                force_unit: (int) 0-N,1-kN.
+                force_unit: (str) N,kN.
+                tol: (float) merge tolerance
                 node_loads: node load object
                 node_restraints: restraints object.
                 beams: beams object.
-                tol: merge tolerance
+
                 run: (bool) run the script or not.
             Output:
                 output: output info
@@ -35,12 +36,12 @@ class MyComponent(component):
             scale=1
         else:
             raise Exception("unit must only be Millimeters or Meters.") 
-        if int(force_unit)==0:
-            scale=1
-        elif int(force_unit)==1:
-            scale=0.001
+        if force_unit.upper()=="N":
+            fscale=1
+        elif force_unit.upper()=="KN":
+            fscale=0.001
         else:
-            raise Exception("force_unit must only be 0 or 1.") 
+            raise Exception("force_unit must only be N or kN.") 
         self.scale=scale
         self.fscale=fscale
             
@@ -48,6 +49,8 @@ class MyComponent(component):
             def __init__(self,path,py_path):
                 self.path=path
                 self.py_path=py_path
+                self.nodes=[]
+                self.beams=[]
                         
         class Node(object):
             def __init__(self,name, pt):
@@ -58,7 +61,7 @@ class MyComponent(component):
         model=None
                         
         if run==True:
-                                        
+            model=Model(path,py_path)
             vertices=[]
             conn={}
             c=[]
@@ -71,7 +74,17 @@ class MyComponent(component):
                         break
                 return loc
                             
-            nodes=[]
+            # analyze material and sections:
+            sections={}
+            materials={}
+            for beam in beams:
+                name=id(beam.section)
+                sections[name]=beam.section
+                
+            for section in sections.values():
+                name=id(section.material)
+                materials[name]=section.material
+                
             # special nodes first
             for snode in node_restraints+node_loads:
                 loc=find_pt(snode.node.point,nodes,tol)
@@ -79,14 +92,6 @@ class MyComponent(component):
                     nodes.append(snode.node)
                 else:
                     snode.node=nodes[loc]
-                                
-        #    # add special node
-        #    for node in special_nodes:
-        #        loc=find_pt(node.point,nodes)
-        #        if loc==-1:
-        #            nodes.append(node)
-        #        else:
-        #            nodes[loc]=node
                                                     
             # generate general node
             for b in beams:
@@ -107,11 +112,16 @@ class MyComponent(component):
                     node=Node("gen_%d"%loc2,pt2)
                     nodes.append(node)
                     conn[bname][1]=loc2
-                                            
+            model.nodes=nodes
+            model.beams=conn
+            model.sections=sections
+            model.materials=materials
             # write script
             if not os.path.exists(path):
                 os.mkdir(path)
             file=os.path.join(path,"gen_assemble.py")
+            
+            
             with open(file, "w+") as f:
                 [f.write("#") for i in range(62)]
                 f.write("\n")
@@ -122,24 +132,73 @@ class MyComponent(component):
                 f.write("\n")
                 f.write("api=Api(r'%s')\n"%path)
                 f.write("\n")
+                
+                for material in model.materials.values():
+                    f.write('api.add_isotropic_material("%s",%f,%f,%f,%f)\n'%(
+                        material.name,
+                        material.rho/scale**3,
+                        material.E*fscale/scale**2,
+                        material.mu,
+                        material.a,))
+                for section in model.sections.values():
+                    if section.shape=="general":
+                        f.write('api.add_beam_section_general("%s","%s",%f,%f,%f,%f,%f,%f,%f,%f)\n'%(
+                            section.name,
+                            section.material.name,
+                            section.A*scale**2,
+                            section.As2*scale**2,
+                            section.As3*scale**2,
+                            section.I2*scale**4,
+                            section.I3*scale**4,
+                            section.J*scale**4,
+                            0,0)) #no W22,W33 now
+                    elif section.shape=="I":
+                        f.write('api.add_beam_section_I("%s","%s",%f,%f,%f,%f)\n'%(
+                            section.name,
+                            section.material.name,
+                            section.h*scale,
+                            section.b*scale,
+                            section.tw*scale,
+                            section.tf*scale))
+                    elif section.shape=="rectangle":
+                        f.write('api.add_beam_section_rectangle("%s","%s",%f,%f)\n'%(
+                            section.name,
+                            section.material.name,
+                            section.h*scale,
+                            section.b*scale))
+                    elif section.shape=="I":
+                        f.write('api.add_beam_section_box("%s","%s",%f,%f,%f,%f)\n'%(
+                            section.name,
+                            section.material.name,
+                            section.h*scale,
+                            section.b*scale,
+                            section.tw*scale,
+                            section.tf*scale))
+                    elif section.shape=="circle":
+                        f.write('api.add_beam_section_I("%s","%s",%f)\n'%(
+                            section.name,
+                            section.material.name,
+                            section.d*scale))
+                    elif section.shape=="pipe":
+                        f.write('api.add_beam_section_I("%s","%s",%f,%f)\n'%(
+                            section.name,
+                            section.material.name,
+                            section.d*scale,
+                            section.t*scale))
+                    else:
+                        raise Exception("Error when adding beam section")
                 for node in nodes:
                     name=node.name
                     pt=node.point
                     f.write('api.add_node("%s",%f,%f,%f)\n'%(name,
                         pt.X*scale,pt.Y*scale,pt.Z*scale))
-                                        
+                
                 for beam in beams:
-                    f.write('api.add_beam("%s","%s","%s",E=%f,mu=%f,A=%f,I3=%f,I2=%f,J=%f,rho=%f)\n'%(
+                    f.write('api.add_beam("%s","%s","%s","%s")\n'%(
                         beam.name,
                         nodes[conn[beam.name][0]].name,
                         nodes[conn[beam.name][1]].name,
-                        beam.section.E*fscale**3,
-                        beam.section.mu,
-                        beam.section.A*scale**2,
-                        beam.section.I3*scale**4,
-                        beam.section.I2*scale**4,
-                        beam.section.J*scale*4,
-                        7850)
+                        beam.section.name)
                     )
                                     
                 f.write('\n')
@@ -161,7 +220,7 @@ class MyComponent(component):
                 f.write('\n')
                 for res in node_restraints:
                     name=res.node.name
-                    f.write('api.set_nodal_restraint("case1","%s",%s,%s,%s,%s,%s,%s)'%(name,
+                    f.write('api.set_nodal_restraint("%s",%s,%s,%s,%s,%s,%s)'%(name,
                         res.restraints[0],res.restraints[1],res.restraints[2],
                         res.restraints[3],res.restraints[4],res.restraints[5],
                         )+'\n')
@@ -178,9 +237,15 @@ class MyComponent(component):
                             
             p = subprocess.Popen([python,file],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
             stdout,stderr = p.communicate()
-            output='stdout : '+stdout+'\n'+'stderr : '+stderr
-            model=Model(path,py_path)
-                
+            
+            output='Assembled model with: \n'
+            output+="%d materials"%len(model.materials)+'\n'
+            output+="%d beam sections"%len(model.sections)+'\n'
+            output+="%d nodes"%len(model.nodes)+'\n'
+            output+="%d beams"%len(model.beams)
+            
+            output+='\n'
+            output+='stdout : '+stdout+'\n'+'stderr : '+stderr
         
         # return outputs if you have them; here I try it for you:
         return (output, model)
