@@ -13,7 +13,7 @@ from structengpy.core.fe_model.element.line.simple_beam import SimpleBeam
 from structengpy.core.fe_model.element.line.beam import Beam
 
 from structengpy.core.fe_model.element.tri.membrane import Membrane3
-from structengpy.core.fe_model.element.quad.membrane import Membrane4
+from structengpy.core.fe_model.element.quad.membrane4 import Membrane4
 
 import logging
 

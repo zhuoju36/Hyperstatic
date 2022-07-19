@@ -16,9 +16,7 @@ class MyComponent(component):
         
         __author__ = "Zhuoju Huang"
         __version__ = "2022.07.12"
-        
-        import rhinoscriptsyntax as rs
-        
+                
         class Beam():
             def __init__(self,name,crv,section):
                 self.name=name
