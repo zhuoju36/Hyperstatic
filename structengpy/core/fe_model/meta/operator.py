@@ -25,5 +25,8 @@ def operator_dot(A,f):
         for j in range(f.shape[1]):
             for k in range(A.shape[1]):
                 if A[i,k]!=0:
-                    res[i,j]+=A[i,k](f[k,j])
+                    if isfunction(A[i,k]):
+                        res[i,j]+=A[i,k](f[k,j])
+                    else:
+                        res[i,j]+=A[i,k]*f[k,j]
     return res

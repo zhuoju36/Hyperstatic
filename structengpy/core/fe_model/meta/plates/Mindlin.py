@@ -25,18 +25,7 @@ Ls=np.array([
     [0,-1,ddy],
     ])
 
-def operator_dot(A,f):
-    assert A.shape[1]==f.shape[0]
-    res=syp.zeros(A.shape[0],f.shape[1])
-    for i in range(A.shape[0]):
-        for j in range(f.shape[1]):
-            for k in range(A.shape[1]):
-                if A[i,k]!=0:
-                    if isfunction(A[i,k]):
-                        res[i,j]+=A[i,k](f[k,j])
-                    else:
-                        res[i,j]+=A[i,k]*f[k,j]
-    return res
+
 
 N1,N2,N3,N4=tuple(Lagrange.N2D())
 
