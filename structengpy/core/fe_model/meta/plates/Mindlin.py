@@ -3,8 +3,8 @@ import sympy as syp
 from sympy.utilities.autowrap import autowrap
 from structengpy.core.fe_model.meta.interpolate import Lagrange
 from structengpy.core.fe_model.meta.jacobi import J2D
+from structengpy.core.fe_model.meta.operator import operator_dot
 
-from inspect import isfunction
 
 E,mu,t=syp.symbols("E mu t")
 xi,eta=syp.symbols("xi eta")

@@ -3,7 +3,9 @@ import sympy as syp
 from sympy.utilities.autowrap import autowrap
 from structengpy.core.fe_model.meta.interpolate import Lagrange
 from structengpy.core.fe_model.meta.jacobi import J2D
+
 from structengpy.core.fe_model.meta.operator import operator_dot
+
 
 alpha=syp.zeros(4,12)
 beta=syp.zeros(4,12)
@@ -95,4 +97,4 @@ N[:,3:6]=syp.eye(3,3)*N2
 N[:,6:9]=syp.eye(3,3)*N3
 N[:,9:12]=syp.eye(3,3)*N4
 
-operator_dot(L0,N1)
+operator_dot(L0,N)

@@ -1,5 +1,6 @@
 import sympy as syp
 import numpy as np
+from inspect import isfunction
 
 x,y,z=syp.symbols("x y z")
 ddx=lambda f : syp.diff(f,x)
