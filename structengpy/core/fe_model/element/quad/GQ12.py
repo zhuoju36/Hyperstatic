@@ -19,6 +19,7 @@ class GQ12(Quad):
             self.nodes[2].loc,
             self.nodes[3].loc]
             )
+        print(self.local_csys.x)
         X_=X-self.local_csys.origin #not necessary
         X_=X_.dot(self.local_csys.transform_matrix.T)[:,:2]
         # assert X[0,2]==X[1,2]==X[2,2]==0
@@ -36,7 +37,13 @@ class GQ12(Quad):
             func,
             quadpy.c2.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
         )
-        return K
+        return self.transform_matrix.T.dot(K).dot(self.transform_matrix)
+
+    @property
+    def transform_matrix(self):
+        T=np.zeros((12,12))
+        T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]=self.local_csys.transform_matrix
+        return T
 
 if __name__=='__main__':
     from structengpy.core.fe_model.node import Node
@@ -56,10 +63,15 @@ if __name__=='__main__':
     # print(K[0,0])
     # print(K[7,0])
 
-    n1=Node("1",-10,-1,0)
-    n2=Node("2",10,-1,0)
-    n3=Node("3",10,1,0)
-    n4=Node("4",-10,1,0)
+    n1=Node("1",1,-1,0)
+    n2=Node("2",1,1,0)
+    n3=Node("3",-1,1,0)
+    n4=Node("4",-1,-1,0)
+
+    # n1=Node("1",-1,-10,0)
+    # n2=Node("2",1,-10,0)
+    # n3=Node("3",1,10,0)
+    # n4=Node("4",-1,10,0)
     steel=IsotropicMaterial('mat',7.849e3,2e12,0.3,1.17e-5) #Q345
     section=ShellSection('sec',steel,0.25)
     ele=GQ12("ele",section,n1,n2,n3,n4)
