@@ -19,7 +19,6 @@ class GQ12(Quad):
             self.nodes[2].loc,
             self.nodes[3].loc]
             )
-        print(self.local_csys.x)
         X_=X-self.local_csys.origin #not necessary
         X_=X_.dot(self.local_csys.transform_matrix.T)[:,:2]
         # assert X[0,2]==X[1,2]==X[2,2]==0
@@ -30,7 +29,9 @@ class GQ12(Quad):
             res=[]
             for xi,eta in zip(x[0],x[1]):
                 res.append(BDB(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size))))
+                # print(BDB(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size)))[0,0])
             res=np.stack(res,axis=2)
+            
             return res
         scheme = quadpy.c2.get_good_scheme(2)
         K = scheme.integrate(
@@ -63,26 +64,29 @@ if __name__=='__main__':
     # print(K[0,0])
     # print(K[7,0])
 
-    n1=Node("1",1,-1,0)
-    n2=Node("2",1,1,0)
-    n3=Node("3",-1,1,0)
-    n4=Node("4",-1,-1,0)
+    n1=Node("1",10,-10,0)
+    n2=Node("2",10,10,0)
+    n3=Node("3",-10,10,0)
+    n4=Node("4",-10,-10,0)
 
-    # n1=Node("1",-1,-10,0)
-    # n2=Node("2",1,-10,0)
-    # n3=Node("3",1,10,0)
-    # n4=Node("4",-1,10,0)
-    steel=IsotropicMaterial('mat',7.849e3,2e12,0.3,1.17e-5) #Q345
+    # n1=Node("1",-10,-10,0)
+    # n2=Node("2",10,-10,0)
+    # n3=Node("3",10,10,0)
+    # n4=Node("4",-10,10,0)
+    steel=IsotropicMaterial('mat',7.849e3,2e11,0.3,1.17e-5) #Q345
     section=ShellSection('sec',steel,0.25)
     ele=GQ12("ele",section,n1,n2,n3,n4)
     K=ele.integrate_K()
     assert K.shape==(12,12)
-    print(K[0,0]/1e10)
-    print(K[1,0]/1e10)
-    print(K[2,0]/1e10)
-    print(K[6,0]/1e10)
-    print(K[7,0]/1e10)
-    print(K[8,0]/1e10)
+    print(K[3,3]/1e10)
+    print(K[3,4]/1e10)
+    print(K[3,5]/1e10)
+    print(K[0,3]/1e10)
+    print(K[1,3]/1e10)
+    print(K[2,3]/1e10)
+    print(K[6,3]/1e10)
+    print(K[7,3]/1e10)
+    print(K[8,3]/1e10)
 
     # n1=Node("1",0,0,0)
     # n2=Node("2",1,0,0)
