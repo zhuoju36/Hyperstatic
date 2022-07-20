@@ -4,10 +4,8 @@ from sympy.utilities.autowrap import autowrap
 from structengpy.core.fe_model.meta.interpolate import Lagrange
 from structengpy.core.fe_model.meta.jacobi import J2D
 from structengpy.core.fe_model.meta.operator import operator_dot
-from structengpy.core.fe_model.meta.plates import x1,y1,x2,y2,x3,y3,x4,y4
+from structengpy.core.fe_model.meta.plates import x1,y1,x2,y2,x3,y3,x4,y4,E,mu,t,xi,eta
 
-E,mu,t=syp.symbols("E mu t")
-xi,eta=syp.symbols("xi eta")
 G=E/2/(1+mu)
 k=6/5
 alpha=G*t/k
@@ -46,5 +44,9 @@ BBs=Bs.T*Bs
 
 
 X=np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4],])
-BDB=(BDBb+alpha*BBs)*syp.det(J2D([N1,N2,N3,N4],X))
-bBDB=autowrap(BDB,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+detJ=syp.det(J2D([N1,N2,N3,N4],X))
+
+def get_bindary_BDB():
+    bBDBb=autowrap(BDBb*syp.det(J2D([N1,N2,N3,N4],X)),args=[E,mu,t,xi,eta,],backend='cython')
+    bBDBs=autowrap(alpha*BBs*detJ,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+    return bBDBb,bBDBs

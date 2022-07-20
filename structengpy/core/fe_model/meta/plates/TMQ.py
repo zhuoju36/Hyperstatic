@@ -4,13 +4,10 @@ from sympy.utilities.autowrap import autowrap
 from structengpy.core.fe_model.meta.interpolate import Lagrange
 from structengpy.core.fe_model.meta.jacobi import J2D
 from structengpy.core.fe_model.meta.operator import operator_dot
-from structengpy.core.fe_model.meta.plates import x1,y1,x2,y2,x3,y3,x4,y4
+from structengpy.core.fe_model.meta.plates import x1,y1,x2,y2,x3,y3,x4,y4,E,mu,t,xi,eta
 
 alpha=syp.zeros(4,12)
 beta=syp.zeros(4,12)
-
-E,mu,t=syp.symbols("E mu t")
-xi,eta=syp.symbols("xi eta")
 
 b1=y2-y3
 b2=y3-y4
@@ -205,6 +202,8 @@ Bs[0,:]=Ns*Xs*Gamma
 Bs[1,:]=Ns*Ys*Gamma
 BCBs=Bs.T*C*syp.eye(2)*Bs
 
-bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+def get_binary_BDB():
+    bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
 
-bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+    bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+    return bBDBb,bBDBs

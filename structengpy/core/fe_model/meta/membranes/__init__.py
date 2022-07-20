@@ -7,4 +7,3 @@ x4,y4=syp.symbols("x4 y4")
 
 E,mu,t=syp.symbols("E mu t")
 xi,eta=syp.symbols("xi eta")
-
