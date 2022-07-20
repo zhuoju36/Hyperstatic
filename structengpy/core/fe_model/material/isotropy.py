@@ -24,7 +24,7 @@ class IsotropicMaterial(Material):
 
     @property
     def mu(self):
-        return self.__E
+        return self.__mu
 
     @property
     def a(self):

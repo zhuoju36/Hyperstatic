@@ -49,15 +49,19 @@ class TMQ(Quad):
         return Kb+Ks
 
 if __name__=='__main__':
+
+    from structengpy.core.fe_model.node import Node
     from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
+    from structengpy.core.fe_model.section.beam_section import BeamSection
+    from structengpy.core.fe_model.node import Node
+
+    from structengpy.core.fe_model.element.line.beam import Beam
 
     n1=Node("1",0,0,0)
     n2=Node("2",1,0,0)
-    n3=Node("3",1,1,1)
-    n4=Node("4",0,1,1)
-    mat=IsotropicMaterial("mat",1,2,3,1e-7)
-    section=ShellSection("sec",mat,1)
-    m=TMQ("m1",section,n1,n2,n3,n4)
-    res=m.integrate_K()
+    n3=Node("3",1,1,0)
+    n4=Node("4",0,1,0)
+    steel=IsotropicMaterial('mat',7.85e3,2e6,0.2,1e-7)
+    section=ShellSection('sec',steel,'general',[],steel,0.1)
+    ele=TMQ("ele",n1,n2,section)
 
-    print(res.shape)

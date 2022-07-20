@@ -19,15 +19,18 @@ class GQ12(Quad):
             self.nodes[2].loc,
             self.nodes[3].loc]
             )
-        X_=X.dot(self.local_csys.transform_matrix.T)[:,:2]
+        X_=X-self.local_csys.origin #not necessary
+        X_=X_.dot(self.local_csys.transform_matrix.T)[:,:2]
+        # assert X[0,2]==X[1,2]==X[2,2]==0
+        E=self.__section.E
+        mu=self.__section.mu
+        t=self.__section.t
         def func(x):
-            E=self.__section.E
-            mu=self.__section.mu
-            t=self.__section.t
             res=[]
             for xi,eta in zip(x[0],x[1]):
                 res.append(BDB(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size))))
-            return np.stack(res,axis=2)
+            res=np.stack(res,axis=2)
+            return res
         scheme = quadpy.c2.get_good_scheme(2)
         K = scheme.integrate(
             func,
@@ -36,13 +39,51 @@ class GQ12(Quad):
         return K
 
 if __name__=='__main__':
+    from structengpy.core.fe_model.node import Node
     from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
+    from structengpy.core.fe_model.section.shell_section import ShellSection
+    from structengpy.core.fe_model.node import Node
 
-    n1=Node("1",0,0,0)
-    n2=Node("2",1,0,0)
-    n3=Node("3",1,1,1)
-    n4=Node("4",0,1,1)
-    mat=IsotropicMaterial("mat",1,2,3,1e-7)
-    section=ShellSection("sec",mat,1)
-    m=GQ12("m1",section,n1,n2,n3,n4)
-    res=m.integrate_K()
+    # n1=Node("1",-10,-10,0)
+    # n2=Node("2",10,-10,0)
+    # n3=Node("3",10,10,0)
+    # n4=Node("4",-10,10,0)
+    # steel=IsotropicMaterial('mat',7.849e3,2e11,0.3,1.17e-5) #Q345
+    # section=ShellSection('sec',steel,0.25)
+    # ele=GQ12("ele",section,n1,n2,n3,n4)
+    # K=ele.integrate_K()
+    # assert K.shape==(12,12)
+    # print(K[0,0])
+    # print(K[7,0])
+
+    n1=Node("1",-10,-1,0)
+    n2=Node("2",10,-1,0)
+    n3=Node("3",10,1,0)
+    n4=Node("4",-10,1,0)
+    steel=IsotropicMaterial('mat',7.849e3,2e12,0.3,1.17e-5) #Q345
+    section=ShellSection('sec',steel,0.25)
+    ele=GQ12("ele",section,n1,n2,n3,n4)
+    K=ele.integrate_K()
+    assert K.shape==(12,12)
+    print(K[0,0]/1e10)
+    print(K[1,0]/1e10)
+    print(K[2,0]/1e10)
+    print(K[6,0]/1e10)
+    print(K[7,0]/1e10)
+    print(K[8,0]/1e10)
+
+    # n1=Node("1",0,0,0)
+    # n2=Node("2",1,0,0)
+    # n3=Node("3",1,1,0)
+    # n4=Node("4",0,1,0)
+    # steel=IsotropicMaterial('mat',7.849e3,2e12,0.3,1.17e-5) #Q345
+    # section=ShellSection('sec',steel,0.25)
+    # ele=GQ12("ele",section,n1,n2,n3,n4)
+    # K=ele.integrate_K()
+    # assert K.shape==(12,12)
+    # print(K[0,6]/1e10)
+    # print(K[1,6]/1e10)
+    # print(K[2,6]/1e10)
+    # print(K[6,6]/1e10)
+    # print(K[7,6]/1e10)
+    # print(K[8,6]/1e10)

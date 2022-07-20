@@ -14,13 +14,14 @@ N0=[]
 Nut=[]
 Nvt=[]
 
-for i in range(4):
-    a1=xi0[i]*x0[i]/4
-    a2=eta0[i]*x0[i]/4
-    a3=xi0[i]*eta0[i]*x0[i]/4
-    b1=xi0[i]*y0[i]/4
-    b2=eta0[i]*y0[i]/4
-    b3=xi0[i]*eta0[i]*y0[i]/4    
+a1=sum([xi0[i]*x0[i]/4 for i in range(4)])
+a2=sum([eta0[i]*x0[i]/4 for i in range(4)])
+a3=sum([xi0[i]*eta0[i]*x0[i]/4 for i in range(4)])
+b1=sum([xi0[i]*y0[i]/4 for i in range(4)])
+b2=sum([eta0[i]*y0[i]/4 for i in range(4)])
+b3=sum([xi0[i]*eta0[i]*y0[i]/4  for i in range(4)])
+
+for i in range(4):  
     N0.append(0.25*(1+xi0[i]*xi)*(1+eta0[i]*eta))
     Nut.append((xi*(1-xi**2)*(b1+b3*eta0[i])*(1+eta0[i]*eta)+eta0[i]*(1-eta**2)*(b2+b3*eta0[i])*(1+eta0[i]*eta))/8)
     Nvt.append(-(xi*(1-xi**2)*(a1+a3*eta0[i])*(1+eta0[i]*eta)+eta0[i]*(1-eta**2)*(a2+a3*eta0[i])*(1+eta0[i]*eta))/8)
@@ -37,8 +38,8 @@ from structengpy.core.fe_model.meta.operator import L2,operator_dot
 D=syp.eye(3,3)
 D[0,0]=D[1,1]=1
 D[2,2]=(1-mu)/2
-# D[0,1]=D[1,0]=mu
-D*=E*t**3/12/(1-mu**2)
+D[0,1]=D[1,0]=mu
+D*=E/12/(1-mu**2)
 
 B=operator_dot(L2(xi,eta),N)
 BDB=B.T*D*B
@@ -46,6 +47,8 @@ BDB=B.T*D*B
 X=np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4],])
 detJ=syp.det(J2D(N0,X)) 
 
+bBDB=autowrap(t*BDB*detJ,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+
 def get_binary_BDB():
-    bBDB=autowrap(BDB*detJ,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+
     return bBDB
