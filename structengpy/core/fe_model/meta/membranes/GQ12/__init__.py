@@ -76,19 +76,25 @@ def L2iso(xi,eta):
         [0,ddy],
         [ddy,ddx]])
 
-
 B=operator_dot(L2iso(xi,eta),N)
 BDB=(B.T)*D*B
 BDB_=t*BDB*syp.det(J) 
 
 tmp=os.path.dirname(os.path.realpath(__file__))
-tmp=os.path.dirname(os.path.realpath(tmp))
-tmp=os.path.join(tmp,"wrapped")
-tmp=os.path.join(tmp,"GQ12")
-if not os.path.exists(tmp):
-    os.mkdir(tmp)
-
-bBDB=autowrap(BDB_,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
-
+    
 def get_binary_BDB():
-    return bBDB
+    """
+      will be compiled first time call, then use the binary file afterwards
+
+    Returns:
+        return : numerical BᵀDB function. 
+    """
+    for file in os.listdir(tmp): 
+        if 'wrapper_module_0' in file:
+            import sys
+            sys.path.append(tmp)
+            import wrapper_module_0
+            return wrapper_module_0.autofunc_c
+    else:
+        bBDB=autowrap(BDB_,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp,)
+        return bBDB
