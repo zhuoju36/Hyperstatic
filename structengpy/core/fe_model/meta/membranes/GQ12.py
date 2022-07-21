@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import sympy as syp
 from sympy.utilities.autowrap import autowrap
@@ -44,16 +45,50 @@ D[2,2]=(1-mu0)/2
 D[0,1]=D[1,0]=mu0
 D*=E0/(1-mu0**2)
 
-B=operator_dot(L2(xi,eta),N)
-BDB=(B.T)*D*B
-
 X=np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4],])
-detJ=syp.det(J2D(N0,X)) 
+J=J2D(N0,X)
 
-BDB_=t*BDB*detJ
+# def L2iso(xi,eta):
+#     x=[x1,x2,x3,x4]
+#     y=[y1,y2,y3,y4]
+#     x=sum([N0[i]*x[i] for i in range(4)])
+#     y=sum([N0[i]*y[i] for i in range(4)])
+#     dds=lambda f: syp.diff(f,xi)
+#     ddt=lambda f: syp.diff(f,eta)
+#     ddx=lambda f: ddt(y)*dds(f)-dds(y)*ddt(f)
+#     ddy=lambda f: dds(x)*ddt(f)-ddt(x)*dds(f)
+#     return np.array([
+#         [ddx,0],
+#         [0,ddy],
+#         [ddy,ddx]])/syp.det(J) 
 
-bBDB=autowrap(BDB_,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+def L2iso(xi,eta):
+    x=[x1,x2,x3,x4]
+    y=[y1,y2,y3,y4]
+    x=sum([N0[i]*x[i] for i in range(4)])
+    y=sum([N0[i]*y[i] for i in range(4)])
+    diso= lambda f:syp.Matrix([[syp.diff(f,xi),syp.diff(f,eta)]]).T
+    dnat= lambda f:syp.inv_quick(J)*diso(f)
+    ddx=lambda f:dnat(f)[0]
+    ddy=lambda f:dnat(f)[1]
+    return np.array([
+        [ddx,0],
+        [0,ddy],
+        [ddy,ddx]])
+
+
+B=operator_dot(L2iso(xi,eta),N)
+BDB=(B.T)*D*B
+BDB_=t*BDB*syp.det(J) 
+
+tmp=os.path.dirname(os.path.realpath(__file__))
+tmp=os.path.dirname(os.path.realpath(tmp))
+tmp=os.path.join(tmp,"wrapped")
+tmp=os.path.join(tmp,"GQ12")
+if not os.path.exists(tmp):
+    os.mkdir(tmp)
+
+bBDB=autowrap(BDB_,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
 
 def get_binary_BDB():
-
     return bBDB
