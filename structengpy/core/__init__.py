@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from copyreg import pickle
+import pickle
 from datetime import datetime
 import os
 import logging
@@ -301,6 +301,24 @@ class Api(object):
             logging.warning(str(e)+" when adding circle beam section")
             return False
 
+    def add_shell_section(self,name:str,material:str,t:float)->bool:
+        """向模型中添加板壳截面
+
+        Args:
+            name (str): 截面名
+            material (str): 材料名
+            t (float): 厚度
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_shell_section(name,material,t)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding shell section")
+            return False
+
     def add_beam_section_pipe(self,name:str,material:str,d:float,t:float)->bool:
         """向模型中添加圆管截面
 
@@ -436,6 +454,27 @@ class Api(object):
             return True
         except Exception as e:
             logging.warning(str(e)+" when settring beam releases")
+            return False
+
+    def add_shell(self,name:str,node1:str,node2:str,node3:str,node4:str,section:str)->bool:
+        """向模型中添加板壳
+
+        Args:
+            name (str): 板壳名
+            node1 (str): 结点1
+            node2 (str): 结点2
+            node3 (str): 结点3
+            node4 (str): 结点4
+            section (str): 板壳截面名
+
+        Returns:
+            bool: 成功操作返回True，反之为False
+        """
+        try:
+            self.__model.add_shell(name,node1,node2,node3,node4,section)
+            return True
+        except Exception as e:
+            logging.warning(str(e)+" when adding beam")
             return False
 
     def add_loadpattern(self,name:str)->bool:
@@ -854,4 +893,36 @@ class Api(object):
         except Exception as e:
             logging.warning("Error when getting beam deformation of "+str(case)+". Exception: "+str(e))
             return None
+
+if __name__ == '__main__':
+    import sys
+
+    path="./test"
+    if sys.platform=="win32":
+        path="c:\\test"
+
+    api=Api(path)
         
+    api.add_node("A",0,0,0)
+    api.add_node("B",1,0,0)
+    api.add_node("C",1,1,0)
+    api.add_node("D",0,1,0)
+    api.add_isotropic_material("Q355",7.849e3,2e11,0.3,1.17e-5) 
+    api.add_shell_section("sec","Q355",0.25)
+    api.add_shell("s","A","B","C","D","sec")
+
+    api.add_loadpattern("pat1")
+    api.set_nodal_load("pat1","B",f1=1)
+
+    api.add_static_case("case1")
+    api.add_case_pattern("case1","pat1",1.0)
+
+    api.set_nodal_restraint("A",True,True,True,True,True,True)
+    api.set_nodal_restraint("B",False,True,True,True,True,True)
+    api.set_nodal_restraint("C",True,True,True,True,True,True)
+    api.set_nodal_restraint("D",True,True,True,True,True,True)
+    api.assemble()
+
+    api.solve_static("case1")
+    d=api.result_get_nodal_displacement("B","case1")
+    print(d)

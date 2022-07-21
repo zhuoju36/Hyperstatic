@@ -104,13 +104,41 @@ class Assembly(object):
             #Static condensation to consider releases
             Ke=self.__model.get_beam_K(elm)
             Ke=self.__model.get_beam_condensated_matrix(elm,Ke)
-
             Ke_ = (Tt*Ke*T).tocoo()
 
             data_k.extend(Ke_.data)
             row_k.extend([i*6+r if r<6 else j*6+r-6 for r in Ke_.row])
             col_k.extend([i*6+c if c<6 else j*6+c-6 for c in Ke_.col])
-
+        for elm in self.__model.get_shell_names():
+            i,j,k,l=self.__model.get_shell_node_hids(elm)
+            T=self.__model.get_shell_transform_matrix(elm)
+            Tt = T.transpose()
+            Ke=self.__model.get_shell_K(elm)
+            Ke_ = (Tt*Ke*T).tocoo() #12*12 membrane
+            row=[]
+            col=[]
+            f=lambda x:x%2+x//2*5
+            for r in Ke_.row:
+                if r<3:
+                    row.append(i*6+f(r))
+                elif r<6:
+                    row.append(j*6+f(r-3))
+                elif r<9:
+                    row.append(k*6+f(r-6))
+                else:
+                    row.append(l*6+f(r-9))
+            for c in Ke_.col:
+                if c<3:
+                    col.append(i*6+f(c))
+                elif c<6:
+                    col.append(j*6+f(c-3))
+                elif c<9:
+                    col.append(k*6+f(c-6))
+                else:
+                    col.append(l*6+f(c-9))
+            data_k.extend(Ke_.data)
+            row_k.extend(row)
+            col_k.extend(col)
         __K=spr.coo_matrix((data_k,(row_k,col_k)),shape=(n_nodes*6, n_nodes*6))
         return __K
 

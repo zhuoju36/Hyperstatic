@@ -1,9 +1,35 @@
-from setuptools import setup
-from setuptools import find_packages
+import os
+try:
+    from setuptools import setup
+    from setuptools import find_packages
+    from setuptools import Extension
+except ImportError:
+    from distutils.core import setup
+    from distutils.extension import Extension
 from Cython.Build import cythonize
-
+cy_opts = {}
+import numpy as np
 
 VERSION = '0.2.0'
+
+elm_path=os.path.dirname(os.path.realpath(__file__))
+elm_path=os.path.join(elm_path,'structengpy')
+elm_path=os.path.join(elm_path,'core')
+elm_path=os.path.join(elm_path,'fe_model')
+elm_path=os.path.join(elm_path,'meta')
+elm_path=os.path.join(elm_path,'wrapped')
+
+ext_mods = [Extension(
+    'wrapper_module_1', [
+        os.path.join(elm_path,'GQ12','wrapper_module_1.pyx'), 
+        os.path.join(elm_path,'GQ12','wrapper_module_1.c')
+        ],
+    include_dirs=[np.get_include()],
+    library_dirs=[],
+    libraries=[],
+    extra_compile_args=['-std=c99'],
+    extra_link_args=[]
+)]
 
 setup(
     name='StructEngPy', 
@@ -49,4 +75,5 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     url='https://github.com/zhuoju36/StructEngPy',
+    # ext_modules=cythonize(ext_mods, **cy_opts)
 )

@@ -9,11 +9,13 @@ from structengpy.core.fe_model.node import Node
 from structengpy.core.fe_model.material import Material
 from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
 from structengpy.core.fe_model.section.beam_section import *
+from structengpy.core.fe_model.section.shell_section import *
 from structengpy.core.fe_model.element.line.simple_beam import SimpleBeam
 from structengpy.core.fe_model.element.line.beam import Beam
 
 from structengpy.core.fe_model.element.tri.membrane import Membrane3
-from structengpy.core.fe_model.element.quad.membrane4 import Membrane4
+from structengpy.core.fe_model.element.quad import Quad
+from structengpy.core.fe_model.element.quad.GQ12 import *
 
 import logging
 
@@ -23,15 +25,14 @@ class Model:
         self.__nodal_restraints:Dict[str,list]={} 
         self.__material:Dict[str,Material]={}
         self.__beam_section:Dict[str,BeamSection]={}
+        self.__shell_section:Dict[str,ShellSection]={}
         self.__beams:Dict[str,Beam]={}
-        self.__tria={}
-        self.__quad={}
+        self.__shells:Dict[str,Quad]={}
 
         self.__hid:Dict[str,Dict[str,int]]={}
         self.__hid['node']={}
         self.__hid['beam']={}
-        self.__hid['tria']={}
-        self.__hid['quad']={}
+        self.__hid['shell']={}
                 
         # self.__index=[]
         # self.__dof=None
@@ -132,6 +133,11 @@ class Model:
         mat=self.__material[material]
         sec=PipeSection(name,mat,d,t)
         self.__beam_section[name]=sec
+
+    def add_shell_section(self,name:str,material:str,t):
+        mat=self.__material[material]
+        sec=ShellSection(name,mat,t)
+        self.__shell_section[name]=sec
 
     def add_beam(self,name:str,start:str,end:str,section:str,check_dup=False):
         node0=self.__nodes[start]
@@ -264,36 +270,59 @@ class Model:
         K=beam.integrate_K()
         return beam.static_condensate_f(re,K)
         
-    def add_membrane3(self,node0, node1, node2, t, E, mu, rho, name=None):
-        """
-        add membrane to model
-        if membrane already exits, it will not be added.
-        return: membrane hidden id
-        """
-        node0=self.nodes[node0]
-        node1=self.nodes[node1]
-        node2=self.nodes[node2]
-        elm=Membrane3(node0, node1, node2, t, E, mu, rho, name)
-        res=len(self.__membrane3s)
-        elm.hid=res
-        self.__membrane3s[res]=elm
-        return res
+
+
+
+    # def add_membrane3(self,node0, node1, node2, t, E, mu, rho, name=None):
+    #     """
+    #     add membrane to model
+    #     if membrane already exits, it will not be added.
+    #     return: membrane hidden id
+    #     """
+    #     node0=self.nodes[node0]
+    #     node1=self.nodes[node1]
+    #     node2=self.nodes[node2]
+    #     elm=Membrane3(node0, node1, node2, t, E, mu, rho, name)
+    #     res=len(self.__membrane3s)
+    #     elm.hid=res
+    #     self.__membrane3s[res]=elm
+    #     return res
     
-    def add_membrane4(self,node0, node1, node2, node3, t, E, mu, rho, name=None):
-        """
-        add membrane to model
-        if membrane already exits, it will not be added.
-        return: membrane hidden id
-        """
-        node0=self.nodes[node0]
-        node1=self.nodes[node1]
-        node2=self.nodes[node2]
-        node3=self.nodes[node3]
-        elm=Membrane4(node0, node1, node2, node3, t, E, mu, rho, name)
-        res=len(self.__membrane4s)
-        elm.hid=res
-        self.__membrane4s[res]=elm
-        return res             
+    def add_shell(self,name:str,node0:Node, node1:Node, node2:Node, node3:Node,section:str):
+        node0=self.__nodes[node0]
+        node1=self.__nodes[node1]
+        node2=self.__nodes[node2]
+        node3=self.__nodes[node3]
+        section=self.__shell_section[section]
+        elm=GQ12(name,node0, node1, node2, node3,section)
+
+        res=len(self.__shells)
+        self.__hid["shell"][name]=res
+        self.__shells[name]=elm
+
+        return res
+
+    def get_shell_names(self):
+        return list(self.__shells.keys())
+
+    def get_shell_connection(self,name:str):
+        return self.__shells[name].nodes[0].name,self.__beams[name].nodes[1].name
+
+    def get_shell_hid(self,name:str):
+        return self.__hid['shell'][name]
+
+    def get_shell_node_hids(self,name:str):
+        shell=self.__shells[name]
+        nodes=shell.get_node_names()
+        return [self.get_node_hid(name) for name in nodes]
+
+    def get_shell_transform_matrix(self,name:str):
+        shell=self.__shells[name]
+        return shell.transform_matrix
+
+    def get_shell_K(self,name:str):
+        shell=self.__shells[name]
+        return shell.integrate_K()  
 
     def find(self,nodes,target,tol=1e-6):
         """
