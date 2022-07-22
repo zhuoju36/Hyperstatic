@@ -16,7 +16,7 @@ from structengpy.core import Api
 # if sys.platform=="win32":
 #     path="c:\\test"
 from random import uniform as u
-from vedo import Points, Line, Lines, Arrows, Plotter, Cone,Text2D
+from vedo import Points, Line, Lines, Arrows, Plotter, Cone,Text2D,Mesh
 from vedo.pyplot import histogram
 import os
 
@@ -27,6 +27,7 @@ class Viewer():
         self.__api:Api=Api.load(workpath,filename)
         self.__pts={}
         self.__lines={}
+        self.__faces={}
         self.__vnodes:Points=None
         self.__vnodeload:Arrows=None
         self.__vnodeNames=None
@@ -34,13 +35,16 @@ class Viewer():
         self.__vbeams:Lines=None
         self.__vbeamNames=None
         self.__vbeamReleases=None
+        self.__vshells:Mesh=None
         self.__plt=Plotter()
+        self.__pt_id_map={}
 
         self.setup_gui()
         self.init_nodes()
         self.__scale=self.__scene_radius()
         self.init_nodal_load()
         self.init_beams()
+        self.init_shells()
 
     def setup_gui(self):
         plt=self.__plt
@@ -60,16 +64,6 @@ class Viewer():
             font="san-serif",
             size=12,
         )
-        
-        # self.__scale_slider=plt.addSlider2D(
-        #     self.slide_scale,
-        #     # pos="bottom-left",
-        #     pos=[(0.65,0.15),(0.95,0.15)],
-        #     # titleSize=0.5,
-        #     xmin=0,
-        #     xmax=100,
-        #     title="label scale"
-        # )
 
     def slide_scale(self,widget,event):
         self.__scale=widget.GetRepresentation().GetValue()
@@ -117,7 +111,9 @@ class Viewer():
         pts=self.__pts
         for n in api.get_node_names():
             x,y,z=api.get_node_location(n)
+            self.__pt_id_map[n]=len(pts)
             pts[n]=(x,y,z)
+            
         
         self.__vnodes = Points(list(pts.values()), r=8, c="blue5")
         self.__vnodes.off()
@@ -176,7 +172,19 @@ class Viewer():
             s,e=api.get_beam_node_names(b)
             lines[b]=([pts[s],pts[e]])
         self.__vbeams=Lines(list(lines.values()),c='k')
-    
+
+    def init_shells(self):
+        api=self.__api
+        pts=self.__pts
+        pt_id_map=self.__pt_id_map
+        for s in api.get_shell_names():
+            n1,n2,n3,n4=api.get_shell_node_names(s)
+            verts=list(pts.values())
+            f=(pt_id_map[n1],pt_id_map[n2],pt_id_map[n3],pt_id_map[n4])
+            self.__faces[s]=f
+        self.__vshells=Mesh([verts,list(self.__faces.values())])
+        self.__vshells.color('b5').backColor('violet').lineColor('tomato').lineWidth(1)
+        
     def reset_view(self):
         xs=[i[0] for i in self.__pts.values()]
         ys=[i[1] for i in self.__pts.values()]
@@ -191,6 +199,7 @@ class Viewer():
         self.__plt.show(
             self.__vnodes, 
             self.__vbeams, 
+            self.__vshells,
             *tuple(self.__vnode_restraints),
             viewup="z", 
             axes=4,
@@ -200,14 +209,14 @@ class Viewer():
     def reset(self):
         self.__plt.show(
             self.__vnodes, 
-            self.__vbeams, 
+            self.__vbeams,
+            self.__vshells, 
             *tuple(self.__vnode_restraints),
             viewup="z", 
             axes=4,
             # camera=self.__plt.camera,
             resetcam=False)
         
-
     def run(self):
         logo=Text2D("ModelViz", pos=(.05, .95), c='k', s=1)
         workpath = Text2D(self.__workpath, pos=(.05, .90), c='k', s=0.5)
@@ -226,7 +235,8 @@ class Viewer():
         plt.show(
             self.__vnodes, 
             self.__vnodeload,
-            self.__vbeams, 
+            self.__vbeams,
+            self.__vshells, 
             *tuple(self.__vnode_restraints),
             logo,workpath,time,info,
             viewup="z", 
@@ -237,8 +247,6 @@ class Viewer():
             )
         plt.interactive().close()
         
-
-
 if __name__=="__main__":
     path=r"G:\testghsep"
     viewer=Viewer(path,"assembly")

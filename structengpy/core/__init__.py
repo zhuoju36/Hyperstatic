@@ -138,7 +138,7 @@ class Api(object):
             logging.warning("Error when getting node location of %s"%name+" Exception: "+str(e))
             return None
 
-    def get_node_restraints(self,casename:str)->dict:
+    def get_node_restraints(self,casename:str=None)->dict:
         """获取结点约束
 
         Args:
@@ -148,7 +148,10 @@ class Api(object):
             dict: 包含约束列表的字典
         """
         try:
-            return self.__loadcases[casename].get_nodal_restraint_dict()
+            if casename==None:
+                return self.__model.get_nodal_restraint_dict()
+            else:
+                return self.__loadcases[casename].get_nodal_restraint_dict()
         except Exception as e:
             logging.warning("Error when getting node restraints of loadcase%s"%casename+" Exception: "+str(e))
             return None
@@ -421,9 +424,9 @@ class Api(object):
             tuple: 梁端三维位置
         """
         try:
-            return tuple(self.__model.beams[beam_name].start),tuple(self.__model.beams[beam_name].end)
+            return self.__model.get_beam_location(beam_name)
         except Exception as e:
-            logging.warning("Error when getting beam node names. Exception: "+str(e))
+            logging.warning("Error when getting beam location. Exception: "+str(e))
             return None
 
     def set_beam_release(self,name,
@@ -476,6 +479,48 @@ class Api(object):
         except Exception as e:
             logging.warning(str(e)+" when adding beam")
             return False
+
+    def get_shell_names(self)->list:
+        """获取板壳名
+
+        Returns:
+            list: 板壳名列表
+        """
+        try:
+            return self.__model.get_shell_names()
+        except Exception as e:
+            logging.warning("Error when getting shell names. Exception: "+str(e))
+            return None
+
+    def get_shell_node_names(self,shell_name:str)->tuple:
+        """获取板壳结点名
+
+        Args:
+            beam_name (str): 板壳名
+
+        Returns:
+            tuple: 梁结点名
+        """
+        try:
+            return tuple(self.__model.get_shell_connection(shell_name))
+        except Exception as e:
+            logging.warning("Error when getting beam node names. Exception: "+str(e))
+            return None
+
+    def get_shell_location(self,shell_name:str)->tuple:
+        """获取板壳位置
+
+        Args:
+            beam_name (str): 板壳名
+
+        Returns:
+            tuple: 板壳结点三维位置
+        """
+        try:
+            return self.__model.get_shell_location(shell_name)
+        except Exception as e:
+            logging.warning("Error when getting shell location. Exception: "+str(e))
+            return None
 
     def add_loadpattern(self,name:str)->bool:
         """向模型中添加荷载样式

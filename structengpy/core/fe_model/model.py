@@ -215,6 +215,9 @@ class Model:
     def get_beam_connection(self,name:str):
         return self.__beams[name].nodes[0].name,self.__beams[name].nodes[1].name
 
+    def get_beam_location(self,name:str):
+        return tuple(self.__beams[name].start),tuple(self.__beams[name].end)
+
     def get_node_hid(self,name:str):
         return self.__hid['node'][name]
 
@@ -269,24 +272,6 @@ class Model:
         beam=self.__beams[name]
         K=beam.integrate_K()
         return beam.static_condensate_f(re,K)
-        
-
-
-
-    # def add_membrane3(self,node0, node1, node2, t, E, mu, rho, name=None):
-    #     """
-    #     add membrane to model
-    #     if membrane already exits, it will not be added.
-    #     return: membrane hidden id
-    #     """
-    #     node0=self.nodes[node0]
-    #     node1=self.nodes[node1]
-    #     node2=self.nodes[node2]
-    #     elm=Membrane3(node0, node1, node2, t, E, mu, rho, name)
-    #     res=len(self.__membrane3s)
-    #     elm.hid=res
-    #     self.__membrane3s[res]=elm
-    #     return res
     
     def add_shell(self,name:str,node0:Node, node1:Node, node2:Node, node3:Node,section:str):
         node0=self.__nodes[node0]
@@ -306,7 +291,10 @@ class Model:
         return list(self.__shells.keys())
 
     def get_shell_connection(self,name:str):
-        return self.__shells[name].nodes[0].name,self.__beams[name].nodes[1].name
+        return self.__shells[name].nodes[0].name,self.__shells[name].nodes[1].name,self.__shells[name].nodes[2].name,self.__shells[name].nodes[3].name
+
+    def get_shell_location(self,name:str):
+        return tuple(self.__shells[name].nodes[0]),tuple(self.__shells[name].nodes[1]),tuple(self.__shells[name].nodes[2]),tuple(self.__shells[name].nodes[3])
 
     def get_shell_hid(self,name:str):
         return self.__hid['shell'][name]
