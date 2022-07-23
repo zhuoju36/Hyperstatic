@@ -259,7 +259,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_beam_section_rectangle(name,material,h,b,tw,tf)
+            self.__model.add_beam_section_I(name,material,h,b,tw,tf)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding I-section")
@@ -280,7 +280,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_beam_section_rectangle(name,material,h,b,tw,tf)
+            self.__model.add_beam_section_box(name,material,h,b,tw,tf)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding box section")
@@ -298,7 +298,7 @@ class Api(object):
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_beam_section_rectangle(name,material,d)
+            self.__model.add_beam_section_circle(name,material,d)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding circle beam section")

@@ -48,24 +48,28 @@ class BasicViewer(ViewerBase):
         self.__scale=widget.GetRepresentation().GetValue()
 
     def toggle_node(self):
-        if self.__btn_node.status()=="hide_node":
-            self.vnodes.off()
-        else:
-            self.vnodes.on()
+        if not self.vnodes==None:
+            if self.__btn_node.status()=="hide_node":
+                self.vnodes.off()
+            else:
+                self.vnodes.on()
         self.__btn_node.switch() 
 
     def toggle_beam(self):
-        if self.__btn_beam.status()=="hide_beam":
-            self.vbeams.off()
-        else:
-            self.vshells.on()
+        if not self.vbeams==None:
+            if self.__btn_beam.status()=="hide_beam":
+                
+                self.vbeams.off()
+            else:
+                self.vbeams.on()
         self.__btn_beam.switch() 
 
     def toggle_shell(self):
-        if self.__btn_shell.status()=="hide_shell":
-            self.vshells.off()
-        else:
-            self.vshells.on()
+        if not self.vshells==None:
+            if self.__btn_shell.status()=="hide_shell":
+                self.vshells.off()
+            else:
+                self.vshells.on()
         self.__btn_shell.switch()    
 
     def toggle_node_name(self):

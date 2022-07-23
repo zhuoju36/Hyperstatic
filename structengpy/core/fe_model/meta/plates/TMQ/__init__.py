@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import sympy as syp
 from sympy.utilities.autowrap import autowrap
@@ -203,7 +204,21 @@ Bs[1,:]=Ns*Ys*Gamma
 BCBs=Bs.T*C*syp.eye(2)*Bs
 
 def get_binary_BDB():
-    bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+    """
+      will be compiled first time call, then use the binary file afterwards
 
-    bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
-    return bBDBb,bBDBs
+    Returns:
+        return : numerical BᵀDB function. 
+    """
+    tmp=os.path.dirname(os.path.realpath(__file__))
+    for file in os.listdir(tmp): 
+        if 'wrapper_module_0' in file:
+            import sys
+            sys.path.append(tmp)
+            import wrapper_module_0
+            return wrapper_module_0.autofunc_c
+    else:
+        bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+
+        bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+        return bBDBb,bBDBs

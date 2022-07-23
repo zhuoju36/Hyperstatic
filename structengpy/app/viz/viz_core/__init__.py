@@ -127,7 +127,7 @@ class ViewerBase():
         pts=self.pts
         pt_id_map=self.pt_id_map
         shells=api.get_shell_names()
-        if shells==None:
+        if shells==[] or shells==None:
             return
         for s in shells:
             n1,n2,n3,n4=api.get_shell_node_names(s)
