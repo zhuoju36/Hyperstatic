@@ -892,9 +892,7 @@ class Api(object):
         try:
             workpath=self.__workpath
             resolver=NodeResultResolver(workpath,self.__filename)
-            res={}
-            for node in self.get_node_names():
-                res[node]=resolver.resolve_nodal_displacement(node,case,step=1)
+            res=dict([(node,resolver.resolve_nodal_displacement(node,case,step=1)) for node in self.get_node_names()])
             return res
         except Exception as e:
             logging.warning(str(e)+" when getting nodal displacement of "+str(case))

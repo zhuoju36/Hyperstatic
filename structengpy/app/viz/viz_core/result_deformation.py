@@ -13,7 +13,7 @@ from structengpy.app.viz.viz_core import ViewerBase
 class ResultViewer(ViewerBase):
     def __init__(self,workpath,filename):
         super(ResultViewer,self).__init__(workpath,filename)
-        self.__deform_scale=1
+        self.__deform_scale=0
         self.setup_gui()
         self.toggle_restraints(False)
 
@@ -153,9 +153,8 @@ class ResultViewer(ViewerBase):
         self.vnodes=Points(tuple(pts.values()), r=8, c="blue5")
         if self.__btn_node.status()=="show nodes":
             self.vnodes.off()
-
-        self.vnodes.cmap('PuOr', scals, vmax=vmax,vmin=vmin) #"jet", "PuOr", "viridis"
-        self.vnodes.addScalarBar(title="Deformation(m)",pos=(0.8,0.4))
+        
+        
         self.plotter.remove(self.vbeams)
         for b in api.get_beam_names():
             s,e=api.get_beam_node_names(b)
@@ -163,14 +162,24 @@ class ResultViewer(ViewerBase):
             lscals.append(disp[s])
             lscals.append(disp[e])
         self.vbeams=Lines(tuple(lines.values()),c='k')
-        self.vbeams.cmap('PuOr', lscals, vmax=vmax,vmin=vmin)
 
         self.plotter.remove(self.vshells)
         shells=api.get_shell_names()
         if shells==None:
             return
         self.vshells=Mesh([list(pts.values()),list(self.faces.values())])
-        self.vshells.cmap('PuOr', scals, vmax=vmax,vmin=vmin).lineColor('tomato').lineWidth(1)
+
+        color_scheme='viridis'
+        abs_max=False
+        if abs_max==True:
+            self.vnodes.cmap(color_scheme, scals, vmax=vmax,vmin=vmin) #"jet", "PuOr", "viridis"
+            self.vbeams.cmap(color_scheme, lscals, vmax=vmax,vmin=vmin)
+            self.vshells.cmap(color_scheme, scals, vmax=vmax,vmin=vmin).lineColor('tomato').lineWidth(1)
+        else:
+            self.vnodes.cmap(color_scheme, scals) #"jet", "PuOr", "viridis"
+            self.vbeams.cmap(color_scheme, lscals)
+            self.vshells.cmap(color_scheme, scals).lineColor('tomato').lineWidth(1)
+        self.vnodes.addScalarBar(title="Deformation(m)",pos=(0.8,0.4))
 
         self.actors["nodes"]=self.vnodes
         self.actors["beams"]=self.vbeams
