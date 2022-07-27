@@ -1,4 +1,8 @@
 import os
+import sys
+tmp=os.path.dirname(os.path.realpath(__file__))
+sys.path.append(tmp)
+
 import numpy as np
 import sympy as syp
 from sympy.utilities.autowrap import autowrap
@@ -210,15 +214,22 @@ def get_binary_BDB():
     Returns:
         return : numerical BᵀDB function. 
     """
-    tmp=os.path.dirname(os.path.realpath(__file__))
+
     for file in os.listdir(tmp): 
         if 'wrapper_module_0' in file:
-            import sys
-            sys.path.append(tmp)
             import wrapper_module_0
-            return wrapper_module_0.autofunc_c
+            bBDBb=wrapper_module_0.autofunc_c
+            break
     else:
-        bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
+        bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
 
-        bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython')
-        return bBDBb,bBDBs
+    for file in os.listdir(tmp): 
+        if 'wrapper_module_1' in file:
+            import wrapper_module_1
+            bBDBs=wrapper_module_1.autofunc_c
+            break
+    else:
+        bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
+    return bBDBb,bBDBs
+
+get_binary_BDB()

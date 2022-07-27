@@ -11,8 +11,8 @@ import os
 from structengpy.app.viz.viz_core import ViewerBase
 
 class BasicViewer(ViewerBase):
-    def __init__(self,workpath,filename):
-        super(BasicViewer, self).__init__(workpath,filename)
+    def __init__(self,workpath,filename,qtWidget=None):
+        super(BasicViewer, self).__init__(workpath,filename,qtWidget)
         self.setup_gui()
         self.__scale=1
 
@@ -24,7 +24,7 @@ class BasicViewer(ViewerBase):
             bc=("b6","r6"),
             pos=(0.6,0.15),
             states=("show_node","hide_node"),
-            font="san-serif",
+            font="Normografo",
             size=12,
         )
         self.__btn_beam=plt.addButton(
@@ -32,7 +32,7 @@ class BasicViewer(ViewerBase):
             bc=("r6","b6"),
             pos=(0.6,0.1),
             states=("hide_beam","show_beam"),
-            font="san-serif",
+            font="Normografo",
             size=12,
         )
         self.__btn_shell=plt.addButton(
@@ -40,7 +40,7 @@ class BasicViewer(ViewerBase):
             bc=("r6","b6"),
             pos=(0.6,0.05),
             states=("hide_shell","show_shell"),
-            font="san-serif",
+            font="Normografo",
             size=12,
         )
 

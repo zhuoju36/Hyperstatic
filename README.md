@@ -1,4 +1,4 @@
-# StructEngPy：基于Python的建筑结构分析程序
+# StructEngPy：开放自由的结构分析引擎
 
 ![GitHub](https://img.shields.io/github/license/zhuoju36/structengpy) [![codecov](https://codecov.io/gh/zhuoju36/StructEngPy/branch/master/graph/badge.svg?token=4C6a6QwvKA)](https://codecov.io/gh/zhuoju36/StructEngPy) ![PyPI](https://img.shields.io/pypi/v/structengpy) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/structengpy)
 [![Documentation Status](https://readthedocs.org/projects/structengpy/badge/?version=latest)](https://structengpy.readthedocs.io/zh_CN/latest/?badge=latest)

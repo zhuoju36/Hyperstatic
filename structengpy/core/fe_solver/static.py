@@ -16,7 +16,7 @@ import scipy.sparse.linalg as sl
 from structengpy.core.fe_model.model import Model
 from structengpy.core.fe_model.load.loadcase import StaticCase
 from structengpy.core.fe_solver import Solver
-import pypardiso
+# import pypardiso
 
 import logging
 
@@ -83,8 +83,40 @@ class StaticSolver(Solver):
         np.save(path,d_)
         return True
    
-    def solve_2nd(self):
-        pass
+    def solve_2nd_order(self,casename,precase=None)->bool:
+        assembly=super().assembly
+        logging.info('Solving STATIC case with %d DOFs...'%assembly.DOF)
+        
+        if precase==None:
+            base_case="0"
+            path=os.path.join(self.workpath,base_case+'.k') #path of the stiff matrix
+            if os.path.exists(path):
+                K=np.load(path)
+            else:
+                K=assembly.assemble_K()
+                np.save(path,K)
+            
+        f=assembly.assemble_f(casename)
+        K_ =assembly.assemble_boundary(casename,K)
+        f_ =assembly.assemble_boundary(casename,f)
+
+        logging.info('Start solving 2nd order equations considered P-Δ effects')
+        begin=time.time()
+
+        delta,info=sl.cg(K_,f_,atol='legacy')
+
+        logging.info('Done!'+"time="+str(time.time()-begin))
+        restraintDOF=assembly.restraintDOF(casename) #case restraint first, then model
+        if len(restraintDOF)==0:
+            restraintDOF=assembly.restraintDOF()
+        for i in restraintDOF: 
+            delta=np.insert(delta,i,0,0)
+
+        d_=delta.reshape((1,assembly.node_count*6)) #row-first, d_ contains all the displacements including the restraint DOFs
+
+        path=os.path.join(self.workpath,casename+'.d')
+        np.save(path,d_)
+        return True
 
     def solve_3rd(self):
         pass

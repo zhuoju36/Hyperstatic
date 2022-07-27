@@ -1,4 +1,7 @@
 import os
+import sys
+tmp=os.path.dirname(os.path.realpath(__file__))
+sys.path.append(tmp)
 import numpy as np
 import sympy as syp
 from sympy.utilities.autowrap import autowrap
@@ -80,8 +83,6 @@ B=operator_dot(L2iso(xi,eta),N)
 BDB=(B.T)*D*B
 BDB_=t*BDB*syp.det(J) 
 
-tmp=os.path.dirname(os.path.realpath(__file__))
-    
 def get_binary_BDB():
     """
       will be compiled first time call, then use the binary file afterwards
@@ -91,8 +92,6 @@ def get_binary_BDB():
     """
     for file in os.listdir(tmp): 
         if 'wrapper_module_0' in file:
-            import sys
-            sys.path.append(tmp)
             import wrapper_module_0
             return wrapper_module_0.autofunc_c
     else:

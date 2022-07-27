@@ -13,7 +13,11 @@
 - 矩形截面 core.Api.add_beam_section_rectangle
 - 圆形截面 core.Api.add_beam_section_circle
 - 圆管截面 core.Api.add_beam_section_pipe
-
+调整内核层可视化接口
+- 基本模型视图 app.viz.viz_core.model_basic.BasicViewer
+- 荷载视图 app.viz.viz_core.model_load.LoadViewer
+- 分析结果视图 app.viz.viz_core.result_deformation.ResultViewer
+性能优化
 
 2022-07-06 v0.1.15
 增加后处理内核接口:

@@ -20,7 +20,7 @@ from vedo import Points, Line, Lines, Arrows, Plotter, Cone,Text2D,Mesh
 from vedo.pyplot import histogram
 import os
 class ViewerBase():
-    def __init__(self,workpath,filename):
+    def __init__(self,workpath,filename,qtWidget=None):
         self.workpath=workpath
         filename=os.path.join(workpath,filename)
         self.api:Api=Api.load(workpath,filename)
@@ -35,7 +35,10 @@ class ViewerBase():
         self.vbeamNames=None
         self.vbeamReleases=None
         self.vshells:Mesh=None
-        self.plotter=Plotter()
+        if qtWidget!=None:
+            self.plotter=Plotter(qtWidget=qtWidget)
+        else:
+            self.plotter=Plotter()
         self.pt_id_map={}
 
         self.actors={}
@@ -206,6 +209,33 @@ class ViewerBase():
             q=True,
             )
         plt.interactive().close()
+
+    def show(self):
+        logo=Text2D("ModelViz", pos=(.05, .95), c='k', s=1)
+        workpath = Text2D(self.workpath, pos=(.05, .90), c='k', s=0.5)
+        time = Text2D(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), pos=(.05, .875), c='k', s=0.5)
+        info = Text2D('Powered by StructEngPy', pos=(.05, .85), c='k', s=0.5)
+        xs=[i[0] for i in self.pts.values()]
+        ys=[i[1] for i in self.pts.values()]
+        zs=[i[2] for i in self.pts.values()]
+        maxx,minx=max(xs),min(xs)
+        maxy,miny=max(ys),min(ys)
+        maxz,minz=max(zs),min(zs)
+        cx,cy,cz=maxx/2+minx/2,maxy/2+miny/2,maxz/2+minz/2
+        rx,ry,rz=maxx/2-minx/2,maxy/2-miny/2,maxz/2-minz/2
+        r=max(rx,ry,rz)
+        plt=self.plotter   
+        plt.show(
+            *tuple(self.actors.values()),
+            logo,workpath,time,info,
+            viewup="z", 
+            axes=4,
+            camera={'pos':(cx-r*5,cy-r*5,cz+r*5),'focalPoint':(cx,cy,cz)},
+            resetcam=True,
+            title="ModelViz",
+            mode='interactive'
+            )
+        
         
 if __name__=="__main__":
     path=r"C:\Users\HZJ\Desktop\ghdev\analysis"
