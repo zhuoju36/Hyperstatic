@@ -95,5 +95,6 @@ def get_binary_BDB():
             import wrapper_module_0
             return wrapper_module_0.autofunc_c
     else:
+        logging.info("first time calling, compiling ")
         bBDB=autowrap(BDB_,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp,)
         return bBDB
