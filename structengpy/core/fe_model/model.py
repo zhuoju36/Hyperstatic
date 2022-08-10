@@ -16,6 +16,8 @@ from structengpy.core.fe_model.element.line.beam import Beam
 from structengpy.core.fe_model.element.tri.membrane import Membrane3
 from structengpy.core.fe_model.element.quad import Quad
 from structengpy.core.fe_model.element.quad.GQ12 import *
+from structengpy.core.fe_model.element.quad.TMQ import *
+from structengpy.core.fe_model.element.quad.TMGQ import *
 
 import logging
 
@@ -134,9 +136,9 @@ class Model:
         sec=PipeSection(name,mat,d,t)
         self.__beam_section[name]=sec
 
-    def add_shell_section(self,name:str,material:str,t):
+    def add_shell_section(self,name:str,material:str,t,ele_type:str="shell"):
         mat=self.__material[material]
-        sec=ShellSection(name,mat,t)
+        sec=ShellSection(name,mat,t,ele_type)
         self.__shell_section[name]=sec
 
     def add_beam(self,name:str,start:str,end:str,section:str,check_dup=False):
@@ -273,13 +275,13 @@ class Model:
         K=beam.integrate_K()
         return beam.static_condensate_f(re,K)
     
-    def add_shell(self,name:str,node0:Node, node1:Node, node2:Node, node3:Node,section:str):
+    def add_shell(self,name:str,node0:str, node1:str, node2:str, node3:str,section:str):
         node0=self.__nodes[node0]
         node1=self.__nodes[node1]
         node2=self.__nodes[node2]
         node3=self.__nodes[node3]
-        section=self.__shell_section[section]
-        elm=GQ12(name,node0, node1, node2, node3,section)
+        shell_sec=self.__shell_section[section]
+        elm=TMGQ(name,shell_sec,node0, node1, node2, node3)
 
         res=len(self.__shells)
         self.__hid["shell"][name]=res

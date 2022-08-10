@@ -3,10 +3,11 @@ from sympy import re
 from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
 
 class ShellSection(object):
-    def __init__(self,name:str,material:IsotropicMaterial,t:float):
+    def __init__(self,name:str,material:IsotropicMaterial,t:float,ele_type:str="shell"):
         self.__name=name
         self.__material=material
         self.__t=t
+        self.__ele_type=ele_type
 
     @property
     def name(self):
@@ -35,3 +36,7 @@ class ShellSection(object):
     @property
     def t(self):
         return self.__t
+
+    @property
+    def ele_type(self):
+        return self.__ele_type

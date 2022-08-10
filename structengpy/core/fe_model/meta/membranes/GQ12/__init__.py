@@ -1,7 +1,7 @@
+import logging
 import os
 import sys
-tmp=os.path.dirname(os.path.realpath(__file__))
-sys.path.append(tmp)
+
 import numpy as np
 import sympy as syp
 from sympy.utilities.autowrap import autowrap
@@ -90,9 +90,11 @@ def get_binary_BDB():
     Returns:
         return : numerical BᵀDB function. 
     """
+    tmp=os.path.dirname(os.path.realpath(__file__))
+    # sys.path.append(tmp)
     for file in os.listdir(tmp): 
         if 'wrapper_module_0' in file:
-            import wrapper_module_0
+            from . import wrapper_module_0
             return wrapper_module_0.autofunc_c
     else:
         logging.info("first time calling, compiling ")

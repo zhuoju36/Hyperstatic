@@ -304,19 +304,20 @@ class Api(object):
             logging.warning(str(e)+" when adding circle beam section")
             return False
 
-    def add_shell_section(self,name:str,material:str,t:float)->bool:
+    def add_shell_section(self,name:str,material:str,t:float,ele_type:str="shell")->bool:
         """向模型中添加板壳截面
 
         Args:
             name (str): 截面名
             material (str): 材料名
             t (float): 厚度
+            ele_type(str): shell, plate or membrane
 
         Returns:
             bool: 成功操作返回True，反之为False
         """
         try:
-            self.__model.add_shell_section(name,material,t)
+            self.__model.add_shell_section(name,material,t,ele_type)
             return True
         except Exception as e:
             logging.warning(str(e)+" when adding shell section")

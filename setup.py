@@ -21,8 +21,8 @@ elm_path=os.path.join(elm_path,'wrapped')
 
 ext_mods = [Extension(
     'wrapper_module_1', [
-        os.path.join(elm_path,'GQ12','wrapper_module_1.pyx'), 
-        os.path.join(elm_path,'GQ12','wrapper_module_1.c')
+        os.path.join(elm_path,'GQ12','wrapper_module_0.pyx'), 
+        os.path.join(elm_path,'GQ12','wrapper_module_0.c')
         ],
     include_dirs=[np.get_include()],
     library_dirs=[],

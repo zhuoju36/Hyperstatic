@@ -114,28 +114,27 @@ class Assembly(object):
             T=self.__model.get_shell_transform_matrix(elm)
             Tt = T.transpose()
             Ke=self.__model.get_shell_K(elm)
-            Ke_ = (Tt*Ke*T).tocoo() #12*12 membrane
+            Ke_ = (Tt*Ke*T).tocoo() #24*24
             row=[]
             col=[]
-            f=lambda x:x%2+x//2*5
             for r in Ke_.row:
-                if r<3:
-                    row.append(i*6+f(r))
-                elif r<6:
-                    row.append(j*6+f(r-3))
-                elif r<9:
-                    row.append(k*6+f(r-6))
+                if r<6:
+                    row.append(i*6+r%6)
+                elif r<12:
+                    row.append(j*6+r%6)
+                elif r<18:
+                    row.append(k*6+r%6)
                 else:
-                    row.append(l*6+f(r-9))
+                    row.append(l*6+r%6)
             for c in Ke_.col:
-                if c<3:
-                    col.append(i*6+f(c))
-                elif c<6:
-                    col.append(j*6+f(c-3))
-                elif c<9:
-                    col.append(k*6+f(c-6))
+                if c<6:
+                    col.append(i*6+c%6)
+                elif c<12:
+                    col.append(j*6+c%6)
+                elif c<18:
+                    col.append(k*6+c%6)
                 else:
-                    col.append(l*6+f(c-9))
+                    col.append(l*6+c%6)
             data_k.extend(Ke_.data)
             row_k.extend(row)
             col_k.extend(col)

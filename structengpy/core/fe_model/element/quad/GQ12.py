@@ -7,7 +7,7 @@ from structengpy.core.fe_model.section.shell_section import ShellSection
 import quadpy
 
 class GQ12(Quad):
-    def __init__(self,name:str,node_i:Node, node_j:Node, node_k:Node, node_l:Node,section:ShellSection):
+    def __init__(self,name:str,section:ShellSection,node_i:Node, node_j:Node, node_k:Node, node_l:Node):
         self.__section=section
         super(GQ12,self).__init__(name,node_i, node_j, node_k, node_l,12)
 
@@ -59,10 +59,10 @@ if __name__=='__main__':
 
     steel=IsotropicMaterial('mat',7.849e3,2e11,0.3,1.17e-5) #Q345
     section=ShellSection('sec',steel,0.25)
-    ele=GQ12("ele",n1,n2,n3,n4,section)
+    ele=GQ12("ele",section,n1,n2,n3,n4)
     K=ele.integrate_K()
     assert K.shape==(12,12)
-    print(K[:,3]/1e10)
+    print(K[0,:]/1e10)
 
     # n1=Node("1",10,0,0)
     # n2=Node("2",30,30,0)

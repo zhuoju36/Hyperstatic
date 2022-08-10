@@ -74,10 +74,18 @@ class StaticSolver(Solver):
         restraintDOF=assembly.restraintDOF(casename) #case restraint first, then model
         if len(restraintDOF)==0:
             restraintDOF=assembly.restraintDOF()
-        for i in restraintDOF: 
-            delta=np.insert(delta,i,0,0)
 
-        d_=delta.reshape((1,assembly.node_count*6)) #row-first, d_ contains all the displacements including the restraint DOFs
+        restraintDOF.sort()
+        delta=list(delta)
+        d=[]
+        for i in range(assembly.node_count*6):
+            if restraintDOF!=[] and i==restraintDOF[0]:
+                restraintDOF.pop(0)
+                d.append(0)
+            else:
+                d.append(delta.pop(0))
+
+        d_=np.array(d).reshape((1,assembly.node_count*6)) #row-first, d_ contains all the displacements including the restraint DOFs
 
         path=os.path.join(self.workpath,casename+'.d')
         np.save(path,d_)

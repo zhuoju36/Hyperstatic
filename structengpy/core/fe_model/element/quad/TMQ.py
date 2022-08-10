@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as spr
 
 from structengpy.core.fe_model.meta.plates.TMQ import get_binary_BDB
 from structengpy.core.fe_model.node import Node
@@ -13,6 +14,12 @@ class TMQ(Quad):
 
     def integrate_K(self):
         bBDBb,bBDBs=get_binary_BDB()
+        # X=np.array([
+        #     self.nodes[2].loc,
+        #     self.nodes[3].loc,
+        #     self.nodes[0].loc,
+        #     self.nodes[1].loc]
+        #     )
         X=np.array([
             self.nodes[0].loc,
             self.nodes[1].loc,
@@ -20,23 +27,21 @@ class TMQ(Quad):
             self.nodes[3].loc]
             )
         X_=X.dot(self.local_csys.transform_matrix.T)[:,:2]
-        # def func(x):
-        #     E=self.__section.E
-        #     mu=self.__section.mu
-        #     t=self.__section.t
-        #     res=[]
-        #     for xi,eta in zip(x[0],x[1]):
-        #         res.append(bBDBb(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size))))
-        #     return np.stack(res,axis=2)
-        # scheme = quadpy.c2.get_good_scheme(2)
-        # Kb = scheme.integrate(
-        #     func,
-        #     quadpy.c2.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
-        # )
+        print(*tuple(X_.reshape(X_.size)))
+        E=self.__section.E
+        mu=self.__section.mu
+        t=self.__section.t
         def func(x):
-            E=self.__section.E
-            mu=self.__section.mu
-            t=self.__section.t
+            res=[]
+            for xi,eta in zip(x[0],x[1]):
+                res.append(bBDBb(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size))))
+            return np.stack(res,axis=2)
+        scheme = quadpy.c2.get_good_scheme(2)
+        Kb = scheme.integrate(
+            func,
+            quadpy.c2.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
+        )
+        def func(x):
             res=[]
             for xi,eta in zip(x[0],x[1]):
                 res.append(bBDBs(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size))))
@@ -46,7 +51,13 @@ class TMQ(Quad):
             func,
             quadpy.c2.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
         )
-        return Ks
+        return spr.csr_matrix(Ks+Kb)
+
+    @property
+    def transform_matrix(self):
+        T=np.zeros((12,12))
+        T[:3,:3]=T[3:6,3:6]=T[6:9,6:9]=T[9:,9:]=self.local_csys.transform_matrix
+        return spr.csr_matrix(T)
 
 if __name__=='__main__':
     from structengpy.core.fe_model.node import Node
@@ -57,6 +68,12 @@ if __name__=='__main__':
     n2=Node("2",1,1,0)
     n3=Node("3",-1,1,0)
     n4=Node("4",-1,-1,0)
+
+    # n1=Node("1",-1,-1,0)
+    # n2=Node("2",1,-1,0)
+    # n3=Node("3",1,1,0)
+    # n4=Node("4",-1,1,0)
+
     steel=IsotropicMaterial('mat',7.849e3,2e11,0.3,1.17e-5) #Q345
     section=ShellSection('sec',steel,0.25)
     ele=TMQ("ele",section,n1,n2,n3,n4)
@@ -64,5 +81,6 @@ if __name__=='__main__':
     K=ele.integrate_K()
     print(time()-beg)
     assert K.shape==(12,12)
-    print(K[3,:]/1e7)
+    i=1
+    print(K.toarray()[3*i,:]/1e8)
 
