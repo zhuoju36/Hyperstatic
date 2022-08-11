@@ -58,7 +58,7 @@ if __name__=='__main__':
     n4=Node("4",-10,-10,0)
 
     steel=IsotropicMaterial('mat',7.849e3,2e11,0.3,1.17e-5) #Q345
-    section=ShellSection('sec',steel,0.25)
+    section=ShellSection('sec',steel,0.25,'membrane')
     ele=GQ12("ele",section,n1,n2,n3,n4)
     K=ele.integrate_K()
     assert K.shape==(12,12)

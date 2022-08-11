@@ -265,34 +265,24 @@ D*=E*t**3/12/(1-mu**2)
 
 Bb=-(H0+H1*alpha+H2*beta)
 
-BDBb=Bb.T*D*Bb*syp.det(J)
+BDBb=Bb.T*D*Bb*syp.det(J)    
 
 def get_binary_BDB():
     """
-      will be compiled first time call, then use the binary file afterwards
-
     Returns:
         return : numerical BᵀDB function. 
     """
-    tmp=os.path.dirname(os.path.realpath(__file__))
-    # sys.path.append(tmp)
-    for file in os.listdir(tmp): 
-        if 'wrapper_module_0' in file:
-            from . import wrapper_module_0
-            bBDBb=wrapper_module_0.autofunc_c
-            break
-    else:
-        logging.info("This is the first time to run the bending plate integration, compliling the binary function...")
-        bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
-
-    for file in os.listdir(tmp): 
-        if 'wrapper_module_1' in file:
-            from . import wrapper_module_1
-            bBDBs=wrapper_module_1.autofunc_c
-            break
-    else:
-        logging.info("This is the first time to run the shearing plate integration, compliling the binary function...")
-        bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
+    import metaTMQb,metaTMQs
+    bBDBb=metaTMQb.autofunc_c
+    bBDBs=metaTMQs.autofunc_c
     return bBDBb,bBDBs
 
-# get_binary_BDB()
+def generate_code():
+    tmp=os.path.dirname(os.path.realpath(__file__))
+    logging.info("This is the first time to run the bending plate integration, compliling the binary function...")
+    bBDBb=autowrap(BDBb,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
+    logging.info("This is the first time to run the shearing plate integration, compliling the binary function...")
+    bBDBs=autowrap(BCBs,args=[E,mu,t,xi,eta,x1,y1,x2,y2,x3,y3,x4,y4],backend='cython',tempdir=tmp)
+
+if __name__=='__main__':
+    generate_code()

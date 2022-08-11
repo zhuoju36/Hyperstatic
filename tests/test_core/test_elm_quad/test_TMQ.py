@@ -17,7 +17,7 @@ if sys.platform=="win32":
     path="c:\\test"
 
 model=Model()
-N=10
+N=1
 l=2
 for i in range(N+1):
     for j in range(N+1):

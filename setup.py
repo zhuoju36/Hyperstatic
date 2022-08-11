@@ -6,7 +6,9 @@ try:
 except ImportError:
     from distutils.core import setup
     from distutils.extension import Extension
-from Cython.Build import cythonize
+from Cython.Build import cythonize,build_ext
+from Cython.Distutils import build_ext
+
 cy_opts = {}
 import numpy as np
 
@@ -17,19 +19,39 @@ elm_path=os.path.join(elm_path,'structengpy')
 elm_path=os.path.join(elm_path,'core')
 elm_path=os.path.join(elm_path,'fe_model')
 elm_path=os.path.join(elm_path,'meta')
-elm_path=os.path.join(elm_path,'wrapped')
 
-ext_mods = [Extension(
-    'wrapper_module_1', [
-        os.path.join(elm_path,'GQ12','wrapper_module_0.pyx'), 
-        os.path.join(elm_path,'GQ12','wrapper_module_0.c')
+ext_mods = [
+    Extension('metaGQ12', [ 
+        os.path.join(elm_path,'membranes','GQ12','metaGQ12.pyx'), 
+        os.path.join(elm_path,'membranes','GQ12','wrapped_code_0.c')
         ],
     include_dirs=[np.get_include()],
     library_dirs=[],
     libraries=[],
     extra_compile_args=['-std=c99'],
     extra_link_args=[]
-)]
+    ),
+    Extension('metaTMQb', [ 
+        os.path.join(elm_path,'plates','TMQ','metaTMQb.pyx'), 
+        os.path.join(elm_path,'plates','TMQ','wrapped_code_0.c')
+        ],
+    include_dirs=[np.get_include()],
+    library_dirs=[],
+    libraries=[],
+    extra_compile_args=['-std=c99'],
+    extra_link_args=[]
+    ),
+    Extension('metaTMQs', [ 
+        os.path.join(elm_path,'plates','TMQ','metaTMQs.pyx'), 
+        os.path.join(elm_path,'plates','TMQ','wrapped_code_1.c')
+        ],
+    include_dirs=[np.get_include()],
+    library_dirs=[],
+    libraries=[],
+    extra_compile_args=['-std=c99'],
+    extra_link_args=[]
+    ),
+]
 
 setup(
     name='StructEngPy', 
@@ -75,5 +97,6 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     url='https://github.com/zhuoju36/StructEngPy',
-    # ext_modules=cythonize(ext_mods, **cy_opts)
+    cmdclass={'build_ext': build_ext},
+    ext_modules=cythonize(ext_mods, **cy_opts),
 )
