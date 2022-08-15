@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from logging import raiseExceptions
 import numpy as np
 import uuid
 
@@ -10,9 +11,9 @@ class Cartesian(object):
         """_summary_
 
         Args:
-            O (tuple): array-like
-            A (tuple): array-like
-            B (tuple): array-like
+            O (tuple): array-like, origin
+            A (tuple): array-like, origin
+            B (tuple): array-like, point on x-y plane
             name (str, optional):  Defaults to None.
 
         Raises:
@@ -30,6 +31,31 @@ class Cartesian(object):
         y = np.cross(z, x)
         self.__T=np.array([x,y,z])
         self.__name=str(uuid.uuid1()) if name==None else name
+
+    @staticmethod
+    def create_by_normal(O:tuple, normal:tuple, guide=(0,0,1),name:str=None):
+        """create cartesian system by normal vector
+
+        Args:
+            O (tuple): array-like, origin
+            normal (tuple): array-like, normal vector
+            guide (tuple): array-like. Defaults to (0,0,1).
+            name (str, optional): Defaults to None.
+
+        Returns:
+            Cartesian: Cartesian obj.
+        """
+        tol=Tolerance.abs_tol()
+        w=np.array(normal)
+        w=w/np.linalg.norm(w)
+        g=np.array(guide)
+        g=g/np.linalg.norm(g)
+        if np.linalg.norm(w-g)<tol or np.linalg.norm(w+g)<tol :
+            raise Exception("Normal vector should not be parallel to guide vector!!")       
+        u=np.cross(g,w)
+        u=u/np.linalg.norm(u)
+        v=np.cross(w,u)
+        return Cartesian(O,O+u,O+v,name)
         
     @property
     def name(self):

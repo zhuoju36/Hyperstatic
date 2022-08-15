@@ -67,7 +67,7 @@ class StaticSolver(Solver):
         begin=time.time()
 
         delta,info=sl.cg(K_,f_,atol='legacy') #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
-        # delta=sl.spsolve(K_,f_,use_umfpack=True) #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
+        # delta=sl.spsolve(K_,f_,use_umfpack=True) #use direct algorithm
         # delta= pypardiso.spsolve(K_,f_)
 
         logging.info('Done!'+"time="+str(time.time()-begin))

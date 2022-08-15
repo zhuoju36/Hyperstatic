@@ -13,8 +13,8 @@ from structengpy.core.fe_model.load.pattern import LoadPattern
 from structengpy.core.fe_model.load.loadcase import StaticCase
 from structengpy.core.fe_solver.static import StaticSolver
 
-class TestTMGQ():
-    def test_GQ12(self):
+class TestDKT():
+    def test_T9(self):
         path="./test"
         if sys.platform=="win32":
             path="c:\\test"
@@ -35,7 +35,8 @@ class TestTMGQ():
 
         for i in range(N):
             for j in range(N):
-                model.add_shell("S%d-%d-A"%(i,j),'section',"%d-%d"%(i,j),"%d-%d"%(i+1,j),"%d-%d"%(i+1,j+1),"%d-%d"%(i,j+1))
+                model.add_shell("S%d-%d-A"%(i,j),'section',"%d-%d"%(i,j),"%d-%d"%(i+1,j),"%d-%d"%(i+1,j+1))
+                model.add_shell("S%d-%d-B"%(i,j),'section',"%d-%d"%(i+1,j+1),"%d-%d"%(i,j+1),"%d-%d"%(i,j))
 
         patt1=LoadPattern("pat1")
         patt1.set_nodal_load("%d-%d"%(N,N),1,0,0,0,0,0)

@@ -13,10 +13,9 @@ from structengpy.core.fe_model.section.shell_section import *
 from structengpy.core.fe_model.element.line.simple_beam import SimpleBeam
 from structengpy.core.fe_model.element.line.beam import Beam
 
-from structengpy.core.fe_model.element.tri.membrane import Membrane3
+from structengpy.core.fe_model.element.tria import Tria
+from structengpy.core.fe_model.element.tria.DKT import *
 from structengpy.core.fe_model.element.quad import Quad
-from structengpy.core.fe_model.element.quad.GQ12 import *
-from structengpy.core.fe_model.element.quad.TMQ import *
 from structengpy.core.fe_model.element.quad.TMGQ import *
 
 import logging
@@ -275,14 +274,17 @@ class Model:
         K=beam.integrate_K()
         return beam.static_condensate_f(re,K)
     
-    def add_shell(self,name:str,node0:str, node1:str, node2:str, node3:str,section:str):
+    def add_shell(self,name:str,section:str,node0:str, node1:str, node2:str, node3:str=None):
+        shell_sec=self.__shell_section[section]
         node0=self.__nodes[node0]
         node1=self.__nodes[node1]
         node2=self.__nodes[node2]
-        node3=self.__nodes[node3]
-        shell_sec=self.__shell_section[section]
-        elm=TMGQ(name,shell_sec,node0, node1, node2, node3)
-
+        if node3!=None:
+            node3=self.__nodes[node3]
+            elm=TMGQ(name,shell_sec,node0, node1, node2, node3)
+        else:
+            elm=DKT(name,shell_sec,node0, node1, node2)
+            
         res=len(self.__shells)
         self.__hid["shell"][name]=res
         self.__shells[name]=elm

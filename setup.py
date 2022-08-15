@@ -21,9 +21,29 @@ elm_path=os.path.join(elm_path,'fe_model')
 elm_path=os.path.join(elm_path,'meta')
 
 ext_mods = [
+    Extension('metaT9', [ 
+        os.path.join(elm_path,'membranes','T9','metaT9.pyx'), 
+        os.path.join(elm_path,'membranes','T9','wrapped_code_0.c')
+        ],
+    include_dirs=[np.get_include()],
+    library_dirs=[],
+    libraries=[],
+    extra_compile_args=['-std=c99'],
+    extra_link_args=[]
+    ),
     Extension('metaGQ12', [ 
         os.path.join(elm_path,'membranes','GQ12','metaGQ12.pyx'), 
         os.path.join(elm_path,'membranes','GQ12','wrapped_code_0.c')
+        ],
+    include_dirs=[np.get_include()],
+    library_dirs=[],
+    libraries=[],
+    extra_compile_args=['-std=c99'],
+    extra_link_args=[]
+    ),
+    Extension('metaDKT', [ 
+        os.path.join(elm_path,'plates','metaDKT','metaDKT.pyx'), 
+        os.path.join(elm_path,'plates','metaDKT','wrapped_code_0.c')
         ],
     include_dirs=[np.get_include()],
     library_dirs=[],

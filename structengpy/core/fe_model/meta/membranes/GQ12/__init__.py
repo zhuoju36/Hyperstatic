@@ -84,14 +84,11 @@ BDB=(B.T)*D*B
 BDB_=t*BDB*syp.det(J) 
 
 def get_binary_BDB():
-    """
-      will be compiled first time call, then use the binary file afterwards
-
-    Returns:
-        return : numerical BᵀDB function. 
-    """
-    import metaGQ12
-    bBDB=metaGQ12.autofunc_c
+    try:
+        import metaGQ12
+        bBDB=metaGQ12.autofunc_c
+    except:
+        raise Exception("Complile the cython code first!")
     return bBDB
 
 def generate_code():

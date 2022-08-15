@@ -105,36 +105,53 @@ class Assembly(object):
             Ke=self.__model.get_beam_K(elm)
             Ke=self.__model.get_beam_condensated_matrix(elm,Ke)
             Ke_ = (Tt*Ke*T).tocoo()
-
             data_k.extend(Ke_.data)
             row_k.extend([i*6+r if r<6 else j*6+r-6 for r in Ke_.row])
             col_k.extend([i*6+c if c<6 else j*6+c-6 for c in Ke_.col])
         for elm in self.__model.get_shell_names():
-            i,j,k,l=self.__model.get_shell_node_hids(elm)
+            hids=self.__model.get_shell_node_hids(elm)
             T=self.__model.get_shell_transform_matrix(elm)
             Tt = T.transpose()
             Ke=self.__model.get_shell_K(elm)
-            Ke_ = (Tt*Ke*T).tocoo() #24*24
+            Ke_ = (Tt*Ke*T).tocoo()            
             row=[]
             col=[]
-            for r in Ke_.row:
-                if r<6:
-                    row.append(i*6+r%6)
-                elif r<12:
-                    row.append(j*6+r%6)
-                elif r<18:
-                    row.append(k*6+r%6)
-                else:
-                    row.append(l*6+r%6)
-            for c in Ke_.col:
-                if c<6:
-                    col.append(i*6+c%6)
-                elif c<12:
-                    col.append(j*6+c%6)
-                elif c<18:
-                    col.append(k*6+c%6)
-                else:
-                    col.append(l*6+c%6)
+            if len(hids)==4:
+                i,j,k,l=hids
+                for r in Ke_.row: #24x24
+                    if r<6:
+                        row.append(i*6+r%6)
+                    elif r<12:
+                        row.append(j*6+r%6)
+                    elif r<18:
+                        row.append(k*6+r%6)
+                    else:
+                        row.append(l*6+r%6)
+                for c in Ke_.col:
+                    if c<6:
+                        col.append(i*6+c%6)
+                    elif c<12:
+                        col.append(j*6+c%6)
+                    elif c<18:
+                        col.append(k*6+c%6)
+                    else:
+                        col.append(l*6+c%6)
+            elif len(hids)==3:
+                i,j,k=hids
+                for r in Ke_.row: #18x18
+                    if r<6:
+                        row.append(i*6+r%6)
+                    elif r<12:
+                        row.append(j*6+r%6)
+                    else:
+                        row.append(k*6+r%6)
+                for c in Ke_.col:
+                    if c<6:
+                        col.append(i*6+c%6)
+                    elif c<12:
+                        col.append(j*6+c%6)
+                    else:
+                        col.append(k*6+c%6)
             data_k.extend(Ke_.data)
             row_k.extend(row)
             col_k.extend(col)
