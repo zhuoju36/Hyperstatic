@@ -18,6 +18,7 @@
 - 荷载视图 app.viz.viz_core.model_load.LoadViewer
 - 分析结果视图 app.viz.viz_core.result_deformation.ResultViewer
 性能优化
+- 求解器采用预处理迭代加速收敛
 
 2022-07-06 v0.1.15
 增加后处理内核接口:

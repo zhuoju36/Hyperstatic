@@ -47,26 +47,23 @@ class StaticSolver(Solver):
         K_ =assembly.assemble_boundary(casename,K)
         f_ =assembly.assemble_boundary(casename,f)
 
-        def icholesky(a):
-            n = a.shape[0]
-            for k in range(n): 
-                a[k,k] = np.sqrt(a[k,k])
-                for i in range(k+1,n):
-                   if (a[i,k] !=0):
-                       a[i,k] = a[i,k]/a[k,k]
-                for j in range(k+1,n):  
-                    for i in range(j,n):
-                       if (a[i,j]!=0):
-                           a[i,j] = a[i,j]-a[i,k]*a[j,k]    
-            return spr.csr_matrix(a)
-        
-
-        # M=spr.diags([1/K_[i,i] for i in range(K_.shape[0])])
-
+        N=K_.shape[0]
+        logging.info('Preconditioning...')
+        lu=sl.spilu(K_.tocsc(),drop_tol=1e-20,fill_factor=20)
+        # lu=sl.splu(K_.tocsc())
+        Pr = spr.csc_matrix((np.ones(N), (lu.perm_r, np.arange(N))))
+        Pc = spr.csc_matrix((np.ones(N), (np.arange(N), lu.perm_c)))
+        P=Pr.T @ (lu.L @ lu.U) @ Pc.T
+        M_x = lambda x: sl.spsolve(P, x)
+        M = sl.LinearOperator((N,N), M_x)
         logging.info('Start solving linear equations!')
         begin=time.time()
 
-        delta,info=sl.cg(K_,f_,atol='legacy') #using cg algorithm, can also be cgs, bicg, bicgstab, gmres, lgmres, etc.
+        delta,info=sl.bicgstab(K_,f_,tol=1e-5,M=M,maxiter=200) #algorithm, can be cg, cgs, bicg, bicgstab, gmres, lgmres, etc.
+        if info==0:
+            logging.info('Interation solver converged! Sucessfully solved the problem.')
+        else:
+            logging.warning('NOT converged!')
         # delta=sl.spsolve(K_,f_,use_umfpack=True) #use direct algorithm
         # delta= pypardiso.spsolve(K_,f_)
 
@@ -150,7 +147,7 @@ if __name__=='__main__':
     for i in range(N+1):
         model.add_node(str(i),6/N*i,0,0)
     for i in range(N):
-        model.add_simple_beam(str(i),str(i),str(i+1),E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        model.add_simple_beam("B"+str(i),str(i),str(i+1),E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
     patt1=LoadPattern("pat1")
     # patt1.set_beam_load_conc("A",M2=1e4,r=0.75)
