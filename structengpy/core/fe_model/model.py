@@ -16,7 +16,7 @@ from structengpy.core.fe_model.element.line.beam import Beam
 from structengpy.core.fe_model.element.tria import Tria
 from structengpy.core.fe_model.element.tria.DKT import *
 from structengpy.core.fe_model.element.quad import Quad
-from structengpy.core.fe_model.element.quad.TMGQ import *
+from structengpy.core.fe_model.element.quad.DKGQ import *
 
 import logging
 
@@ -245,13 +245,27 @@ class Model:
         beam=self.__beams[name]
         return beam.transform_matrix
 
-    def get_beam_K(self,name:str):
+    def get_beam_K(self,name:str,condensate=False,local=True):
         beam=self.__beams[name]
-        return beam.integrate_K()     
+        K=beam.integrate_K()
+        if condensate:
+            K=beam.static_condensate(K)
+        if local:
+            return K
+        else:
+            T=beam.transform_matrix
+            return T.T*K*T
 
-    def get_beam_M(self,name:str):
+    def get_beam_M(self,name:str,condensate=False,local=True):
         beam=self.__beams[name]
-        return beam.integrate_M()
+        M=beam.integrate_M()
+        if condensate:
+            M=beam.static_condensate(M)
+        if local:
+            return M
+        else:
+            T=beam.transform_matrix
+            return T.T*M*T
 
     def get_beam_shape_function(self,name:str):
         beam=self.__beams[name]
@@ -281,7 +295,7 @@ class Model:
         node2=self.__nodes[node2]
         if node3!=None:
             node3=self.__nodes[node3]
-            elm=TMGQ(name,shell_sec,node0, node1, node2, node3)
+            elm=DKGQ(name,shell_sec,node0, node1, node2, node3)
         else:
             elm=DKT(name,shell_sec,node0, node1, node2)
             

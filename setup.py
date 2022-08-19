@@ -51,6 +51,16 @@ ext_mods = [
     extra_compile_args=['-std=c99'],
     extra_link_args=[]
     ),
+    Extension('metaDKQ', [ 
+        os.path.join(elm_path,'plates','metaDKQ','metaDKQ.pyx'), 
+        os.path.join(elm_path,'plates','metaDKQ','wrapped_code_0.c')
+        ],
+    include_dirs=[np.get_include()],
+    library_dirs=[],
+    libraries=[],
+    extra_compile_args=['-std=c99'],
+    extra_link_args=[]
+    ),
     Extension('metaTMQb', [ 
         os.path.join(elm_path,'plates','TMQ','metaTMQb.pyx'), 
         os.path.join(elm_path,'plates','TMQ','wrapped_code_0.c')

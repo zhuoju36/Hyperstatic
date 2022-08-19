@@ -29,7 +29,7 @@ class StaticSolver(Solver):
     def workpath(self):
         return super().workpath
 
-    def solve_linear(self,casename,precase=None,use_solver='pcg')->bool:
+    def solve_linear(self,casename,precase=None,use_solver='direct')->bool:
         assembly=super().assembly
         logging.info('Solving STATIC case with %d DOFs...'%assembly.DOF)
         
@@ -41,13 +41,12 @@ class StaticSolver(Solver):
             else:
                 K=assembly.assemble_K()
                 np.save(path,K)
-            
+
         f=assembly.assemble_f(casename)
         K_ =assembly.assemble_boundary(casename,K)
         f_ =assembly.assemble_boundary(casename,f)
-
-        N=K_.shape[0]
         
+        N=K_.shape[0]
 
         def ilu_precon(A):
             ## incomplete LU decomposition
@@ -62,6 +61,7 @@ class StaticSolver(Solver):
 
         def nearest_SPD(A):
             N=A.shape[0]
+            B=(A+A.T)/2
             u,s,vt=sl.svds(A,k=min(32,N-1),which='LM')
             vt[vt<1e-6]=0
             Vt=spr.csc_matrix(vt)
@@ -147,7 +147,7 @@ class StaticSolver(Solver):
             else:
                 K=assembly.assemble_K()
                 np.save(path,K)
-            
+          
         f=assembly.assemble_f(casename)
         K_ =assembly.assemble_boundary(casename,K)
         f_ =assembly.assemble_boundary(casename,f)
@@ -190,7 +190,7 @@ if __name__=='__main__':
     if sys.platform=="win32":
         path="c:\\test"
     model=Model()
-    N=200000
+    N=100000
     l=6
     for i in range(N+1):
         model.add_node(str(i),l/N*i,0,0)
