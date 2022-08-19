@@ -30,13 +30,13 @@ class DKT(Tria):
             for xi,eta in zip(x[0],x[1]):
                 res.append(bBDBp(E,mu,t,xi,eta,*tuple(X_.reshape(X_.size))))
             return np.stack(res,axis=2)
-        scheme = quadpy.c2.get_good_scheme(2)
-        Kp = scheme.integrate(
+        scheme = quadpy.t2.get_good_scheme(12)
+        Kp =2*self.area* scheme.integrate(
             func,
-            quadpy.c2.rectangle_points([-1.0, 1.0], [-1.0, 1.0]),
+            [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
         )
         bBDBm=T9.get_binary_BDB()
-        Km = t*self.area*bBDBm(E,mu,t,*tuple(X_.reshape(X_.size)))
+        Km = 2*t*self.area*bBDBm(E,mu,t,*tuple(X_.reshape(X_.size)))
         
         K=np.zeros((18,18))
         for i in range(3):

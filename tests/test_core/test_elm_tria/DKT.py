@@ -17,11 +17,12 @@ if sys.platform=="win32":
     path="c:\\test"
 
 model=Model()
-N=50
+N=100
 l=2
 for i in range(N+1):
     for j in range(N+1):
         model.add_node("%d-%d"%(i,j),i/N*l,j/N*l,0)
+        model.set_nodal_restraint("%d-%d"%(i,j),r3=True)
         
 model.add_isotropic_material('steel',7.849e3,2e11,0.3,1.17e-5)
 model.add_shell_section('section','steel',0.25,"shell")
@@ -35,13 +36,8 @@ for i in range(N):
         model.add_shell("S%d-%d-A"%(i,j),'section',"%d-%d"%(i,j),"%d-%d"%(i+1,j),"%d-%d"%(i+1,j+1))
         model.add_shell("S%d-%d-B"%(i,j),'section',"%d-%d"%(i+1,j+1),"%d-%d"%(i,j+1),"%d-%d"%(i,j))
 
-# quad as benchmark
-# for i in range(N):
-#     for j in range(N):
-#         model.add_shell("S%d-%d-A"%(i,j),'section',"%d-%d"%(i,j),"%d-%d"%(i+1,j),"%d-%d"%(i+1,j+1),"%d-%d"%(i,j+1))
-
 patt1=LoadPattern("pat1")
-patt1.set_nodal_load("%d-%d"%(N,N),1,0,0,0,0,0)
+patt1.set_nodal_load("%d-%d"%(N,N),0,0,1,0,0,0)
 # patt1.set_nodal_disp("1",0,0,0,0,0,0)
 
 lc=StaticCase("case1")
@@ -53,6 +49,3 @@ solver.solve_linear("case1")
 d=np.load(os.path.join(path,"case1.d.npy")).T
 # assert d[o[0]]==approx(o[1],rel=5e-2)
 print(d[-6:])
-
-# K=asb.assemble_K().toarray()
-# print(K[0,:])

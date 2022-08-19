@@ -85,7 +85,7 @@ class Model:
             res=self.__hid['node'][dup_name]
         return res
 
-    def set_nodal_restraint(self,name,u1:bool,u2:bool,u3:bool,r1:bool,r2:bool,r3:bool)->bool:
+    def set_nodal_restraint(self,name,u1:bool=False,u2:bool=False,u3:bool=False,r1:bool=False,r2:bool=False,r3:bool=False)->bool:
         if name not in self.__nodes.keys():
             logging.warning("Node name %s is not defined, nodal restraint setting is aborted."%name)
             return False

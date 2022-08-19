@@ -17,7 +17,7 @@ if sys.platform=="win32":
     path="c:\\test"
 
 model=Model()
-N=1
+N=10
 l=2
 for i in range(N+1):
     for j in range(N+1):
@@ -32,10 +32,10 @@ model.set_nodal_restraint("0-%d"%N,True,True,True,True,True,True)
 
 for i in range(N):
     for j in range(N):
-        model.add_shell("P%d-%d"%(i,j),"%d-%d"%(i,j),"%d-%d"%(i+1,j),"%d-%d"%(i+1,j+1),"%d-%d"%(i,j+1),'section')
+        model.add_shell("P%d-%d"%(i,j),'section',"%d-%d"%(i,j),"%d-%d"%(i+1,j),"%d-%d"%(i+1,j+1),"%d-%d"%(i,j+1))
 
 patt1=LoadPattern("pat1")
-patt1.set_nodal_load("%d-%d"%(N,N),0,0,1,0,0,0)
+patt1.set_nodal_load("%d-%d"%(N,N),1,0,0,0,0,0)
 # patt1.set_nodal_disp("1",0,0,0,0,0,0)
 
 lc=StaticCase("case1")
