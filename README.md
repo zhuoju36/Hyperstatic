@@ -1,9 +1,20 @@
-# Hyperstatic：开放自由的结构分析引擎
+# Hyperstatic：开放自由的结构分析框架
 
 ![GitHub](https://img.shields.io/github/license/zhuoju36/hyperstatic) [![codecov](https://codecov.io/gh/zhuoju36/Hyperstatic/branch/master/graph/badge.svg?token=4C6a6QwvKA)](https://codecov.io/gh/zhuoju36/Hyperstatic) ![PyPI](https://img.shields.io/pypi/v/hyperstatic) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/hyperstatic)
 [![Documentation Status](https://readthedocs.org/projects/hyperstatic/badge/?version=latest)](https://hyperstatic.readthedocs.io/zh_CN/latest/?badge=latest)
 ## 简介
 采用面向对象方式开发，针对建筑领域特点开发的结构分析包，提供基础的结构数值分析，可供高校师生、研究院所参考，也可自由用于相关结构工程设计。
+
+## 当前版本支持功能（v0.2）
+
+- 各向同性单轴材料
+- 考虑剪切的梁单元
+- 三角形、四边形薄壳，支持平板及薄膜刚度
+- 线性静力分析，支持多种稀疏矩阵求解器
+- 自振模态分析
+- 直接积分法时程分析
+- 后处理
+- 分析结果的可视化
 
 ## 快速开始
 ### 安装
@@ -62,9 +73,6 @@ api.solve_static("case1")
 d=api.result_get_nodal_displacement("B","case1")
 print("Deflection at node B is %4.6f m"%d[2])
 ```
-
-### 可视化
-
 
 ## 留言讨论
 - [github](https://github.com/zhuoju36)
