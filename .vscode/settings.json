@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "arange",
+        "autowrap",
         "casename",
         "condensated",
         "csys",
@@ -15,10 +16,11 @@
         "precase",
         "scipy",
         "spmatrix",
-        "structengpy",
+        "hyperstatic",
         "toarray",
         "tocoo",
         "tocsr",
+        "tria",
         "vedo",
         "workpath"
     ]

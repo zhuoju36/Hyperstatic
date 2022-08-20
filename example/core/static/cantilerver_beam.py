@@ -2,7 +2,7 @@
 
 # 导入包
 import sys
-from structengpy.core import Api
+from hyperstatic.core import Api
 
 # 工作路径
 path="./wkdir"
@@ -17,7 +17,7 @@ api.add_node("A",0,0,0)
 api.add_node("B",10,0,0)
 
 # 定义单元
-api.add_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+api.add_simple_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
 # 定义荷载样式
 api.add_loadpattern("pat1")
@@ -32,7 +32,7 @@ api.add_static_case("case1")
 api.add_case_pattern("case1","pat1",1.0)
 
 # 向工况添加结点约束
-api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
 # 集成求解数据
 api.assemble()

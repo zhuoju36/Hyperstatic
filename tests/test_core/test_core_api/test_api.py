@@ -7,7 +7,7 @@ from pytest import approx,raises
 import numpy as np
 import numpy.linalg as nl
 
-from structengpy.core import Api
+from hyperstatic.core import Api
 import logging
 
 class TestApi():
@@ -19,7 +19,7 @@ class TestApi():
         api=Api(path)
         api.add_node("A",0,0,0)
         api.add_node("B",6,0,0)
-        api.add_beam("b","A","B",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
+        api.add_simple_beam("b","A","B",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
 
         api.add_loadpattern("pat1")
         api.set_nodal_load("pat1","B",f3=-1e4)
@@ -27,7 +27,7 @@ class TestApi():
         api.add_static_case("case1")
         api.add_case_pattern("case1","pat1",1.0)
 
-        api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
         api.assemble()
 
@@ -52,7 +52,7 @@ class TestApi():
         api=Api(path)
         api.add_node("A",0,0,0)
         api.add_node("B",6,0,0)
-        api.add_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        api.add_simple_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         api.add_loadpattern("pat1")
         api.set_beam_load_distributed("pat1","b",qi2=-1e4)
@@ -60,7 +60,7 @@ class TestApi():
         api.add_static_case("case1")
         api.add_case_pattern("case1","pat1",1.0)
 
-        api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
         api.assemble()
         api.solve_static("case1")
@@ -76,7 +76,7 @@ class TestApi():
         api=Api(path)
         api.add_node("A",0,0,0)
         api.add_node("B",6,0,0)
-        api.add_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
+        api.add_simple_beam("b","A","B",E=2e11,mu=0.3,A=0.0188,I2=4.023e-5,I3=4.771e-4,J=4.133e-6,rho=7.85e10)
 
         api.add_loadpattern("pat1")
         api.set_beam_load_concentrated("pat1","b",M3=1e4,r=0.75)
@@ -84,7 +84,7 @@ class TestApi():
         api.add_static_case("case1")
         api.add_case_pattern("case1","pat1",1.0)
 
-        api.set_nodal_restraint("case1","A",True,True,True,True,True,True)
+        api.set_loadcase_nodal_restraint("case1","A",True,True,True,True,True,True)
 
         api.assemble()
 

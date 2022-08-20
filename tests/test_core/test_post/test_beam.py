@@ -8,13 +8,13 @@ import logging
 import sys
 import os
 
-from structengpy.core.fe_model.assembly import Assembly
-from structengpy.core.fe_model.model import Model
-from structengpy.core.fe_model.load.pattern import LoadPattern
-from structengpy.core.fe_model.load.loadcase import ModalCase, StaticCase
-from structengpy.core.fe_solver.dynamic import ModalSolver
-from structengpy.core.fe_post.beam import BeamResultResolver
-from structengpy.core.fe_solver.static import StaticSolver
+from hyperstatic.core.fe_model.assembly import Assembly
+from hyperstatic.core.fe_model.model import Model
+from hyperstatic.core.fe_model.load.pattern import LoadPattern
+from hyperstatic.core.fe_model.load.loadcase import ModalCase, StaticCase
+from hyperstatic.core.fe_solver.dynamic import ModalSolver
+from hyperstatic.core.fe_post.beam import BeamResultResolver
+from hyperstatic.core.fe_solver.static import StaticSolver
 
 
 class TestBeamResult():
@@ -26,7 +26,7 @@ class TestBeamResult():
         model=Model()
         model.add_node("1",0,0,0)
         model.add_node("2",6,0,0)
-        model.add_beam("A","1","2",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
+        model.add_simple_beam("A","1","2",E=1.999e11,mu=0.3,A=4.265e-3,I3=6.572e-5,I2=3.301e-6,J=9.651e-8,rho=7849.0474)
 
         patt1=LoadPattern("pat1")
         patt1.set_nodal_load("2",0,0,-1e4,0,0,0)
