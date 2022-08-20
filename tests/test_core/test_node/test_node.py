@@ -3,7 +3,7 @@ import pytest
 from pytest import approx,raises
 
 import numpy as np
-from structengpy.core.fe_model.node import Node
+from hyperstatic.core.fe_model.node import Node
 
 class TestNode():
     def test_T(self):

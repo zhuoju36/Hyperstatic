@@ -8,12 +8,12 @@ import logging
 import sys
 import os
 
-from structengpy.core.fe_model.assembly import Assembly
-from structengpy.core.fe_model.model import Model
-from structengpy.core.fe_model.load.pattern import LoadPattern
-from structengpy.core.fe_model.load.loadcase import ModalCase
-from structengpy.core.fe_solver.dynamic import ModalSolver
-from structengpy.core.fe_post.structure import StructureResultResolver
+from hyperstatic.core.fe_model.assembly import Assembly
+from hyperstatic.core.fe_model.model import Model
+from hyperstatic.core.fe_model.load.pattern import LoadPattern
+from hyperstatic.core.fe_model.load.loadcase import ModalCase
+from hyperstatic.core.fe_solver.dynamic import ModalSolver
+from hyperstatic.core.fe_post.structure import StructureResultResolver
 
 
 class TestStructureResult():

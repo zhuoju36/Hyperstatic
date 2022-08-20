@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import pytest
 from pytest import approx
-from structengpy.core.fe_model.node import Node
-from structengpy.core.fe_model.material.isotropy import IsotropicMaterial
-from structengpy.core.fe_model.section.beam_section import BeamSection
-from structengpy.core.fe_model.node import Node
+from hyperstatic.core.fe_model.node import Node
+from hyperstatic.core.fe_model.material.isotropy import IsotropicMaterial
+from hyperstatic.core.fe_model.section.beam_section import BeamSection
+from hyperstatic.core.fe_model.node import Node
 
-from structengpy.core.fe_model.element.line.beam import Beam
+from hyperstatic.core.fe_model.element.line.beam import Beam
 
 class TestBeam():
     def test_construction(self):

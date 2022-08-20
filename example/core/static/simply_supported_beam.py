@@ -2,7 +2,7 @@
 
 # 导入包
 import sys
-from structengpy.core import Api
+from hyperstatic.core import Api
 
 # 工作路径
 path="./wkdir"

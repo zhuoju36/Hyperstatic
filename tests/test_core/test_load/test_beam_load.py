@@ -2,7 +2,7 @@
 from pytest import approx,raises
 
 import numpy as np
-from structengpy.core.fe_model.load.pattern import LoadPattern
+from hyperstatic.core.fe_model.load.pattern import LoadPattern
 
 class TestBeam():
     def test_beam_distributed(self):

@@ -6,11 +6,11 @@ import logging
 import sys
 import os
 
-from structengpy.core.fe_model.assembly import Assembly
-from structengpy.core.fe_model.model import Model
-from structengpy.core.fe_model.load.pattern import LoadPattern
-from structengpy.core.fe_model.load.loadcase import StaticCase
-from structengpy.core.fe_solver.static import StaticSolver
+from hyperstatic.core.fe_model.assembly import Assembly
+from hyperstatic.core.fe_model.model import Model
+from hyperstatic.core.fe_model.load.pattern import LoadPattern
+from hyperstatic.core.fe_model.load.loadcase import StaticCase
+from hyperstatic.core.fe_solver.static import StaticSolver
 
 class TestDKGQ():
     def test_basic(self):

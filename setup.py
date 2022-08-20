@@ -15,7 +15,7 @@ import numpy as np
 VERSION = '0.2.0'
 
 elm_path=os.path.dirname(os.path.realpath(__file__))
-elm_path=os.path.join(elm_path,'structengpy')
+elm_path=os.path.join(elm_path,'hyperstatic')
 elm_path=os.path.join(elm_path,'core')
 elm_path=os.path.join(elm_path,'fe_model')
 elm_path=os.path.join(elm_path,'meta')
@@ -84,7 +84,7 @@ ext_mods = [
 ]
 
 setup(
-    name='StructEngPy', 
+    name='Hyperstatic', 
     version=VERSION, 
     author='Zhuoju Huang',
     author_email='zhuoju36@hotmail.com',
@@ -126,7 +126,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
     ],
-    url='https://github.com/zhuoju36/StructEngPy',
+    url='https://github.com/zhuoju36/Hyperstatic',
     cmdclass={'build_ext': build_ext},
     ext_modules=cythonize(ext_mods, **cy_opts),
 )

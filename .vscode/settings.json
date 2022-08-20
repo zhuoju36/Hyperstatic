@@ -16,7 +16,7 @@
         "precase",
         "scipy",
         "spmatrix",
-        "structengpy",
+        "hyperstatic",
         "toarray",
         "tocoo",
         "tocsr",

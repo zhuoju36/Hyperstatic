@@ -3,8 +3,8 @@ import pytest
 from pytest import approx,raises
 
 import numpy as np
-from structengpy.core.fe_model.node import Node
-from structengpy.core.fe_model.element.line import Line
+from hyperstatic.core.fe_model.node import Node
+from hyperstatic.core.fe_model.element.line import Line
 
 class TestLine():
     def test_construction(self):

@@ -3,8 +3,8 @@ import pytest
 from pytest import approx,raises
 
 import numpy as np
-from structengpy.core.fe_model.node import Node
-from structengpy.core.fe_model.element.line.simple_beam import SimpleBeam
+from hyperstatic.core.fe_model.node import Node
+from hyperstatic.core.fe_model.element.line.simple_beam import SimpleBeam
 
 class TestSimpleBeam():
     def test_construction(self):

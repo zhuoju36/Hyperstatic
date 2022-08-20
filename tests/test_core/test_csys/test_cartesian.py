@@ -4,7 +4,7 @@ from pytest import approx,raises
 import numpy as np
 import numpy.linalg as nl
 
-from structengpy.common.csys import Cartesian
+from hyperstatic.common.csys import Cartesian
 
 class TestCartesian():
     def test_vec(self):

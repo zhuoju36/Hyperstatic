@@ -2,8 +2,8 @@
 from pytest import approx,raises
 
 import numpy as np
-from structengpy.core.fe_model.load.loadcase import LoadCase,LoadPattern
-from structengpy.common.curve import Curve
+from hyperstatic.core.fe_model.load.loadcase import LoadCase,LoadPattern
+from hyperstatic.common.curve import Curve
 
 class TestBasic():
     def test_loadcase(self):

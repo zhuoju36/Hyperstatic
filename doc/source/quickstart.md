@@ -2,7 +2,7 @@
 
 ## 安装
 ```bash
-pip install -U structengpy
+pip install -U hyperstatic
 ```
 
 ## Core API使用
@@ -14,7 +14,7 @@ pip install -U structengpy
 
 # 导入包
 import sys
-from structengpy.core import Api
+from hyperstatic.core import Api
 
 # 工作路径
 path="./wkdir"

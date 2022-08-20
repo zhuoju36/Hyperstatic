@@ -7,7 +7,7 @@ from pytest import approx,raises
 import numpy as np
 import numpy.linalg as nl
 
-from structengpy.core import Api
+from hyperstatic.core import Api
 import logging
 
 class TestApi():
