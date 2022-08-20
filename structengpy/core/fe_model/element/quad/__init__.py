@@ -7,15 +7,13 @@ from structengpy.common.tolerance import Tolerance
 class Quad(Element):
     def __init__(self,name,node_i,node_j,node_k,node_l,dof):
         #Initialize local CSys
-        o=[(node_i.x+node_j.x+node_k.x)/3,
-            (node_i.y+node_j.y+node_k.y)/3,
-            (node_i.z+node_j.z+node_k.z)/3]
+        o=(node_i.loc+node_j.loc+node_k.loc+node_l.loc)/4
         vec1=node_i.loc-node_j.loc
         vec2=node_j.loc-node_k.loc
         n=np.cross(vec1,vec2)
         n=n/np.linalg.norm(n)
         tol=Tolerance.abs_tol()
-        if np.linalg.norm(n-np.array([0,0,1]))<tol:
+        if np.linalg.norm(n-np.array([0,0,1]))<tol or np.linalg.norm(n+np.array([0,0,1]))<tol:
             csys = Cartesian.create_by_normal(o, n, guide=[0,1,0])
         else:
             csys = Cartesian.create_by_normal(o, n)

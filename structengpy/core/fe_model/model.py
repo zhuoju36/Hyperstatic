@@ -298,11 +298,9 @@ class Model:
             elm=DKGQ(name,shell_sec,node0, node1, node2, node3)
         else:
             elm=DKT(name,shell_sec,node0, node1, node2)
-            
         res=len(self.__shells)
         self.__hid["shell"][name]=res
         self.__shells[name]=elm
-
         return res
 
     def get_shell_names(self):
